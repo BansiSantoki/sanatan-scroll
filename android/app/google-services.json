@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "746323217658",
+    "project_id": "sanatan-scroll-19b25",
+    "storage_bucket": "sanatan-scroll-19b25.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:746323217658:android:05599e93219860775d4d43",
+        "android_client_info": {
+          "package_name": "com.sanatanscroll.sanatan_scroll"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "746323217658-qu7ukk3g7e63ra3vl72t7d0in9iqgdri.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sanatanscroll.sanatan_scroll",
+            "certificate_hash": "181752623da8d367afc2d371353956e65e930967"
+          }
+        },
+        {
+          "client_id": "746323217658-0qfl1om1hk67vflkormno80seq38pvcr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgdzgYurf4TzOA4iNRNPCMK2y7xhlKjFc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "746323217658-0qfl1om1hk67vflkormno80seq38pvcr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "746323217658-g9kmvge3q4gnahcv41rotp7er6ndmih3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sanatanscroll.sanatanScroll"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
