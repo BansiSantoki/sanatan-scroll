@@ -1,17 +1,16 @@
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../app/routes/app_routes.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_dimensions.dart';
-import '../../../../app/theme/app_gradients.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../data/mock_wisdom_data.dart';
 import '../../../../data/sacred_books_data.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/reading_progress_provider.dart';
-import 'widgets/wisdom_card.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -23,13 +22,6 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> {
   Timer? _completionTimer;
   bool _isShowingCompletion = false;
-
-  static const List<Color> _backgroundColors = [
-    Color(0xFFA57625),
-    Color(0xFFE9CA9B),
-    Color(0xFFD4A96D),
-    Color(0xFFC0A275),
-  ];
 
   @override
   void dispose() {
@@ -73,7 +65,7 @@ class _FeedScreenState extends State<FeedScreen> {
         ? 40.0
         : width >= 600
             ? 28.0
-            : 16.0;
+            : 20.0;
 
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
@@ -82,59 +74,43 @@ class _FeedScreenState extends State<FeedScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: _backgroundColors,
-            stops: [0.0, 0.35, 0.68, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxContentWidth,
+      backgroundColor: const Color(0xFFFAF0E4),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxContentWidth,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: horizontalPadding,
+                right: horizontalPadding,
+                top: 12,
+                bottom: 24,
               ),
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  const SliverToBoxAdapter(
-                    child: _FeedHeader(),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                    ),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate(
-                        [
-                          const SizedBox(height: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  // HEADER
+                  _HomeHeaderRow(),
 
-                          // DAILY WISDOM
-                          WisdomCard(
-                            wisdom: MockWisdomData.dailyWisdom,
-                          ),
+                  SizedBox(height: 28),
 
-                          const SizedBox(height: 12),
+                  // DAILY WISDOM
+                  _DailyWisdomCard(),
 
-                          // CONTINUE YOUR JOURNEY
-                          const _ContinueScripturesRow(),
+                  SizedBox(height: 28),
 
-                          const SizedBox(height: 36),
+                  // CONTINUE
+                  _ContinueJourneyCard(),
 
-                          // EXPLORE SCRIPTURES
-                          const _ExplorePreview(),
+                  SizedBox(height: 30),
 
-                          const SizedBox(height: 32),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // EXPLORE
+                  _ExploreScripturesSection(),
+
+                  SizedBox(height: 30),
                 ],
               ),
             ),
@@ -146,303 +122,64 @@ class _FeedScreenState extends State<FeedScreen> {
 }
 
 // ============================================================
-// FEED HEADER
+// HEADER
 // ============================================================
 
-class _FeedHeader extends StatelessWidget {
-  const _FeedHeader();
+class _HomeHeaderRow extends StatelessWidget {
+  const _HomeHeaderRow();
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final userName = auth.firstName;
 
-    final width = MediaQuery.sizeOf(context).width;
+    final rawName = auth.firstName;
+    final userName = rawName.isNotEmpty ? rawName : 'Bansi';
 
-    final horizontalPadding = width >= 900
-        ? 40.0
-        : width >= 600
-            ? 28.0
-            : 16.0;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        16,
-        horizontalPadding,
-        12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'NAMASTE, ${userName.toUpperCase()}',
-              maxLines: 2,
-              softWrap: true,
-              style: AppTextStyles.pageHeading.copyWith(
-                fontSize: width >= 900
-                    ? 25
-                    : width >= 600
-                        ? 23
-                        : 21,
-                color: AppColors.primaryBurgundy,
-                fontWeight: FontWeight.w700,
-                height: 1.15,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 9,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.96),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.local_fire_department_outlined,
-                  size: 18,
-                  color: AppColors.primaryBurgundy,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '7 Days',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// CONTINUE YOUR JOURNEY
-// ============================================================
-
-class _ContinueScripturesRow extends StatelessWidget {
-  const _ContinueScripturesRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-
-    final cardWidth = width >= 900
-        ? 520.0
-        : width >= 600
-            ? 440.0
-            : width * 0.86;
-
-    final books = [
-      {
-        'id': 'bhagavad_gita',
-        'title': 'Bhagavad Gita',
-        'subtitle': 'Continue where you left off',
-      },
-      {
-        'id': 'ramayana',
-        'title': 'Ramayana',
-        'subtitle': 'The Epic of Duty',
-      },
-    ];
-
-    final readingProvider =
-        context.watch<ReadingProgressProvider>();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+        Expanded(
           child: Text(
-            'Continue Your Journey',
-            style: AppTextStyles.caption.copyWith(
-              fontSize: 12,
-              color: AppColors.secondaryText,
+            'Namaste, $userName',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.cormorantGaramond(
+              fontSize: 31,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF141814),
+              height: 1,
             ),
           ),
         ),
 
-        SizedBox(
-          height: 150,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: books.length,
-            separatorBuilder: (_, __) {
-              return const SizedBox(width: 12);
-            },
-            itemBuilder: (context, index) {
-              final info = books[index];
+        const SizedBox(width: 12),
 
-              final bookId = info['id'] as String;
-              final title = info['title'] as String;
-              final subtitle = info['subtitle'] as String;
-
-              final savedPos =
-                  readingProvider.positionFor(bookId);
-
-              final bookModel =
-                  SacredBooksData.findById(bookId);
-
-              double progress = 0.0;
-
-              if (savedPos != null && bookModel != null) {
-                progress =
-                    (savedPos.chapterNumber - 1) /
-                        bookModel.totalChapters;
-
-                progress = progress.clamp(0.0, 1.0);
-              }
-
-              return SizedBox(
-                width: cardWidth,
-                child: GestureDetector(
-                  onTap: () {
-                    if (savedPos != null) {
-                      Navigator.of(context).pushNamed(
-                        AppRoutes.sacredTextReading,
-                        arguments: {
-                          'textId': bookId,
-                          'chapterNumber':
-                              savedPos.chapterNumber,
-                        },
-                      );
-                    } else {
-                      Navigator.of(context).pushNamed(
-                        AppRoutes.sacredTextReading,
-                        arguments: bookId,
-                      );
-                    }
-                  },
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius:
-                        BorderRadius.circular(
-                      AppDimensions.radiusLarge,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.82),
-                        borderRadius:
-                            BorderRadius.circular(
-                          AppDimensions.radiusLarge,
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.80),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style:
-                                AppTextStyles.cardTitle.copyWith(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.darkText,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            subtitle,
-                            style:
-                                AppTextStyles.caption.copyWith(
-                              fontSize: 12,
-                              color:
-                                  AppColors.secondaryText,
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(8),
-                                  child:
-                                      LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 6,
-                                    backgroundColor:
-                                        AppColors.softBeige,
-                                    color:
-                                        const Color(0xFFA57625),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: () {
-                                  if (savedPos != null) {
-                                    Navigator.of(context)
-                                        .pushNamed(
-                                      AppRoutes
-                                          .sacredTextReading,
-                                      arguments: {
-                                        'textId': bookId,
-                                        'chapterNumber':
-                                            savedPos
-                                                .chapterNumber,
-                                      },
-                                    );
-                                  } else {
-                                    Navigator.of(context)
-                                        .pushNamed(
-                                      AppRoutes
-                                          .sacredTextReading,
-                                      arguments: bookId,
-                                    );
-                                  }
-                                },
-                                icon: const Icon(
-                                  Icons.volume_up_rounded,
-                                  color:
-                                      AppColors.secondaryText,
-                                ),
-                                tooltip: 'Open',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 17,
+            vertical: 11,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBC07E),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '🔥',
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                '7 Days',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF141814),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ],
@@ -451,88 +188,391 @@ class _ContinueScripturesRow extends StatelessWidget {
 }
 
 // ============================================================
-// EXPLORE SCRIPTURES
+// DAILY WISDOM
+// ============================================================
+//
+// IMPORTANT:
+// bg_bg.png       = green background
+// chariot_lineart.png = chariot line art
+//
+// બંને Stack માં છે.
+// Text left side માં fixed area માં છે.
+// એટલે text image ઉપર નહીં જાય.
 // ============================================================
 
-class _ExplorePreview extends StatelessWidget {
-  const _ExplorePreview();
+class _DailyWisdomCard extends StatelessWidget {
+  const _DailyWisdomCard();
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
+    final wisdom = MockWisdomData.dailyWisdom;
 
-    /*
-     * BOOK IMAGE RATIO
-     *
-     * Real book covers are portrait.
-     *
-     * width : height
-     * 0.66  : 1
-     *
-     * So we calculate the height from the width.
-     * This prevents the white/empty container problem.
-     */
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
 
-    final double bookWidth;
+        final isSmallPhone = width < 370;
+        final isTablet = width >= 600;
 
-    if (width >= 900) {
-      bookWidth = 300.0;
-    } else if (width >= 600) {
-      bookWidth = width * 0.40;
-    } else {
-      bookWidth = width * 0.48;
-    }
+        final titleSize = isTablet
+            ? 29.0
+            : isSmallPhone
+                ? 23.0
+                : 25.0;
 
-    final double bookHeight = bookWidth / 0.66;
+        final sanskritSize = isTablet
+            ? 19.0
+            : isSmallPhone
+                ? 15.5
+                : 17.0;
 
+        final quoteSize = isTablet
+            ? 14.5
+            : isSmallPhone
+                ? 12.5
+                : 13.5;
+
+        final cardHeight = isTablet
+            ? 350.0
+            : isSmallPhone
+                ? 330.0
+                : 350.0;
+
+        return SizedBox(
+          width: double.infinity,
+          height: cardHeight,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // ------------------------------------------------
+              // GREEN BACKGROUND
+              // ------------------------------------------------
+
+              Positioned(
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: isTablet
+                    ? width * 0.50
+                    : width * 0.53,
+                child: Image.asset(
+                  'assets/images/bg_bg.png',
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB5BD8E),
+                        borderRadius: BorderRadius.circular(45),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // ------------------------------------------------
+              // TEXT AREA
+              // ------------------------------------------------
+
+              Positioned(
+                left: 0,
+                top: 8,
+                width: width * 0.59,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // DAILY WISDOM
+                    Text(
+                      'DAILY WISDOM',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF858D5C),
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // BOOK TITLE
+                    Text(
+                      wisdom.source,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF141814),
+                        height: 1.05,
+                      ),
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    // CHAPTER + VERSE
+                    Text(
+                      'Chapter ${wisdom.chapter}.Verse ${wisdom.verse}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF141814),
+                        height: 1.05,
+                      ),
+                    ),
+
+                    const SizedBox(height: 13),
+
+                    // SANSKRIT
+                    if (wisdom.sanskrit != null &&
+                        wisdom.sanskrit!.isNotEmpty)
+                      Text(
+                        wisdom.sanskrit!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.notoSansDevanagari(
+                          fontSize: sanskritSize,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF141814),
+                          height: 1.35,
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    // ENGLISH TRANSLATION
+                    Text(
+                      wisdom.quote,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: quoteSize,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF30352F),
+                        height: 1.48,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ------------------------------------------------
+              // CHARIOT
+              // ------------------------------------------------
+
+              Positioned(
+                right: isTablet ? -2 : -4,
+                bottom: isTablet ? 15 : 13,
+                width: isTablet
+                    ? width * 0.49
+                    : width * 0.50,
+                child: Image.asset(
+                  'assets/images/chariot_lineart.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ============================================================
+// CONTINUE YOUR JOURNEY
+// ============================================================
+
+class _ContinueJourneyCard extends StatelessWidget {
+  const _ContinueJourneyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final readingProvider = context.watch<ReadingProgressProvider>();
+    final savedPos = readingProvider.positionFor('bhagavad_gita');
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBC07E),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            if (savedPos != null) {
+              Navigator.of(context).pushNamed(
+                AppRoutes.sacredTextReading,
+                arguments: {
+                  'textId': 'bhagavad_gita',
+                  'chapterNumber': savedPos.chapterNumber,
+                },
+              );
+            } else {
+              Navigator.of(context).pushNamed(
+                AppRoutes.sacredTextReading,
+                arguments: 'bhagavad_gita',
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              24,
+              25,
+              20,
+              25,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Continue Your Journey',
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 25,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF141814),
+                          height: 1.05,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      Text(
+                        'Pick up where you left off',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF30352F),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 34,
+                  color: Color(0xFF141814),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// EXPLORE SCRIPTURES
+// ============================================================
+
+class _ExploreScripturesSection extends StatelessWidget {
+  const _ExploreScripturesSection();
+
+  static const List<Map<String, dynamic>> _fourBooks = [
+    {
+      'id': 'bhagavad_gita',
+      'title': 'Gita',
+      'subtitle': 'The Song of\nthe Divine',
+      'color': Color(0xFFFBC07E),
+      'iconType': 0,
+    },
+    {
+      'id': 'ramayana',
+      'title': 'Ramayana',
+      'subtitle': 'The Epic of\nDuty',
+      'color': Color(0xFFF7B185),
+      'iconType': 1,
+    },
+    {
+      'id': 'upanishads',
+      'title': 'Upanishads',
+      'subtitle': 'Wisdom of\nthe Self',
+      'color': Color(0xFFB5BD8E),
+      'iconType': 2,
+    },
+    {
+      'id': 'mahabharata',
+      'title': 'Mahabharata',
+      'subtitle': 'The Great\nEpic',
+      'color': Color(0xFFEBD49A),
+      'iconType': 3,
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Explore Scriptures',
-          style: AppTextStyles.sectionHeading.copyWith(
-            color: AppColors.darkText,
-            fontSize: width >= 600 ? 30 : 28,
-            fontWeight: FontWeight.w700,
+          'EXPLORE SCRIPTURES',
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF858D5C),
+            letterSpacing: 1.5,
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        Text(
+          'Dive into timeless wisdom',
+          style: GoogleFonts.inter(
+            fontSize: 15.5,
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF141814),
           ),
         ),
 
         const SizedBox(height: 18),
 
-        /*
-         * ONLY TWO BOOKS
-         *
-         * Horizontal scrolling is kept so the UI
-         * remains comfortable on smaller phones.
-         */
         SizedBox(
-          height: bookHeight + 70,
+          height: 200,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: SacredBooksData.all.length >= 2
-                ? 2
-                : SacredBooksData.all.length,
-            separatorBuilder: (_, __) {
-              return const SizedBox(width: 22);
+            itemCount: _fourBooks.length,
+            separatorBuilder: (context, index) {
+              return const SizedBox(width: 12);
             },
             itemBuilder: (context, index) {
-              final book = SacredBooksData.all[index];
+              final info = _fourBooks[index];
 
-              final imagePath =
-                  'assets/images/${book.id}.png';
+              final bookId = info['id'] as String;
+              final title = info['title'] as String;
+              final subtitle = info['subtitle'] as String;
+              final bgColor = info['color'] as Color;
+              final iconType = info['iconType'] as int;
 
-              return _ScripturePreviewCard(
-                title: book.title,
-                subtitle: book.subtitle,
-                imagePath: imagePath,
-                width: bookWidth,
-                height: bookHeight,
+              final book = SacredBooksData.findById(bookId);
+
+              return _HorizontalBookCard(
+                bookId: bookId,
+                title: title,
+                subtitle: subtitle,
+                bgColor: bgColor,
+                iconType: iconType,
                 onTap: () {
                   Navigator.of(context).pushNamed(
                     AppRoutes.sacredTextDetail,
-                    arguments: book.id,
+                    arguments: book?.id ?? bookId,
                   );
                 },
               );
@@ -545,125 +585,462 @@ class _ExplorePreview extends StatelessWidget {
 }
 
 // ============================================================
-// BOOK IMAGE CARD
+// BOOK CARD
 // ============================================================
 
-class _ScripturePreviewCard extends StatelessWidget {
-  const _ScripturePreviewCard({
-    required this.title,
-    required this.subtitle,
-    required this.imagePath,
-    required this.width,
-    required this.height,
-    required this.onTap,
-  });
-
+class _HorizontalBookCard extends StatelessWidget {
+  final String bookId;
   final String title;
   final String subtitle;
-  final String imagePath;
-  final double width;
-  final double height;
+  final Color bgColor;
+  final int iconType;
   final VoidCallback onTap;
+
+  const _HorizontalBookCard({
+    required this.bookId,
+    required this.title,
+    required this.subtitle,
+    required this.bgColor,
+    required this.iconType,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: width,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /*
-             * IMPORTANT:
-             *
-             * NO WHITE CONTAINER
-             * NO CARD BACKGROUND
-             *
-             * The actual book image itself is shown.
-             */
-
-            SizedBox(
-              width: width,
-              height: height,
-              child: ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(18),
-                child: Image.asset(
-                  imagePath,
-
-                  /*
-                   * BoxFit.fill is intentionally NOT used.
-                   *
-                   * BoxFit.cover keeps the book artwork
-                   * filling the exact portrait area.
-                   */
-                  fit: BoxFit.cover,
-
-                  alignment: Alignment.center,
-
-                  filterQuality: FilterQuality.high,
-
-                  errorBuilder:
-                      (context, error, stackTrace) {
-                    return Container(
-                      width: width,
-                      height: height,
-                      decoration: BoxDecoration(
-                        gradient:
-                            AppGradients.sacredCard(0),
-                        borderRadius:
-                            BorderRadius.circular(18),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        title.characters
-                            .take(2)
-                            .toString(),
-                        style:
-                            AppTextStyles.cardTitle.copyWith(
-                          color: AppColors.white,
-                          fontSize: 36,
-                        ),
-                      ),
-                    );
-                  },
+      width: 116,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 9,
+              vertical: 16,
+            ),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: CustomPaint(
+                    painter: _getIconPainter(iconType),
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 11),
+
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF141814),
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF30352F),
+                    height: 1.25,
+                  ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 12),
-
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  AppTextStyles.cardTitle.copyWith(
-                color: AppColors.darkText,
-                fontSize: width < 200 ? 15 : 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            Text(
-              subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  AppTextStyles.caption.copyWith(
-                color: AppColors.secondaryText,
-                fontSize: width < 200 ? 11 : 12,
-                height: 1.25,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  CustomPainter _getIconPainter(int type) {
+    const iconColor = Color(0xFF141814);
+
+    switch (type) {
+      case 0:
+        return const _LotusIconPainter(color: iconColor);
+
+      case 1:
+        return const _BowArrowIconPainter(color: iconColor);
+
+      case 2:
+        return const _LeavesIconPainter(color: iconColor);
+
+      case 3:
+        return const _WheelIconPainter(color: iconColor);
+
+      default:
+        return const _LotusIconPainter(color: iconColor);
+    }
+  }
+}
+
+// ============================================================
+// LOTUS
+// ============================================================
+
+class _LotusIconPainter extends CustomPainter {
+  final Color color;
+
+  const _LotusIconPainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2 + 2;
+
+    final center = Path();
+
+    center.moveTo(cx, cy + 12);
+    center.quadraticBezierTo(
+      cx - 9,
+      cy - 3,
+      cx,
+      cy - 15,
+    );
+    center.quadraticBezierTo(
+      cx + 9,
+      cy - 3,
+      cx,
+      cy + 12,
+    );
+
+    canvas.drawPath(center, paint);
+
+    final left = Path();
+
+    left.moveTo(cx - 2, cy + 12);
+    left.quadraticBezierTo(
+      cx - 18,
+      cy + 3,
+      cx - 15,
+      cy - 8,
+    );
+    left.quadraticBezierTo(
+      cx - 6,
+      cy - 5,
+      cx - 2,
+      cy + 6,
+    );
+
+    canvas.drawPath(left, paint);
+
+    final right = Path();
+
+    right.moveTo(cx + 2, cy + 12);
+    right.quadraticBezierTo(
+      cx + 18,
+      cy + 3,
+      cx + 15,
+      cy - 8,
+    );
+    right.quadraticBezierTo(
+      cx + 6,
+      cy - 5,
+      cx + 2,
+      cy + 6,
+    );
+
+    canvas.drawPath(right, paint);
+
+    final outerLeft = Path();
+
+    outerLeft.moveTo(cx - 4, cy + 12);
+    outerLeft.quadraticBezierTo(
+      cx - 22,
+      cy + 11,
+      cx - 19,
+      cy + 1,
+    );
+    outerLeft.quadraticBezierTo(
+      cx - 10,
+      cy + 2,
+      cx - 4,
+      cy + 9,
+    );
+
+    canvas.drawPath(outerLeft, paint);
+
+    final outerRight = Path();
+
+    outerRight.moveTo(cx + 4, cy + 12);
+    outerRight.quadraticBezierTo(
+      cx + 22,
+      cy + 11,
+      cx + 19,
+      cy + 1,
+    );
+    outerRight.quadraticBezierTo(
+      cx + 10,
+      cy + 2,
+      cx + 4,
+      cy + 9,
+    );
+
+    canvas.drawPath(outerRight, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
+// ============================================================
+// BOW & ARROW
+// ============================================================
+
+class _BowArrowIconPainter extends CustomPainter {
+  final Color color;
+
+  const _BowArrowIconPainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    final bow = Path();
+
+    bow.moveTo(cx - 13, cy + 13);
+    bow.quadraticBezierTo(
+      cx + 5,
+      cy + 5,
+      cx + 13,
+      cy - 13,
+    );
+
+    canvas.drawPath(bow, paint);
+
+    final stringPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(cx - 13, cy + 13),
+      Offset(cx + 13, cy - 13),
+      stringPaint,
+    );
+
+    canvas.drawLine(
+      Offset(cx - 11, cy + 11),
+      Offset(cx + 12, cy - 12),
+      paint,
+    );
+
+    final head = Path();
+
+    head.moveTo(cx + 5, cy - 12);
+    head.lineTo(cx + 12, cy - 12);
+    head.lineTo(cx + 12, cy - 5);
+
+    canvas.drawPath(head, paint);
+
+    final nock = Path();
+
+    nock.moveTo(cx - 13, cy + 9);
+    nock.lineTo(cx - 9, cy + 13);
+
+    canvas.drawPath(nock, stringPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
+// ============================================================
+// LEAVES
+// ============================================================
+
+class _LeavesIconPainter extends CustomPainter {
+  final Color color;
+
+  const _LeavesIconPainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    canvas.drawLine(
+      Offset(cx, cy + 16),
+      Offset(cx, cy - 14),
+      paint,
+    );
+
+    final top = Path();
+
+    top.moveTo(cx, cy - 14);
+    top.quadraticBezierTo(
+      cx - 8,
+      cy - 7,
+      cx,
+      cy + 1,
+    );
+    top.quadraticBezierTo(
+      cx + 8,
+      cy - 7,
+      cx,
+      cy - 14,
+    );
+
+    canvas.drawPath(top, paint);
+
+    final left = Path();
+
+    left.moveTo(cx, cy + 1);
+    left.quadraticBezierTo(
+      cx - 15,
+      cy - 5,
+      cx - 15,
+      cy + 5,
+    );
+    left.quadraticBezierTo(
+      cx - 5,
+      cy + 10,
+      cx,
+      cy + 1,
+    );
+
+    canvas.drawPath(left, paint);
+
+    final right = Path();
+
+    right.moveTo(cx, cy + 1);
+    right.quadraticBezierTo(
+      cx + 15,
+      cy - 5,
+      cx + 14,
+      cy + 5,
+    );
+    right.quadraticBezierTo(
+      cx + 5,
+      cy + 10,
+      cx,
+      cy + 1,
+    );
+
+    canvas.drawPath(right, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
+// ============================================================
+// WHEEL
+// ============================================================
+
+class _WheelIconPainter extends CustomPainter {
+  final Color color;
+
+  const _WheelIconPainter({
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(
+      size.width / 2,
+      size.height / 2,
+    );
+
+    const rOuter = 16.0;
+    const rInner = 5.0;
+
+    canvas.drawCircle(
+      center,
+      rOuter,
+      paint,
+    );
+
+    canvas.drawCircle(
+      center,
+      rInner,
+      paint,
+    );
+
+    for (int i = 0; i < 8; i++) {
+      final angle = i * (math.pi / 4);
+
+      final p1 = Offset(
+        center.dx + rInner * math.cos(angle),
+        center.dy + rInner * math.sin(angle),
+      );
+
+      final p2 = Offset(
+        center.dx + rOuter * math.cos(angle),
+        center.dy + rOuter * math.sin(angle),
+      );
+
+      canvas.drawLine(
+        p1,
+        p2,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }
 
@@ -685,9 +1062,7 @@ class _CompletionDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: TweenAnimationBuilder<double>(
-        duration: const Duration(
-          milliseconds: 700,
-        ),
+        duration: const Duration(milliseconds: 700),
         curve: Curves.elasticOut,
         tween: Tween(
           begin: 0.65,
@@ -708,11 +1083,10 @@ class _CompletionDialog extends StatelessWidget {
                 18,
               ),
               decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius:
-                    BorderRadius.circular(24),
+                color: const Color(0xFFFAF0E4),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: AppColors.peachHighlight,
+                  color: const Color(0xFFFBC07E),
                   width: 2,
                 ),
               ),
@@ -720,37 +1094,53 @@ class _CompletionDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _CelebrationIcon(),
+                      Icon(
+                        Icons.auto_awesome,
+                        color: Color(0xFFE88242),
+                        size: 28,
+                      ),
                       SizedBox(width: 12),
-                      _CelebrationIcon(),
+                      Icon(
+                        Icons.auto_awesome,
+                        color: Color(0xFFE88242),
+                        size: 28,
+                      ),
                     ],
                   ),
+
                   const SizedBox(height: 14),
+
                   Text(
                     'You completed $chapterTitle',
                     textAlign: TextAlign.center,
-                    style:
-                        AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.darkText,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF141814),
                     ),
                   ),
+
                   const SizedBox(height: 6),
+
                   Text(
                     bookTitle,
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.caption,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF2D352E),
+                    ),
                   ),
+
                   const SizedBox(height: 18),
+
                   FilledButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor:
-                          AppColors.primaryBurgundy,
+                      backgroundColor: const Color(0xFF212121),
                     ),
                     child: const Text(
                       'Continue journey',
@@ -762,42 +1152,6 @@ class _CompletionDialog extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-// ============================================================
-// CELEBRATION ICON
-// ============================================================
-
-class _CelebrationIcon extends StatelessWidget {
-  const _CelebrationIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(
-        milliseconds: 900,
-      ),
-      tween: Tween(
-        begin: -0.12,
-        end: 0.12,
-      ),
-      curve: Curves.easeInOut,
-      builder: (
-        context,
-        angle,
-        child,
-      ) {
-        return Transform.rotate(
-          angle: angle,
-          child: const Icon(
-            Icons.auto_awesome,
-            color: AppColors.warmOrange,
-            size: 27,
-          ),
-        );
-      },
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
+
 import 'social_auth_button.dart';
 
 class AppleSignInButton extends StatelessWidget {
@@ -7,10 +7,16 @@ class AppleSignInButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.isLoading = false,
+    this.backgroundColor = const Color(0xFFF9CCA5),
+    this.foregroundColor = const Color(0xFF141814),
+    this.borderColor = const Color(0xFFF9CCA5),
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -18,10 +24,10 @@ class AppleSignInButton extends StatelessWidget {
       label: 'Continue with Apple',
       onPressed: onPressed,
       isLoading: isLoading,
-      backgroundColor: AppColors.black,
-      foregroundColor: AppColors.white,
-      borderColor: AppColors.black,
-      leading: const Icon(Icons.apple, size: 24, color: AppColors.white),
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      borderColor: borderColor,
+      leading: Icon(Icons.apple, size: 24, color: foregroundColor),
     );
   }
 }

@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_dimensions.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/apple_sign_in_button.dart';
 import '../../../../core/widgets/google_sign_in_button.dart';
 import '../../../../providers/auth_provider.dart';
-import 'widgets/auth_footer.dart';
 import 'widgets/auth_header.dart';
 
 class AuthScreen extends StatelessWidget {
@@ -17,189 +13,118 @@ class AuthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final padding = Responsive.horizontalPadding(context);
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: Container(
+      backgroundColor: const Color(0xFFFAF0E4),
+      body: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.fromARGB(255, 165, 118, 37),
-              Color.fromARGB(255, 233, 202, 155),
-              Color.fromARGB(255, 212, 169, 109),
-              Color.fromARGB(255, 192, 162, 117),
-            ],
-            stops: [
-              0.0,
-              0.35,
-              0.72,
-              1.0,
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -120,
-              left: -100,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFFE8C8)
-                      .withValues(alpha: 0.28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFD6A0)
-                          .withValues(alpha: 0.20),
-                      blurRadius: 100,
-                      spreadRadius: 30,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            children: [
+              // Top Orange Wave Header
+              const AuthHeader(),
 
-            Positioned(
-              bottom: -140,
-              right: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFF6D4B5)
-                      .withValues(alpha: 0.22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFE6B78E)
-                          .withValues(alpha: 0.16),
-                      blurRadius: 110,
-                      spreadRadius: 35,
-                    ),
-                  ],
+              // Main Body Content
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width < 360 ? 20.0 : 28.0,
                 ),
-              ),
-            ),
+                child: Column(
+                  children: [
+                    SizedBox(height: size.height < 650 ? 20 : 32),
 
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: padding,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
+                    // Title "Begin Your Journey"
+                    Text(
+                      'Begin Your Journey',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: size.width < 360 ? 34 : 42,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF141814),
+                        height: 1.1,
                       ),
-                      child: IntrinsicHeight(
-                        child: Column(
+                    ),
+
+                    SizedBox(height: size.height < 650 ? 10 : 14),
+
+                    // Description text
+                    Text(
+                      'Explore timeless wisdom.\nBuild clarity. Live with purpose.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: size.width < 360 ? 14.5 : 16,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF2D352E),
+                        height: 1.4,
+                      ),
+                    ),
+
+                    SizedBox(height: size.height < 650 ? 28 : 36),
+
+                    // Google & Apple buttons
+                    Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return Column(
                           children: [
-                            const Spacer(),
-
-                            const AuthHeader(),
-
-                            const SizedBox(
-                              height:
-                                  AppDimensions.spacing40,
+                            GoogleSignInButton(
+                              onPressed: auth.isLoading
+                                  ? null
+                                  : () => _handleGoogleSignIn(context, auth),
+                              isLoading: auth.isGoogleLoading,
                             ),
 
-                            Consumer<AuthProvider>(
-                              builder: (
-                                context,
-                                auth,
-                                _,
-                              ) {
-                                return Column(
-                                  children: [
-                                    GoogleSignInButton(
-                                      onPressed: auth.isLoading
-                                          ? null
-                                          : () =>
-                                              _handleGoogleSignIn(
-                                                context,
-                                                auth,
-                                              ),
-                                      isLoading:
-                                          auth.isGoogleLoading,
-                                    ),
+                            const SizedBox(height: 14),
 
-                                    const SizedBox(
-                                      height:
-                                          AppDimensions.spacing12,
-                                    ),
-
-                                    AppleSignInButton(
-                                      onPressed:
-                                          auth.isLoading
-                                              ? null
-                                              : () {
-                                                  ScaffoldMessenger
-                                                      .of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content:
-                                                          Text(
-                                                        'Apple Sign-In will be added soon',
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                      isLoading:
-                                          auth.isAppleLoading,
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-
-                            const Spacer(),
-
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(
-                                  context,
-                                ).pushReplacementNamed(
-                                  AppRoutes.onboarding,
-                                );
-                              },
-                              child: Text(
-                                'Maybe Later',
-                                style: AppTextStyles
-                                    .bodyMedium
-                                    .copyWith(
-                                  color:
-                                      AppColors.warmOrange,
-                                  fontWeight:
-                                      FontWeight.w600,
-                                ),
-                              ),
-                            ),
-
-                            const AuthFooter(
-                              showSyncText: false,
-                            ),
-
-                            const SizedBox(
-                              height:
-                                  AppDimensions.spacing16,
+                            AppleSignInButton(
+                              onPressed: auth.isLoading
+                                  ? null
+                                  : () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Apple Sign-In will be added soon',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              isLoading: auth.isAppleLoading,
                             ),
                           ],
+                        );
+                      },
+                    ),
+
+                    SizedBox(height: size.height < 650 ? 22 : 28),
+
+                    // "Maybe Later" text link
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushReplacementNamed(
+                          AppRoutes.onboarding,
+                        );
+                      },
+                      child: Text(
+                        'Maybe Later',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF141814),
+                          decoration: TextDecoration.underline,
+                          decorationColor: const Color(0xFF141814),
                         ),
                       ),
                     ),
-                  );
-                },
+
+                    SizedBox(height: size.height < 650 ? 24 : 32),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -209,8 +134,7 @@ class AuthScreen extends StatelessWidget {
     BuildContext context,
     AuthProvider auth,
   ) async {
-    final error =
-        await auth.signInWithGoogle();
+    final error = await auth.signInWithGoogle();
 
     if (!context.mounted) {
       return;
@@ -223,8 +147,7 @@ class AuthScreen extends StatelessWidget {
       return;
     }
 
-    if (error != null &&
-        error != 'Google Sign-In cancelled') {
+    if (error != null && error != 'Google Sign-In cancelled') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_dimensions.dart';
-import '../../app/theme/app_text_styles.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SocialAuthButton extends StatelessWidget {
   const SocialAuthButton({
@@ -9,9 +7,11 @@ class SocialAuthButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.leading,
-    this.backgroundColor = AppColors.white,
-    this.foregroundColor = AppColors.darkText,
-    this.borderColor = AppColors.divider,
+    this.backgroundColor = const Color(0xFFF9CCA5),
+    this.foregroundColor = const Color(0xFF141814),
+    this.borderColor = const Color(0xFFF9CCA5),
+    this.height = 56,
+    this.borderRadius = 22,
     this.isLoading = false,
   });
 
@@ -21,23 +21,24 @@ class SocialAuthButton extends StatelessWidget {
   final Color backgroundColor;
   final Color foregroundColor;
   final Color borderColor;
+  final double height;
+  final double borderRadius;
   final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: AppDimensions.buttonHeight,
-      child: OutlinedButton(
+      height: height,
+      child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
+        style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          side: BorderSide(color: borderColor),
-          elevation: backgroundColor == AppColors.white ? 1 : 0,
-          shadowColor: AppColors.darkText.withValues(alpha: 0.08),
+          elevation: 0,
+          side: BorderSide(color: borderColor, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
         child: isLoading
@@ -56,9 +57,10 @@ class SocialAuthButton extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     label,
-                    style: AppTextStyles.bodyMedium.copyWith(
+                    style: GoogleFonts.inter(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w500,
                       color: foregroundColor,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

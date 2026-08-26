@@ -33,14 +33,19 @@ class AppConstants {
       label: 'Home',
     ),
     AppNavigationItem(
-      icon: Icons.local_fire_department_outlined,
-      activeIcon: Icons.local_fire_department_rounded,
+      icon: Icons.power_settings_new_rounded,
+      activeIcon: Icons.power_settings_new_rounded,
       label: 'Streak',
     ),
     AppNavigationItem(
       icon: Icons.bookmark_outline_rounded,
       activeIcon: Icons.bookmark_rounded,
       label: 'Saved',
+    ),
+    AppNavigationItem(
+      icon: Icons.subtitles_outlined,
+      activeIcon: Icons.wysiwyg_rounded,
+      label: 'Feed',
     ),
     AppNavigationItem(
       icon: Icons.person_outline_rounded,

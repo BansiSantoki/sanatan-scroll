@@ -1,256 +1,328 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_dimensions.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/utils/responsive.dart';
-import '../../../../core/widgets/gradient_button.dart';
 import '../../../../providers/onboarding_provider.dart';
+
+class OnboardingOption {
+  final String title;
+  final Color defaultBgColor;
+  final Color selectedBgColor;
+  final Color defaultTextColor;
+  final Color selectedTextColor;
+  final Color? borderColor;
+  final IconData iconData;
+
+  const OnboardingOption({
+    required this.title,
+    required this.defaultBgColor,
+    required this.selectedBgColor,
+    required this.defaultTextColor,
+    required this.selectedTextColor,
+    this.borderColor,
+    required this.iconData,
+  });
+}
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
+  static const List<OnboardingOption> _options = [
+    OnboardingOption(
+      title: 'Understand Hindu Scriptures',
+      defaultBgColor: Color(0xFFFBC07E),
+      selectedBgColor: Color(0xFFF9A852),
+      defaultTextColor: Color(0xFF141814),
+      selectedTextColor: Color(0xFF141814),
+      iconData: Icons.auto_awesome_mosaic_outlined,
+    ),
+    OnboardingOption(
+      title: 'Learn About My Roots',
+      defaultBgColor: Color(0xFF858D5C),
+      selectedBgColor: Color(0xFF747C4B),
+      defaultTextColor: Colors.white,
+      selectedTextColor: Colors.white,
+      iconData: Icons.import_contacts_outlined,
+    ),
+    OnboardingOption(
+      title: 'Deal With Overthinking',
+      defaultBgColor: Color(0xFFFDF3E9),
+      selectedBgColor: Color(0xFFFDF3E9),
+      defaultTextColor: Color(0xFF141814),
+      selectedTextColor: Color(0xFF141814),
+      borderColor: Color(0xFFD6CDBF),
+      iconData: Icons.psychology_outlined,
+    ),
+    OnboardingOption(
+      title: 'Build a Spiritual Habit',
+      defaultBgColor: Color(0xFFE0DCB7),
+      selectedBgColor: Color(0xFFD0CBA3),
+      defaultTextColor: Color(0xFF141814),
+      selectedTextColor: Color(0xFF141814),
+      iconData: Icons.eco_outlined,
+    ),
+    OnboardingOption(
+      title: 'Find Greater Peace',
+      defaultBgColor: Color(0xFFFDD3A3),
+      selectedBgColor: Color(0xFFFBBF83),
+      defaultTextColor: Color(0xFF141814),
+      selectedTextColor: Color(0xFF141814),
+      iconData: Icons.filter_vintage_outlined,
+    ),
+    OnboardingOption(
+      title: 'Find Purpose',
+      defaultBgColor: Color(0xFFFDF3E9),
+      selectedBgColor: Color(0xFFFDF3E9),
+      defaultTextColor: Color(0xFF141814),
+      selectedTextColor: Color(0xFF141814),
+      borderColor: Color(0xFFD6CDBF),
+      iconData: Icons.crop_square_rounded,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final padding = Responsive.horizontalPadding(context);
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final screenHeight = size.height;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 165, 118, 37),
-              Color.fromARGB(255, 233, 202, 155),
-              Color.fromARGB(255, 212, 169, 109),
-              Color.fromARGB(255, 192, 162, 117),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _OnboardingBanner(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    padding,
-                    20,
-                    padding,
-                    10,
+      backgroundColor: const Color(0xFFFAF0E4),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth < 360 ? 20.0 : 26.0,
+                  vertical: 12.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+
+                    // Top Illustration (Sacred Scroll Book with Om & Lotus Leaves)
+                    Center(
+                      child: Image.asset(
+                        'assets/images/onboarding_header_illustration.png',
+                        height: screenHeight < 650 ? 95 : 120,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const SizedBox(height: 90);
+                        },
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight < 650 ? 14 : 20),
+
+                    // Title: "What brings you to\nSanatan Scroll?"
+                    Text(
+                      'What brings you to\nSanatan Scroll?',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: screenWidth < 360 ? 32 : 38,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF141814),
+                        height: 1.1,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Subtitle: "Select your spiritual aspirations..."
+                    Text(
+                      'Select your spiritual aspirations to\npersonalise your daily reading path.',
+                      style: GoogleFonts.inter(
+                        fontSize: screenWidth < 360 ? 14 : 15.5,
+                        fontWeight: FontWeight.w400,
+                        color: const Color(0xFF2D352E),
+                        height: 1.35,
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight < 650 ? 20 : 26),
+
+                    // 6 Interactive Selection Cards
+                    Consumer<OnboardingProvider>(
+                      builder: (context, provider, _) {
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _options.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final option = _options[index];
+                            final isSelected =
+                                provider.isSelected(option.title);
+
+                            return _OptionCardWidget(
+                              option: option,
+                              isSelected: isSelected,
+                              onTap: () {
+                                provider.toggleInterest(option.title);
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom "Continue ->" Pill Button
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth < 360 ? 20.0 : 26.0,
+                8.0,
+                screenWidth < 360 ? 20.0 : 26.0,
+                20.0,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pushReplacementNamed(
+                      AppRoutes.main,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF212121),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
-                  child: Column(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'What brings you to Sanatan Scroll?',
-                        style: AppTextStyles.pageHeading.copyWith(
-                          color: AppColors.darkBurgundy,
+                        'Continue',
+                        style: GoogleFonts.inter(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(
-                        height: AppDimensions.spacing12,
-                      ),
-                      Text(
-                        'Select your spiritual aspirations to personalize your daily reading path.',
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.secondaryText,
-                          height: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(
-                        height: AppDimensions.spacing24,
-                      ),
-                      Consumer<OnboardingProvider>(
-                        builder: (context, provider, child) {
-                          return Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            alignment: WrapAlignment.center,
-                            children:
-                                AppConstants.interestOptions.map((interest) {
-                              final isSelected = provider.isSelected(interest);
-
-                              return _InterestChip(
-                                label: interest,
-                                isSelected: isSelected,
-                                onTap: () {
-                                  provider.toggleInterest(interest);
-                                },
-                              );
-                            }).toList(),
-                          );
-                        },
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 20,
+                        color: Colors.white,
                       ),
                     ],
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  padding,
-                  10,
-                  padding,
-                  24,
-                ),
-                child: Consumer<OnboardingProvider>(
-                  builder: (context, provider, child) {
-                    return GradientButton(
-                      label: 'Continue',
-                      isEnabled: provider.hasSelection,
-                      onPressed: () {
-                        if (!provider.hasSelection) return;
-
-                        Navigator.of(context).pushReplacementNamed(
-                          AppRoutes.beginJourney,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _OnboardingBanner extends StatelessWidget {
-  const _OnboardingBanner();
+class _OptionCardWidget extends StatelessWidget {
+  final OnboardingOption option;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 250,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color.fromARGB(255, 165, 118, 37),
-                  Color.fromARGB(255, 233, 202, 155),
-                  Color.fromARGB(255, 212, 169, 109),
-                  Color.fromARGB(255, 192, 162, 117),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-          Image.asset(
-            'assets/images/sanatan_page.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (context, error, stackTrace) {
-              return const SizedBox.shrink();
-            },
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  AppColors.mainBackground.withValues(alpha: 0.20),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InterestChip extends StatelessWidget {
-  const _InterestChip({
-    required this.label,
+  const _OptionCardWidget({
+    required this.option,
     required this.isSelected,
     required this.onTap,
   });
 
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
+    final bgColor =
+        isSelected ? option.selectedBgColor : option.defaultBgColor;
+
+    final textColor =
+        isSelected ? option.selectedTextColor : option.defaultTextColor;
+
+    final borderColor = isSelected
+        ? (option.borderColor ?? Colors.transparent)
+        : (option.borderColor ?? Colors.transparent);
+
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 13,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: isSelected
-                  ? const LinearGradient(
-                      colors: [
-                        Color(0xFF7A2027),
-                        Color(0xFFB44A3D),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
-                  : null,
-              color: isSelected ? null : AppColors.cardBackground,
-              border: Border.all(
-                color: isSelected ? Colors.transparent : AppColors.divider,
-              ),
-              boxShadow: [
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: borderColor,
+          width: option.borderColor != null ? 1.2 : 0,
+        ),
+        boxShadow: isSelected
+            ? [
                 BoxShadow(
-                  color: isSelected
-                      ? const Color(0xFF7A2027).withValues(alpha: 0.16)
-                      : Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 12,
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
-              ],
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 18.0,
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: isSelected ? AppColors.white : AppColors.darkText,
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                // Icon
+                Icon(
+                  option.iconData,
+                  size: 26,
+                  color: textColor,
+                ),
+
+                const SizedBox(width: 16),
+
+                // Card Title
+                Expanded(
+                  child: Text(
+                    option.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: textColor,
+                    ),
                   ),
                 ),
-                if (isSelected) ...[
-                  const SizedBox(width: 6),
-                  const Icon(
-                    Icons.auto_awesome,
-                    size: 14,
-                    color: Color(0xFFFFD77A),
+
+                // Selected Checkmark Badge (white circle with checkmark)
+                if (isSelected)
+                  Container(
+                    width: 32,
+                    height: 32,
+                    margin: const EdgeInsets.only(left: 10),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 20,
+                      color: Color(0xFF141814),
+                    ),
                   ),
-                ],
               ],
             ),
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_dimensions.dart';
-import '../../app/theme/app_text_styles.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../constants/app_constants.dart';
 
 class CustomBottomNavigation extends StatelessWidget {
@@ -19,58 +18,43 @@ class CustomBottomNavigation extends StatelessWidget {
     final items = AppConstants.bottomNavigationItems;
 
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.darkText.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: Color(0xFF1D201D),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
       ),
       child: SafeArea(
-        child: SizedBox(
-          height: AppDimensions.bottomNavHeight,
+        child: Container(
+          height: 68,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: List.generate(items.length, (index) {
               final item = items[index];
               final isSelected = currentIndex == index;
+              final activeColor = const Color(0xFFE88242);
+              final inactiveColor = Colors.white.withValues(alpha: 0.65);
+
               return Expanded(
                 child: InkWell(
                   onTap: () => onTap(index),
+                  borderRadius: BorderRadius.circular(16),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryBurgundy.withValues(alpha: 0.1)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          isSelected ? item.activeIcon : item.icon,
-                          color: isSelected
-                              ? AppColors.primaryBurgundy
-                              : AppColors.mutedBrown,
-                          size: 24,
-                        ),
+                      Icon(
+                        isSelected ? item.activeIcon : item.icon,
+                        color: isSelected ? activeColor : inactiveColor,
+                        size: 24,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         item.label,
-                        style: AppTextStyles.navLabel.copyWith(
-                          color: isSelected
-                              ? AppColors.primaryBurgundy
-                              : AppColors.mutedBrown,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
                           fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                          color: isSelected ? activeColor : inactiveColor,
                         ),
                       ),
                     ],

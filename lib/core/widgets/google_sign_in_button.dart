@@ -7,10 +7,16 @@ class GoogleSignInButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.isLoading = false,
+    this.backgroundColor = const Color(0xFFF9CCA5),
+    this.foregroundColor = const Color(0xFF141814),
+    this.borderColor = const Color(0xFFF9CCA5),
   });
 
   final VoidCallback? onPressed;
   final bool isLoading;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +24,9 @@ class GoogleSignInButton extends StatelessWidget {
       label: 'Continue with Google',
       onPressed: onPressed,
       isLoading: isLoading,
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      borderColor: borderColor,
       leading: const _GoogleIcon(),
     );
   }

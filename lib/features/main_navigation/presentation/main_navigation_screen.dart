@@ -16,6 +16,7 @@ class MainNavigationScreen extends StatelessWidget {
     FeedScreen(),
     StreakScreen(),
     SavedScreen(),
+    FeedScreen(),
     ProfileScreen(),
   ];
 
@@ -23,48 +24,17 @@ class MainNavigationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<NavigationProvider>(
       builder: (context, nav, _) {
+        final currentIndex = nav.currentIndex.clamp(0, _screens.length - 1);
+
         return Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: const Color(0xFFFAF0E4),
           body: IndexedStack(
-            index: nav.currentIndex,
+            index: currentIndex,
             children: _screens,
           ),
-          bottomNavigationBar: const _BottomNavigationWrapper(),
-        );
-      },
-    );
-  }
-}
-
-class _BottomNavigationWrapper extends StatelessWidget {
-  const _BottomNavigationWrapper();
-
-  static const List<Color> _backgroundColors = [
-    Color.fromARGB(255, 165, 118, 37),
-    Color.fromARGB(255, 233, 202, 155),
-    Color.fromARGB(255, 212, 169, 109),
-    Color.fromARGB(255, 192, 162, 117),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<NavigationProvider>(
-      builder: (context, nav, _) {
-        return Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: _backgroundColors,
-              stops: [0.0, 0.35, 0.68, 1.0],
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: CustomBottomNavigation(
-              currentIndex: nav.currentIndex,
-              onTap: nav.setIndex,
-            ),
+          bottomNavigationBar: CustomBottomNavigation(
+            currentIndex: currentIndex,
+            onTap: nav.setIndex,
           ),
         );
       },
