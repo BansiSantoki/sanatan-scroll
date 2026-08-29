@@ -37,15 +37,35 @@ class AppPages {
 
       // Sacred Text Detail Screen
       case AppRoutes.sacredTextDetail:
-        final textId = settings.arguments as String? ?? 'bhagavad_gita';
+        final dynamic args = settings.arguments;
+        String bookId = 'bhagavad_gita';
+
+        if (args is String) {
+          bookId = args;
+        } else if (args is Map) {
+          final value = args['bookId'] ?? args['textId'];
+          if (value is String && value.isNotEmpty) {
+            bookId = value;
+          }
+        }
 
         return _slideRoute(
-          SacredTextDetailScreen(textId: textId),
+          SacredTextDetailScreen(bookId: bookId),
           settings,
         );
 
       case AppRoutes.sacredChapterList:
-        final textId = settings.arguments as String? ?? 'bhagavad_gita';
+        final dynamic args = settings.arguments;
+        String textId = 'bhagavad_gita';
+
+        if (args is String) {
+          textId = args;
+        } else if (args is Map) {
+          final value = args['bookId'] ?? args['textId'];
+          if (value is String && value.isNotEmpty) {
+            textId = value;
+          }
+        }
 
         return _slideRoute(
           SacredChapterListScreen(textId: textId),

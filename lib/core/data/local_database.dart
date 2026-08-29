@@ -100,13 +100,27 @@ class LocalDatabase {
     final set = completed.map((d) => DateTime(d.year, d.month, d.day)).toSet();
 
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
     int current = 0;
-    for (int i = 0; ; i++) {
-      final day = DateTime(now.year, now.month, now.day - i);
-      if (set.contains(day)) {
-        current++;
-      } else {
-        break;
+    if (set.contains(today)) {
+      for (int i = 0; ; i++) {
+        final day = today.subtract(Duration(days: i));
+        if (set.contains(day)) {
+          current++;
+        } else {
+          break;
+        }
+      }
+    } else if (set.contains(yesterday)) {
+      for (int i = 1; ; i++) {
+        final day = today.subtract(Duration(days: i));
+        if (set.contains(day)) {
+          current++;
+        } else {
+          break;
+        }
       }
     }
 

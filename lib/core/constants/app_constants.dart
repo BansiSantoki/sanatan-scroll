@@ -33,8 +33,8 @@ class AppConstants {
       label: 'Home',
     ),
     AppNavigationItem(
-      icon: Icons.power_settings_new_rounded,
-      activeIcon: Icons.power_settings_new_rounded,
+      icon: Icons.local_fire_department_outlined,
+      activeIcon: Icons.local_fire_department_rounded,
       label: 'Streak',
     ),
     AppNavigationItem(
@@ -43,8 +43,8 @@ class AppConstants {
       label: 'Saved',
     ),
     AppNavigationItem(
-      icon: Icons.subtitles_outlined,
-      activeIcon: Icons.wysiwyg_rounded,
+      icon: Icons.menu_book_outlined,
+      activeIcon: Icons.menu_book_rounded,
       label: 'Feed',
     ),
     AppNavigationItem(
@@ -77,8 +77,9 @@ class AppConstants {
 
   static const List<String> savedFilters = [
     'All',
-    'Verses',
-    'Readings',
-    'Reflections',
+    'Bhagavad Gita',
+    'Ramayana',
+    'Upanishads',
+    'Mahabharata',
   ];
 }

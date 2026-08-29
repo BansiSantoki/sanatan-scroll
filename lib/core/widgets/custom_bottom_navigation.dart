@@ -18,46 +18,68 @@ class CustomBottomNavigation extends StatelessWidget {
     final items = AppConstants.bottomNavigationItems;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1D201D),
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(28),
-        ),
-      ),
+      color: const Color(0xFFFAF5ED),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: SafeArea(
+        top: false,
         child: Container(
           height: 68,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFDF9),
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(
+              color: const Color(0xFFE8DEC8).withValues(alpha: 0.8),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             children: List.generate(items.length, (index) {
               final item = items[index];
               final isSelected = currentIndex == index;
-              final activeColor = const Color(0xFFE88242);
-              final inactiveColor = Colors.white.withValues(alpha: 0.65);
+              final activeColor = const Color(0xFFC85A32);
+              final inactiveColor = const Color(0xFF4A4B46);
 
               return Expanded(
-                child: InkWell(
+                child: GestureDetector(
                   onTap: () => onTap(index),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        isSelected ? item.activeIcon : item.icon,
-                        color: isSelected ? activeColor : inactiveColor,
-                        size: 24,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFFFDECDA)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isSelected ? item.activeIcon : item.icon,
                           color: isSelected ? activeColor : inactiveColor,
+                          size: 22,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 3),
+                        Text(
+                          item.label,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11.5,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isSelected ? activeColor : inactiveColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );

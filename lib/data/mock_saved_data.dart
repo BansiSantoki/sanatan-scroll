@@ -49,8 +49,8 @@ class MockSavedData {
       type: SavedItemType.reading,
       title: 'Dharma in Daily Life',
       content:
-          'Dharma is not merely ritual — it is the righteous path we walk each day through our thoughts, words, and actions.',
-      source: 'Ramayana',
+          'Dharma is not merely ritual — it is the righteous path we walk each day through our choices.',
+      source: 'Daily Flow',
     ),
   ];
 }

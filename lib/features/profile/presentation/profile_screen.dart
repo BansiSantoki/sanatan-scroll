@@ -1,188 +1,164 @@
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../providers/auth_provider.dart';
-import '../../../../providers/onboarding_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-
-import '../../streak/presentation/streak_screen.dart';
-
-import '../../../../models/streak_model.dart';
-import '../../../../data/mock_streak_data.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+
+    final horizontalPadding = width >= 900
+        ? 40.0
+        : width >= 600
+            ? 28.0
+            : 18.0;
+
+    final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Consumer<AuthProvider>(
           builder: (context, auth, child) {
-            final firebaseUser =
-                firebase_auth.FirebaseAuth.instance.currentUser;
+            final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
 
-            final String name =
-                auth.userName.trim().isNotEmpty
-                    ? auth.userName.trim()
-                    : 'Sanatan Sadhaka';
+            final String name = auth.userName.trim().isNotEmpty
+                ? auth.userName.trim()
+                : 'Bansi Santoki';
 
-            final String email =
-                firebaseUser?.email ?? '';
+            final String email = firebaseUser?.email ?? 'bansisantoki2005@gmail.com';
 
-            final String? photoUrl =
-                auth.userPhotoUrl?.trim().isNotEmpty == true
-                    ? auth.userPhotoUrl
-                    : firebaseUser?.photoURL;
+            final String? photoUrl = auth.userPhotoUrl?.trim().isNotEmpty == true
+                ? auth.userPhotoUrl
+                : firebaseUser?.photoURL;
 
-            // ==================================================
-            // STREAK DATA
-            // ==================================================
+            return Stack(
+              children: [
+                // Top-Right Sun & Botanical Leaf Decorative Graphic
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: CustomPaint(
+                    size: const Size(180, 180),
+                    painter: _HeaderDecorationPainter(),
+                  ),
+                ),
 
-            final StreakModel streak =
-                MockStreakData.initial;
-
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                18,
-                12,
-                18,
-                20,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  // ==========================================
-                  // PAGE TITLE
-                  // ==========================================
-
-                  Text(
-                    'My Profile',
-                    style:
-                        AppTextStyles.pageHeading.copyWith(
-                      fontSize: 32,
+                // Main Scrollable Content
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: maxContentWidth,
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ==========================================
-                  // PROFILE CARD
-                  // ==========================================
-
-                  _ProfileCard(
-                    name: name,
-                    email: email,
-                    photoUrl: photoUrl,
-                    onEdit: () =>
-                        _showProfileEditor(context),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ==========================================
-                  // PROFILE MENU
-                  // ==========================================
-
-                  _ProfileMenuCard(
-                    onMilestones: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const StreakScreen(),
-                        ),
-                      );
-                    },
-                    onSettings: () {
-                      Navigator.of(context).pushNamed(
-                        AppRoutes.settings,
-                      );
-                    },
-                    onHelp: () {
-                      _showInfoDialog(
-                        context,
-                        'Help & Support',
-                        'Need help with Sanatan Scroll? Support options will be available here.',
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ==========================================
-                  // WEEKLY STREAK
-                  // ==========================================
-
-                  _WeeklyStreakCard(
-                    streak: streak,
-                    onTap: () {
-                      _showStreakCalendar(
-                        context,
-                        streak,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ==========================================
-                  // SYNC CARD
-                  // ==========================================
-
-                  const _SyncCard(),
-
-                  const SizedBox(height: 18),
-
-                  // ==========================================
-                  // SIGN OUT
-                  // ==========================================
-
-                  Center(
-                    child: TextButton(
-                      onPressed: auth.isLoading
-                          ? null
-                          : () =>
-                              _showSignOutDialog(
-                                context,
-                              ),
-                      style: TextButton.styleFrom(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 8,
-                        ),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.only(
+                        left: horizontalPadding,
+                        right: horizontalPadding,
+                        top: 10,
+                        bottom: 24,
                       ),
-                      child: auth.isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              'Sign Out',
-                              style: AppTextStyles
-                                  .bodyMedium
-                                  .copyWith(
-                                color:
-                                    AppColors.accentRed,
-                                fontSize: 17,
-                                fontWeight:
-                                    FontWeight.w700,
-                              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header (My Profile & Subtitle)
+                          _buildHeader(),
+
+                          const SizedBox(height: 20),
+
+                          // Profile Summary Card
+                          _ProfileSummaryCard(
+                            name: name,
+                            email: email,
+                            photoUrl: photoUrl,
+                            onEdit: () => _showProfileEditor(context),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // 1. Milestones & Achievements Card
+                          _MenuTileCard(
+                            icon: Icons.emoji_events_outlined,
+                            iconBgColor: const Color(0xFFE0E5CE),
+                            iconColor: const Color(0xFF495736),
+                            cardBgColor: const Color(0xFFEFF2E4),
+                            title: 'Milestones & Achievements',
+                            subtitle: 'Track your growth and celebrate.',
+                            onTap: () {
+                              ScaffoldMessenger.of(context)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Milestones & Achievements'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                            },
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // 2. Settings Card
+                          _MenuTileCard(
+                            icon: Icons.settings_outlined,
+                            iconBgColor: const Color(0xFFF7D4B6),
+                            iconColor: const Color(0xFFD96E28),
+                            cardBgColor: const Color(0xFFFDECDA),
+                            title: 'Settings',
+                            subtitle: 'Manage your preferences.',
+                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.settings),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // 3. Help & Support Card
+                          _MenuTileCard(
+                            icon: Icons.help_outline_rounded,
+                            iconBgColor: const Color(0xFFF9E7B6),
+                            iconColor: const Color(0xFFC8932A),
+                            cardBgColor: const Color(0xFFFDF4DA),
+                            title: 'Help & Support',
+                            subtitle: "We're here to help you.",
+                            onTap: () => _showInfoDialog(
+                              context,
+                              'Help & Support',
+                              'Need help with Sanatan Scroll? We are here to support your spiritual journey.',
                             ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // 4. Synced Across Devices Card
+                          const _SyncedDevicesCard(),
+
+                          const SizedBox(height: 14),
+
+                          // 5. Sign Out Option (ID: logout)
+                          _MenuTileCard(
+                            key: const Key('logout'),
+                            icon: Icons.logout_rounded,
+                            iconBgColor: const Color(0xFFFAD1C7),
+                            iconColor: const Color(0xFFC83A2A),
+                            cardBgColor: const Color(0xFFFDE8E4),
+                            title: 'Sign Out',
+                            titleColor: const Color(0xFFC83A2A),
+                            subtitle: 'Log out of your account.',
+                            onTap: () => _confirmSignOut(context),
+                          ),
+
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
@@ -190,70 +166,136 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  // ==========================================================
-  // PROFILE EDITOR
-  // ==========================================================
+  // ============================================================
+  // HEADER (My Profile & Subtitle)
+  // ============================================================
 
-  Future<void> _showProfileEditor(
-    BuildContext context,
-  ) async {
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'My Profile',
+          style: GoogleFonts.cormorantGaramond(
+            fontSize: 36,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1B1B1B),
+            height: 1.05,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Your account, your journey.',
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF555555),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // SIGN OUT CONFIRMATION DIALOG
+  // ============================================================
+
+  void _confirmSignOut(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: const Color(0xFFFAF7F2),
+          title: Text(
+            'Sign Out',
+            style: GoogleFonts.manrope(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1B1B1B),
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to sign out of your account?',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              height: 1.45,
+              color: const Color(0xFF555555),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const Key('logout_confirm'),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await context.read<AuthProvider>().signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.auth,
+                    (route) => false,
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC83A2A),
+              ),
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // EDIT PROFILE DIALOG
+  // ============================================================
+
+  Future<void> _showProfileEditor(BuildContext context) async {
     final auth = context.read<AuthProvider>();
-
-    final nameController =
-        TextEditingController(
-      text: auth.userName,
-    );
-
-    final photoController =
-        TextEditingController(
-      text: auth.userPhotoUrl ?? '',
-    );
+    final nameController = TextEditingController(text: auth.userName);
+    final photoController = TextEditingController(text: auth.userPhotoUrl ?? '');
 
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
+          backgroundColor: const Color(0xFFFAF7F2),
+          title: Text(
             'Edit Profile',
-            style: TextStyle(
-              fontSize: 20,
+            style: GoogleFonts.manrope(
+              fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: SingleChildScrollView(
             child: Column(
-              mainAxisSize:
-                  MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller:
-                      nameController,
-                  textCapitalization:
-                      TextCapitalization.words,
-                  decoration:
-                      const InputDecoration(
-                    labelText:
-                        'Display name',
+                  controller: nameController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Display name',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-
-                const SizedBox(
-                  height: 12,
-                ),
-
+                const SizedBox(height: 14),
                 TextField(
-                  controller:
-                      photoController,
-                  keyboardType:
-                      TextInputType.url,
-                  decoration:
-                      const InputDecoration(
-                    labelText:
-                        'Photo URL',
+                  controller: photoController,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(
+                    labelText: 'Photo URL',
+                    border: OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -261,56 +303,36 @@ class ProfileScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
-              },
-              child:
-                  const Text('Cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-
             FilledButton(
               onPressed: () async {
-                if (nameController
-                    .text
-                    .trim()
-                    .isEmpty) {
+                if (nameController.text.trim().isEmpty) {
                   return;
                 }
 
-                final error =
-                    await auth.updateProfile(
-                  displayName:
-                      nameController.text
-                          .trim(),
-                  photoUrl:
-                      photoController.text
-                          .trim(),
+                final error = await auth.updateProfile(
+                  displayName: nameController.text.trim(),
+                  photoUrl: photoController.text.trim(),
                 );
 
                 if (!dialogContext.mounted) {
                   return;
                 }
 
-                Navigator.of(
-                  dialogContext,
-                ).pop();
+                Navigator.of(dialogContext).pop();
 
-                if (error != null &&
-                    context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(
-                    SnackBar(
-                      content:
-                          Text(error),
-                    ),
+                if (error != null && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error)),
                   );
                 }
               },
-              child:
-                  const Text('Save'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1B1B1B),
+              ),
+              child: const Text('Save'),
             ),
           ],
         );
@@ -321,166 +343,47 @@ class ProfileScreen extends StatelessWidget {
     photoController.dispose();
   }
 
-  // ==========================================================
-  // INFO DIALOG
-  // ==========================================================
-
-  void _showInfoDialog(
-    BuildContext context,
-    String title,
-    String message,
-  ) {
+  void _showInfoDialog(BuildContext context, String title, String message) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
           ),
+          backgroundColor: const Color(0xFFFAF7F2),
           title: Text(
             title,
-            style:
-                AppTextStyles.cardTitle.copyWith(
-              fontSize: 19,
+            style: GoogleFonts.manrope(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
             message,
-            style:
-                AppTextStyles.body.copyWith(
+            style: GoogleFonts.manrope(
               fontSize: 14,
+              height: 1.5,
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
-              },
-              child:
-                  const Text('Close'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  // ==========================================================
-  // SIGN OUT DIALOG
-  // ==========================================================
-
-  void _showSignOutDialog(
-    BuildContext context,
-  ) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(18),
-          ),
-          title: Text(
-            'Sign Out',
-            style:
-                AppTextStyles.cardTitle.copyWith(
-              fontSize: 20,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to sign out of Sanatan Scroll?',
-            style:
-                AppTextStyles.body.copyWith(
-              fontSize: 14,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
-              },
-              child:
-                  const Text('Cancel'),
-            ),
-
-            TextButton(
-              onPressed: () async {
-                Navigator.of(
-                  dialogContext,
-                ).pop();
-
-                final authProvider =
-                    context.read<
-                        AuthProvider>();
-
-                final onboardingProvider =
-                    context.read<
-                        OnboardingProvider>();
-
-                await authProvider
-                    .signOut();
-
-                if (!context.mounted) {
-                  return;
-                }
-
-                onboardingProvider.reset();
-
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(
-                  AppRoutes.auth,
-                  (route) => false,
-                );
-              },
-              child: Text(
-                'Sign Out',
-                style: TextStyle(
-                  color:
-                      AppColors.accentRed,
-                  fontWeight:
-                      FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ==========================================================
-  // STREAK CALENDAR POPUP
-  // ==========================================================
-
-  void _showStreakCalendar(
-    BuildContext context,
-    StreakModel streak,
-  ) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return _StreakCalendarDialog(
-          streak: streak,
         );
       },
     );
   }
 }
 
-// ==========================================================
-// PROFILE CARD
-// ==========================================================
+// ============================================================
+// PROFILE SUMMARY CARD
+// ============================================================
 
-class _ProfileCard
-    extends StatelessWidget {
-  const _ProfileCard({
+class _ProfileSummaryCard extends StatelessWidget {
+  const _ProfileSummaryCard({
     required this.name,
     required this.email,
     required this.photoUrl,
@@ -496,88 +399,79 @@ class _ProfileCard
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding:
-          const EdgeInsets.fromLTRB(
-        16,
-        20,
-        16,
-        18,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
-        color:
-            AppColors.cardBackground,
-        borderRadius:
-            BorderRadius.circular(22),
-        border: Border.all(
-          color: AppColors.divider,
-          width: 1,
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFF7EF),
+            Color(0xFFFDE8D4),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Profile Photo & Edit Button
           Stack(
-            clipBehavior:
-                Clip.none,
+            clipBehavior: Clip.none,
             children: [
               Container(
-                width: 86,
-                height: 86,
-                decoration:
-                    BoxDecoration(
-                  shape:
-                      BoxShape.circle,
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   border: Border.all(
-                    color:
-                        AppColors.divider,
-                    width: 2,
+                    color: Colors.white,
+                    width: 3.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: ClipOval(
-                  child: photoUrl !=
-                              null &&
-                          photoUrl!
-                              .isNotEmpty
+                  child: photoUrl != null && photoUrl!.isNotEmpty
                       ? Image.network(
                           photoUrl!,
-                          width: 86,
-                          height: 86,
                           fit: BoxFit.cover,
-                          errorBuilder:
-                              (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
-                            return _defaultAvatar();
-                          },
+                          errorBuilder: (_, __, ___) => _defaultAvatar(),
                         )
                       : _defaultAvatar(),
                 ),
               ),
-
               Positioned(
-                right: -2,
-                bottom: -2,
-                child: Material(
-                  color:
-                      AppColors.accentRed,
-                  shape:
-                      const CircleBorder(),
-                  child: InkWell(
-                    onTap: onEdit,
-                    customBorder:
-                        const CircleBorder(),
-                    child:
-                        const SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: Icon(
-                        Icons
-                            .edit_rounded,
-                        size: 17,
-                        color:
-                            Colors.white,
+                right: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onTap: onEdit,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE48643),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2,
                       ),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 13,
                     ),
                   ),
                 ),
@@ -585,87 +479,63 @@ class _ProfileCard
             ],
           ),
 
-          const SizedBox(
-            height: 12,
-          ),
+          const SizedBox(width: 16),
 
-          Text(
-            name,
-            textAlign:
-                TextAlign.center,
-            maxLines: 1,
-            overflow:
-                TextOverflow.ellipsis,
-            style:
-                AppTextStyles.cardTitle
-                    .copyWith(
-              fontSize: 24,
-              fontWeight:
-                  FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(
-            height: 4,
-          ),
-
-          if (email.isNotEmpty)
-            Text(
-              email,
-              textAlign:
-                  TextAlign.center,
-              maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-              style: AppTextStyles
-                  .caption
-                  .copyWith(
-                fontSize: 14,
-              ),
-            ),
-
-          const SizedBox(
-            height: 10,
-          ),
-
-          Container(
-            padding:
-                const EdgeInsets
-                    .symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
-            decoration:
-                BoxDecoration(
-              color: AppColors
-                  .peachHighlight
-                  .withValues(
-                alpha: 0.45,
-              ),
-              borderRadius:
-                  BorderRadius.circular(
-                20,
-              ),
-            ),
-            child:
-                const Row(
-              mainAxisSize:
-                  MainAxisSize.min,
+          // User Name, Email & Verification Badge
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons
-                      .verified_outlined,
-                  size: 16,
-                ),
-                SizedBox(
-                  width: 6,
-                ),
                 Text(
-                  'Google Verified',
-                  style: TextStyle(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.cormorantGaramond(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1B1B1B),
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
                     fontSize: 13,
-                    fontWeight:
-                        FontWeight.w600,
+                    color: const Color(0xFF555555),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE4E8D5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 13,
+                        color: Color(0xFF495736),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Google Verified',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF495736),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -678,1265 +548,239 @@ class _ProfileCard
 
   Widget _defaultAvatar() {
     return Container(
-      color:
-          AppColors.peachHighlight,
-      child: const Icon(
-        Icons.person_rounded,
-        size: 48,
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// PROFILE MENU
-// ==========================================================
-
-class _ProfileMenuCard
-    extends StatelessWidget {
-  const _ProfileMenuCard({
-    required this.onMilestones,
-    required this.onSettings,
-    required this.onHelp,
-  });
-
-  final VoidCallback onMilestones;
-  final VoidCallback onSettings;
-  final VoidCallback onHelp;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color:
-            AppColors.cardBackground,
-        borderRadius:
-            BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.divider,
-        ),
-      ),
-      child: Column(
-        children: [
-          _CompactMenuTile(
-            icon: Icons
-                .emoji_events_outlined,
-            title:
-                'Milestones & Achievements',
-            onTap:
-                onMilestones,
-          ),
-
-          _menuDivider(),
-
-          _CompactMenuTile(
-            icon: Icons
-                .settings_outlined,
-            title: 'Settings',
-            onTap: onSettings,
-          ),
-
-          _menuDivider(),
-
-          _CompactMenuTile(
-            icon: Icons
-                .help_outline_rounded,
-            title:
-                'Help & Support',
-            onTap: onHelp,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _menuDivider() {
-    return Padding(
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 18,
-      ),
-      child: Divider(
-        height: 1,
-        color: AppColors.divider,
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// COMPACT MENU TILE
-// ==========================================================
-
-class _CompactMenuTile
-    extends StatelessWidget {
-  const _CompactMenuTile({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius:
-          BorderRadius.circular(20),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 23,
-              color:
-                  AppColors.primaryBurgundy,
-            ),
-
-            const SizedBox(
-              width: 16,
-            ),
-
-            Expanded(
-              child: Text(
-                title,
-                style: AppTextStyles
-                    .bodyMedium
-                    .copyWith(
-                  fontSize: 16,
-                  fontWeight:
-                      FontWeight.w500,
-                ),
-              ),
-            ),
-
-            Icon(
-              Icons
-                  .chevron_right_rounded,
-              size: 24,
-              color:
-                  AppColors.primaryBurgundy,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// WEEKLY STREAK CARD
-// ==========================================================
-
-class _WeeklyStreakCard
-    extends StatelessWidget {
-  const _WeeklyStreakCard({
-    required this.streak,
-    required this.onTap,
-  });
-
-  final StreakModel streak;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-
-    // Dart weekday:
-    // Monday = 1
-    // Sunday = 7
-    //
-    // We want:
-    // Sunday, Monday, Tuesday...
-    final sunday = DateTime(
-      now.year,
-      now.month,
-      now.day -
-          (now.weekday % 7),
-    );
-
-    const dayLabels = [
-      'S',
-      'M',
-      'T',
-      'W',
-      'T',
-      'F',
-      'S',
-    ];
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding:
-            const EdgeInsets.fromLTRB(
-          16,
-          14,
-          16,
-          16,
-        ),
-        decoration: BoxDecoration(
-          color:
-              AppColors.cardBackground,
-          borderRadius:
-              BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.divider,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black
-                  .withValues(
-                alpha: 0.06,
-              ),
-              blurRadius: 8,
-              offset:
-                  const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            // ==========================================
-            // HEADER
-            // ==========================================
-
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'WEEKLY STREAK',
-                    style:
-                        AppTextStyles
-                            .label
-                            .copyWith(
-                      fontSize: 10,
-                      fontWeight:
-                          FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-
-                // Diya
-                _LegendDot(
-                  color:
-                      Colors.amber,
-                  label: 'Diya',
-                ),
-
-                const SizedBox(
-                  width: 12,
-                ),
-
-                // Bhog
-                _LegendDot(
-                  color:
-                      AppColors.accentRed,
-                  label: 'Bhog',
-                ),
-              ],
-            ),
-
-            const SizedBox(
-              height: 10,
-            ),
-
-            // ==========================================
-            // WEEK DAYS
-            // ==========================================
-
-            Row(
-              children:
-                  List.generate(
-                7,
-                (index) {
-                  final date =
-                      sunday.add(
-                    Duration(
-                      days: index,
-                    ),
-                  );
-
-                  final completed =
-                      streak
-                          .isCompleted(
-                    date,
-                  );
-
-                  final isToday =
-                      date.year ==
-                              now.year &&
-                          date.month ==
-                              now.month &&
-                          date.day ==
-                              now.day;
-
-                  return Expanded(
-                    child:
-                        _WeekDayItem(
-                      label:
-                          dayLabels[
-                              index],
-                      date: date,
-                      completed:
-                          completed,
-                      isToday:
-                          isToday,
-                      isDiya: streak
-                          .isDiyaOffering(
-                        date,
-                      ),
-                      isBhog: streak
-                          .isBhogOffering(
-                        date,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// WEEK DAY ITEM
-// ==========================================================
-
-class _WeekDayItem
-    extends StatelessWidget {
-  const _WeekDayItem({
-    required this.label,
-    required this.date,
-    required this.completed,
-    required this.isToday,
-    required this.isDiya,
-    required this.isBhog,
-  });
-
-  final String label;
-  final DateTime date;
-  final bool completed;
-  final bool isToday;
-  final bool isDiya;
-  final bool isBhog;
-
-  @override
-  Widget build(BuildContext context) {
-    Color ringColor =
-        AppColors.divider;
-
-    if (isBhog) {
-      ringColor =
-          AppColors.accentRed;
-    } else if (isDiya) {
-      ringColor =
-          Colors.amber;
-    } else if (completed) {
-      ringColor =
-          AppColors.accentRed
-              .withValues(
-            alpha: 0.65,
-          );
-    }
-
-    return Column(
-      children: [
-        Text(
-          label,
-          style:
-              AppTextStyles.caption
-                  .copyWith(
-            fontSize: 8,
-            fontWeight: isToday
-                ? FontWeight.w800
-                : FontWeight.w500,
-          ),
-        ),
-
-        const SizedBox(
-          height: 4,
-        ),
-
-        Container(
-          width: 34,
-          height: 34,
-          decoration:
-              BoxDecoration(
-            shape:
-                BoxShape.circle,
-            color: completed
-                ? ringColor
-                    .withValues(
-                    alpha: 0.10,
-                  )
-                : Colors.transparent,
-            border: Border.all(
-              color: ringColor,
-              width: isToday
-                  ? 2.4
-                  : 1.8,
-            ),
-          ),
-          child: Center(
-            child:
-                completed
-                    ? Icon(
-                        isBhog
-                            ? Icons
-                                .restaurant_rounded
-                            : Icons
-                                .local_fire_department_rounded,
-                        size: 15,
-                        color:
-                            ringColor,
-                      )
-                    : null,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ==========================================================
-// LEGEND DOT
-// ==========================================================
-
-class _LegendDot
-    extends StatelessWidget {
-  const _LegendDot({
-    required this.color,
-    required this.label,
-  });
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize:
-          MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration:
-              BoxDecoration(
-            shape:
-                BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: 2,
-            ),
-          ),
-        ),
-        const SizedBox(
-          width: 4,
-        ),
-        Text(
-          label,
-          style:
-              AppTextStyles.caption
-                  .copyWith(
-            fontSize: 8,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ==========================================================
-// STREAK CALENDAR DIALOG
-// ==========================================================
-
-class _StreakCalendarDialog
-    extends StatefulWidget {
-  const _StreakCalendarDialog({
-    required this.streak,
-  });
-
-  final StreakModel streak;
-
-  @override
-  State<_StreakCalendarDialog>
-      createState() =>
-          _StreakCalendarDialogState();
-}
-
-class _StreakCalendarDialogState
-    extends State<
-        _StreakCalendarDialog> {
-  late DateTime displayedMonth;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final now = DateTime.now();
-
-    displayedMonth = DateTime(
-      now.year,
-      now.month,
-    );
-  }
-
-  void _previousMonth() {
-    setState(() {
-      displayedMonth = DateTime(
-        displayedMonth.year,
-        displayedMonth.month - 1,
-      );
-    });
-  }
-
-  void _nextMonth() {
-    final now = DateTime.now();
-
-    final currentMonth = DateTime(
-      now.year,
-      now.month,
-    );
-
-    final nextMonth = DateTime(
-      displayedMonth.year,
-      displayedMonth.month + 1,
-    );
-
-    // Don't allow future months.
-    if (nextMonth.isAfter(
-      currentMonth,
-    )) {
-      return;
-    }
-
-    setState(() {
-      displayedMonth = nextMonth;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-
-    final firstDay = DateTime(
-      displayedMonth.year,
-      displayedMonth.month,
-      1,
-    );
-
-    final daysInMonth =
-        DateTime(
-          displayedMonth.year,
-          displayedMonth.month + 1,
-          0,
-        ).day;
-
-    // Convert Monday based weekday to
-    // Sunday based index.
-    final startingOffset =
-        firstDay.weekday % 7;
-
-    final totalCells =
-        ((startingOffset +
-                    daysInMonth) /
-                7)
-            .ceil() *
-        7;
-
-    final monthTitle =
-        _monthName(
-      displayedMonth.month,
-    );
-
-    final currentMonth =
-        DateTime(
-      now.year,
-      now.month,
-    );
-
-    final isCurrentMonth =
-        displayedMonth.year ==
-                currentMonth.year &&
-            displayedMonth.month ==
-                currentMonth.month;
-
-    return Dialog(
-      backgroundColor:
-          Colors.transparent,
-      insetPadding:
-          const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 24,
-      ),
-      child: Container(
-        constraints:
-            const BoxConstraints(
-          maxHeight: 700,
-        ),
-        decoration:
-            BoxDecoration(
+      color: const Color(0xFF62A7DB),
+      child: const Center(
+        child: Icon(
+          Icons.person,
+          size: 48,
           color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(28),
-        ),
-        child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.fromLTRB(
-            22,
-            24,
-            22,
-            20,
-          ),
-          child: Column(
-            children: [
-              // ==========================================
-              // TOTAL DAYS
-              // ==========================================
-
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 18,
-                ),
-                decoration:
-                    BoxDecoration(
-                  color: AppColors
-                      .peachHighlight,
-                  borderRadius:
-                      BorderRadius.circular(
-                    24,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisSize:
-                          MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons
-                              .local_fire_department_rounded,
-                          size: 34,
-                          color:
-                              Colors.orange,
-                        ),
-                        const SizedBox(
-                          width: 6,
-                        ),
-                        Text(
-                          '${widget.streak.totalDays}',
-                          style:
-                              AppTextStyles
-                                  .pageHeading
-                                  .copyWith(
-                            fontSize: 34,
-                            color: AppColors
-                                .primaryBurgundy,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(
-                      height: 4,
-                    ),
-                    Text(
-                      'Total days of offerings',
-                      style:
-                          AppTextStyles
-                              .body
-                              .copyWith(
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(
-                height: 24,
-              ),
-
-              // ==========================================
-              // MONTH NAVIGATION
-              // ==========================================
-
-              Row(
-                children: [
-                  _CalendarNavButton(
-                    icon: Icons
-                        .chevron_left_rounded,
-                    onTap:
-                        _previousMonth,
-                  ),
-
-                  Expanded(
-                    child: Text(
-                      '$monthTitle ${displayedMonth.year}',
-                      textAlign:
-                          TextAlign.center,
-                      style:
-                          AppTextStyles
-                              .sectionHeading
-                              .copyWith(
-                        fontSize: 22,
-                        color: AppColors
-                            .accentRed,
-                      ),
-                    ),
-                  ),
-
-                  _CalendarNavButton(
-                    icon: Icons
-                        .chevron_right_rounded,
-                    onTap: isCurrentMonth
-                        ? null
-                        : _nextMonth,
-                  ),
-                ],
-              ),
-
-              const SizedBox(
-                height: 20,
-              ),
-
-              // ==========================================
-              // WEEK HEADER
-              // ==========================================
-
-              Row(
-                children: const [
-                  _CalendarWeekLabel('S'),
-                  _CalendarWeekLabel('M'),
-                  _CalendarWeekLabel('T'),
-                  _CalendarWeekLabel('W'),
-                  _CalendarWeekLabel('T'),
-                  _CalendarWeekLabel('F'),
-                  _CalendarWeekLabel('S'),
-                ],
-              ),
-
-              const SizedBox(
-                height: 8,
-              ),
-
-              // ==========================================
-              // CALENDAR
-              // ==========================================
-
-              GridView.builder(
-                shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(),
-                itemCount:
-                    totalCells,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 7,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 4,
-                ),
-                itemBuilder:
-                    (context, index) {
-                  final dayNumber =
-                      index -
-                          startingOffset +
-                          1;
-
-                  if (dayNumber <
-                          1 ||
-                      dayNumber >
-                          daysInMonth) {
-                    return const SizedBox();
-                  }
-
-                  final date =
-                      DateTime(
-                    displayedMonth
-                        .year,
-                    displayedMonth
-                        .month,
-                    dayNumber,
-                  );
-
-                  final completed =
-                      widget.streak
-                          .isCompleted(
-                    date,
-                  );
-
-                  final diya =
-                      widget.streak
-                          .isDiyaOffering(
-                    date,
-                  );
-
-                  final bhog =
-                      widget.streak
-                          .isBhogOffering(
-                    date,
-                  );
-
-                  final isToday =
-                      date.year ==
-                              now.year &&
-                          date.month ==
-                              now.month &&
-                          date.day ==
-                              now.day;
-
-                  return _CalendarDay(
-                    day: dayNumber,
-                    completed:
-                        completed,
-                    isToday:
-                        isToday,
-                    isDiya:
-                        diya,
-                    isBhog:
-                        bhog,
-                  );
-                },
-              ),
-
-              const SizedBox(
-                height: 20,
-              ),
-
-              // ==========================================
-              // LEGEND
-              // ==========================================
-
-              Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-                children: [
-                  _LargeLegend(
-                    color:
-                        Colors.amber,
-                    label:
-                        'Diya Offering',
-                  ),
-
-                  const SizedBox(
-                    width: 30,
-                  ),
-
-                  _LargeLegend(
-                    color:
-                        AppColors.accentRed,
-                    label:
-                        'Bhog Offering',
-                  ),
-                ],
-              ),
-
-              const SizedBox(
-                height: 20,
-              ),
-
-              // ==========================================
-              // CLOSE BUTTON
-              // ==========================================
-
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop();
-                  },
-                  style:
-                      ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppColors.accentRed,
-                    foregroundColor:
-                        Colors.white,
-                    elevation: 0,
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        16,
-                      ),
-                    ),
-                  ),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight:
-                          FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
-
-  String _monthName(int month) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-
-    return months[month - 1];
-  }
 }
 
-// ==========================================================
-// CALENDAR NAV BUTTON
-// ==========================================================
+// ============================================================
+// MENU TILE CARD
+// ============================================================
 
-class _CalendarNavButton
-    extends StatelessWidget {
-  const _CalendarNavButton({
+class _MenuTileCard extends StatelessWidget {
+  const _MenuTileCard({
+    super.key,
     required this.icon,
+    required this.iconBgColor,
+    required this.iconColor,
+    required this.cardBgColor,
+    required this.title,
+    this.titleColor,
+    required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: onTap == null
-          ? AppColors
-              .softBeige
-              .withValues(alpha: 0.4)
-          : AppColors.softBeige,
-      shape:
-          const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder:
-            const CircleBorder(),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(
-            icon,
-            color: onTap == null
-                ? AppColors.secondaryText
-                : AppColors.primaryBurgundy,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// CALENDAR WEEK LABEL
-// ==========================================================
-
-class _CalendarWeekLabel
-    extends StatelessWidget {
-  const _CalendarWeekLabel(
-    this.label,
-  );
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Center(
-        child: Text(
-          label,
-          style:
-              AppTextStyles.bodyMedium
-                  .copyWith(
-            fontWeight:
-                FontWeight.w700,
-            color:
-                AppColors.secondaryText,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// CALENDAR DAY
-// ==========================================================
-
-class _CalendarDay
-    extends StatelessWidget {
-  const _CalendarDay({
-    required this.day,
-    required this.completed,
-    required this.isToday,
-    required this.isDiya,
-    required this.isBhog,
-  });
-
-  final int day;
-  final bool completed;
-  final bool isToday;
-  final bool isDiya;
-  final bool isBhog;
-
-  @override
-  Widget build(BuildContext context) {
-    Color ringColor =
-        AppColors.divider;
-
-    if (isBhog) {
-      ringColor =
-          AppColors.accentRed;
-    } else if (isDiya) {
-      ringColor =
-          Colors.amber;
-    } else if (completed) {
-      ringColor =
-          AppColors.accentRed
-              .withValues(
-            alpha: 0.65,
-          );
-    }
-
-    return Center(
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration:
-            BoxDecoration(
-          shape:
-              BoxShape.circle,
-          color: completed
-              ? ringColor
-                  .withValues(
-                  alpha: 0.08,
-                )
-              : Colors.transparent,
-          border: Border.all(
-            color: ringColor,
-            width:
-                isToday ? 2.5 : 2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            '$day',
-            style:
-                AppTextStyles.bodyMedium
-                    .copyWith(
-              fontSize: 13,
-              fontWeight: isToday
-                  ? FontWeight.w800
-                  : FontWeight.w500,
-              color:
-                  AppColors.primaryBurgundy,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ==========================================================
-// LARGE LEGEND
-// ==========================================================
-
-class _LargeLegend
-    extends StatelessWidget {
-  const _LargeLegend({
-    required this.color,
-    required this.label,
-  });
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize:
-          MainAxisSize.min,
-      children: [
-        Container(
-          width: 18,
-          height: 18,
-          decoration:
-              BoxDecoration(
-            shape:
-                BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: 3,
-            ),
-          ),
-        ),
-        const SizedBox(
-          width: 8,
-        ),
-        Text(
-          label,
-          style:
-              AppTextStyles.body.copyWith(
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ==========================================================
-// SYNC CARD
-// ==========================================================
-
-class _SyncCard
-    extends StatelessWidget {
-  const _SyncCard();
+  final Color iconBgColor;
+  final Color iconColor;
+  final Color cardBgColor;
+  final String title;
+  final Color? titleColor;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding:
-          const EdgeInsets.fromLTRB(
-        16,
-        18,
-        16,
-        16,
-      ),
       decoration: BoxDecoration(
-        color: AppColors
-            .peachHighlight
-            .withValues(
-          alpha: 0.35,
-        ),
-        borderRadius:
-            BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors
-              .accentRed
-              .withValues(
-            alpha: 0.65,
-          ),
-          width: 1.2,
-        ),
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Synced across devices',
-            style:
-                AppTextStyles.cardTitle
-                    .copyWith(
-              fontSize: 20,
-              fontWeight:
-                  FontWeight.w700,
-            ),
-          ),
-
-          const SizedBox(
-            height: 6,
-          ),
-
-          Text(
-            'Your account is connected and your journey can be synced across devices.',
-            style:
-                AppTextStyles.caption
-                    .copyWith(
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-
-          const SizedBox(
-            height: 12,
-          ),
-
-          Container(
-            width: double.infinity,
-            padding:
-                const EdgeInsets
-                    .symmetric(
-              vertical: 11,
-              horizontal: 14,
-            ),
-            decoration:
-                BoxDecoration(
-              color: AppColors
-                  .peachHighlight
-                  .withValues(
-                alpha: 0.45,
-              ),
-              borderRadius:
-                  BorderRadius.circular(
-                28,
-              ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
             ),
             child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment
-                      .center,
               children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.cormorantGaramond(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          color: titleColor ?? const Color(0xFF1B1B1B),
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.manrope(
+                          fontSize: 12.5,
+                          color: titleColor != null ? titleColor!.withValues(alpha: 0.7) : const Color(0xFF555555),
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Icon(
-                  Icons
-                      .cloud_done_outlined,
-                  size: 20,
-                  color: AppColors
-                      .primaryBurgundy,
+                  Icons.chevron_right_rounded,
+                  size: 22,
+                  color: titleColor ?? const Color(0xFF1B1B1B),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                const SizedBox(
-                  width: 8,
+// ============================================================
+// SYNCED ACROSS DEVICES CARD
+// ============================================================
+
+class _SyncedDevicesCard extends StatelessWidget {
+  const _SyncedDevicesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFEFF2E4),
+            Color(0xFFE5EAD4),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Cloud Illustration Container with Sparkles
+          Container(
+            width: 85,
+            height: 85,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7FAF0),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.cloud_sync_outlined,
+                  size: 40,
+                  color: Color(0xFF495736),
                 ),
+                // Sparkle 1
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 10,
+                    color: const Color(0xFF495736).withValues(alpha: 0.5),
+                  ),
+                ),
+                // Sparkle 2
+                Positioned(
+                  bottom: 14,
+                  right: 14,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 10,
+                    color: const Color(0xFF495736).withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
+          const SizedBox(width: 16),
+
+          // Text Content & Connected Button
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Account Connected',
-                  style: AppTextStyles
-                      .bodyMedium
-                      .copyWith(
-                    fontSize: 15,
-                    fontWeight:
-                        FontWeight.w700,
-                    color: AppColors
-                        .primaryBurgundy,
+                  'Synced across devices',
+                  style: GoogleFonts.cormorantGaramond(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1B1B1B),
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Your account is connected and your journey can be synced across devices.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12.5,
+                    color: const Color(0xFF4A5538),
+                    fontWeight: FontWeight.w400,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4E5A35),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Account Connected',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1946,4 +790,65 @@ class _SyncCard
       ),
     );
   }
+}
+
+// ============================================================
+// HEADER DECORATION PAINTER (Golden Circular Gradient & Leaves)
+// ============================================================
+
+class _HeaderDecorationPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Golden Sun Circles
+    final sunCenter = Offset(w * 0.75, h * 0.35);
+
+    final sunPaint1 = Paint()
+      ..color = const Color(0xFFFBE4C8).withValues(alpha: 0.6)
+      ..style = PaintingStyle.fill;
+
+    final sunPaint2 = Paint()
+      ..color = const Color(0xFFF7C898).withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(sunCenter, 70, sunPaint1);
+    canvas.drawCircle(sunCenter, 45, sunPaint2);
+
+    // Botanical Leaf Branch Stem
+    final stemPaint = Paint()
+      ..color = const Color(0xFF495736).withValues(alpha: 0.75)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    final stem = Path();
+    stem.moveTo(w * 0.95, h * 0.05);
+    stem.cubicTo(w * 0.75, h * 0.25, w * 0.65, h * 0.55, w * 0.45, h * 0.75);
+    canvas.drawPath(stem, stemPaint);
+
+    // Leaves along stem
+    _drawLeaf(canvas, Offset(w * 0.82, h * 0.20), -0.5, stemPaint);
+    _drawLeaf(canvas, Offset(w * 0.72, h * 0.36), 0.4, stemPaint);
+    _drawLeaf(canvas, Offset(w * 0.58, h * 0.52), -0.6, stemPaint);
+    _drawLeaf(canvas, Offset(w * 0.48, h * 0.68), 0.5, stemPaint);
+  }
+
+  void _drawLeaf(Canvas canvas, Offset tip, double angle, Paint paint) {
+    canvas.save();
+    canvas.translate(tip.dx, tip.dy);
+    canvas.rotate(angle);
+
+    final leaf = Path();
+    leaf.moveTo(0, 0);
+    leaf.quadraticBezierTo(8, -10, 18, -12);
+    leaf.quadraticBezierTo(10, 0, 0, 0);
+    canvas.drawPath(leaf, paint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

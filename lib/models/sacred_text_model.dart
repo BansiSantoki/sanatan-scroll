@@ -15,7 +15,7 @@ class SacredTextModel {
   });
 
   final String id;
-  final String title;
+  final String title; 
   final String subtitle;
   final String description;
   final String category;

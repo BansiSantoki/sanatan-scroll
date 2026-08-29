@@ -53,7 +53,7 @@ class _GoogleLogoPainter extends CustomPainter {
     Canvas canvas,
     Size size,
   ) {
-    final center = Offset(
+    final center = Offset( 
       size.width / 2,
       size.height / 2,
     );

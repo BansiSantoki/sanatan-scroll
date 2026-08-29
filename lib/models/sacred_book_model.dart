@@ -1,5 +1,4 @@
 import 'sacred_chapter_model.dart';
-
 class SacredBookModel {
   final String id;
   final String title;

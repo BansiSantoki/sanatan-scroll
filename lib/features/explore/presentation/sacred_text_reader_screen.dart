@@ -20,6 +20,7 @@ import '../../../../providers/chapter_rating_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/guest_access_provider.dart';
+import '../../../../providers/streak_provider.dart';
 
 class SacredTextReaderScreen extends StatefulWidget {
   const SacredTextReaderScreen({  
@@ -60,6 +61,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
       context.read<GuestAccessProvider>().markFreeChapterUsed(
             isAuthenticated: auth.isAuthenticated,
           );
+      context.read<StreakProvider>().markCompleted(DateTime.now());
       _guestChapterMarked = true;
       final position =
           context.read<ReadingProgressProvider>().positionFor(widget.textId);

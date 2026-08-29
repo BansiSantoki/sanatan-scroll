@@ -15,9 +15,13 @@ class SavedProvider extends ChangeNotifier {
 
   List<SavedItemModel> get items {
     if (_activeFilter == 'All') return List.unmodifiable(_items);
-    final typeFilter = _filterToType(_activeFilter);
-    if (typeFilter == null) return List.unmodifiable(_items);
-    return _items.where((i) => i.type == typeFilter).toList();
+    final query = _activeFilter.toLowerCase().trim();
+    final filtered = _items.where((i) {
+      return i.source.toLowerCase().contains(query) ||
+          i.title.toLowerCase().contains(query) ||
+          i.content.toLowerCase().contains(query);
+    }).toList();
+    return List.unmodifiable(filtered);
   }
 
   String get activeFilter => _activeFilter;
@@ -74,37 +78,47 @@ class SavedProvider extends ChangeNotifier {
   }
 
   Future<void> removeItem(String id) async {
-    if (_activeUserId.isNotEmpty) {
-      await _firestore
-          .collection('users')
-          .doc(_activeUserId)
-          .collection('saved_items')
-          .doc(id)
-          .delete();
-      return;
-    }
-
     _items.removeWhere((i) => i.id == id);
     notifyListeners();
+
+    if (_activeUserId.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('users')
+            .doc(_activeUserId)
+            .collection('saved_items')
+            .doc(id)
+            .delete();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error deleting saved item from Firestore: $e');
+        }
+      }
+    }
   }
 
   Future<void> addItem(SavedItemModel item) async {
-    if (_activeUserId.isNotEmpty) {
-      await _firestore
-          .collection('users')
-          .doc(_activeUserId)
-          .collection('saved_items')
-          .doc(item.id)
-          .set({
-        ...item.toMap(),
-        'savedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      return;
-    }
-
     if (!_items.any((i) => i.id == item.id)) {
       _items.insert(0, item);
       notifyListeners();
+    }
+
+    if (_activeUserId.isNotEmpty) {
+      try {
+        await _firestore
+            .collection('users')
+            .doc(_activeUserId)
+            .collection('saved_items')
+            .doc(item.id)
+            .set({
+          ...item.toMap(),
+          'savedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error adding saved item to Firestore: $e');
+        }
+      }
     }
   }
 
@@ -119,18 +133,7 @@ class SavedProvider extends ChangeNotifier {
 
   bool isSaved(String id) => _items.any((i) => i.id == id);
 
-  SavedItemType? _filterToType(String filter) {
-    switch (filter) {
-      case 'Verses':
-        return SavedItemType.verse;
-      case 'Readings':
-        return SavedItemType.reading;
-      case 'Reflections':
-        return SavedItemType.reflection;
-      default:
-        return null;
-    }
-  }
+
 
   @override
   void dispose() {

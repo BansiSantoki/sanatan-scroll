@@ -13,7 +13,7 @@ class ExploreProvider extends ChangeNotifier {
     var texts = MockSacredTexts.all;
 
     if (_selectedCategory != 'All') {
-      texts = texts
+      texts = texts 
           .where((t) => t.category == _selectedCategory)
           .toList();
     }
