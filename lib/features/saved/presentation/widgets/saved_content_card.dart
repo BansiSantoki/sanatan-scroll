@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../models/saved_item_model.dart';
 
@@ -68,11 +69,13 @@ class SavedContentCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
-                          style: GoogleFonts.cormorantGaramond(
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 23,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF1B1B1B),
                             height: 1.05,
+                            isSerif: true,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -80,7 +83,8 @@ class SavedContentCard extends StatelessWidget {
                           item.content,
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 13.5,
                             fontWeight: FontWeight.w400,
                             color: const Color(0xFF4A4B46),
@@ -90,7 +94,8 @@ class SavedContentCard extends StatelessWidget {
                         const SizedBox(height: 14),
                         Text(
                           item.source,
-                          style: GoogleFonts.manrope(
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: cardStyle.sourceColor,
@@ -213,10 +218,6 @@ class _CardStyleConfig {
     required this.watermarkPainter,
   });
 }
-
-// ============================================================
-// WATERMARK LINE-ART PAINTERS (Low Opacity)
-// ============================================================
 
 class _LotusWatermarkPainter extends CustomPainter {
   @override

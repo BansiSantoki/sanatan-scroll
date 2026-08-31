@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/saved_provider.dart';
@@ -56,17 +56,20 @@ class SavedScreen extends StatelessWidget {
                         children: [
                           Text(
                             context.l10n.saved,
-                            style: GoogleFonts.cormorantGaramond(
+                            style: AppTextStyles.getFont(
+                              context,
                               fontSize: 42,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF1B1B1B),
                               height: 1.05,
+                              isSerif: true,
                             ),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             'Your personal collection of wisdom',
-                            style: GoogleFonts.manrope(
+                            style: AppTextStyles.getFont(
+                              context,
                               fontSize: 14.5,
                               fontWeight: FontWeight.w400,
                               color: const Color(0xFF555555),
@@ -101,7 +104,8 @@ class SavedScreen extends StatelessWidget {
                                   children: [
                                     Text(
                                       filter,
-                                      style: GoogleFonts.manrope(
+                                      style: AppTextStyles.getFont(
+                                        context,
                                         fontSize: 14.5,
                                         fontWeight: isSelected
                                             ? FontWeight.w700
@@ -161,17 +165,20 @@ class SavedScreen extends StatelessWidget {
                                     const SizedBox(height: 16),
                                     Text(
                                       'No saved wisdom yet',
-                                      style: GoogleFonts.cormorantGaramond(
+                                      style: AppTextStyles.getFont(
+                                        context,
                                         fontSize: 24,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFF1B1B1B),
+                                        isSerif: true,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
                                       'Save verses, reflections, and wisdom that inspire you.',
                                       textAlign: TextAlign.center,
-                                      style: GoogleFonts.manrope(
+                                      style: AppTextStyles.getFont(
+                                        context,
                                         fontSize: 14,
                                         color: const Color(0xFF666666),
                                         height: 1.4,
@@ -217,17 +224,12 @@ class SavedScreen extends StatelessWidget {
   }
 }
 
-// ============================================================
-// HEADER SPIRITUAL BACKGROUND ART PAINTER (Sun, Temple & Leaves)
-// ============================================================
-
 class _HeaderSpiritualArtPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // Sun Rays / Sun Circle
     final sunCenter = Offset(w * 0.85, h * 0.25);
     final sunPaint = Paint()
       ..color = const Color(0xFFD69A5E).withValues(alpha: 0.18)
@@ -235,7 +237,6 @@ class _HeaderSpiritualArtPainter extends CustomPainter {
 
     canvas.drawCircle(sunCenter, 28, sunPaint);
 
-    // Temple Silhouette Spires (Line art)
     final templePaint = Paint()
       ..color = const Color(0xFFD69A5E).withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
@@ -249,7 +250,6 @@ class _HeaderSpiritualArtPainter extends CustomPainter {
     temple.lineTo(w * 0.90, h * 0.55);
     canvas.drawPath(temple, templePaint);
 
-    // Botanical Leaves Branch
     final leavesPaint = Paint()
       ..color = const Color(0xFF5A6C38).withValues(alpha: 0.20)
       ..style = PaintingStyle.stroke

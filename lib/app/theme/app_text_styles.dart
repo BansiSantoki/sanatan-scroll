@@ -1,12 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'app_colors.dart';
 
 class AppTextStyles {
   AppTextStyles._();
 
-  static TextStyle get _serif => GoogleFonts.cormorantGaramond();
-  static TextStyle get _sans => GoogleFonts.manrope();
+  static TextStyle getFont(
+    BuildContext context, {
+    required double fontSize,
+    FontWeight fontWeight = FontWeight.w400,
+    Color? color,
+    double height = 1.2,
+    double? letterSpacing,
+    bool isSerif = false,
+    TextDecoration decoration = TextDecoration.none,
+  }) {
+    final locale = Localizations.localeOf(context);
+    return getFontForLocale(
+      locale,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+      isSerif: isSerif,
+      decoration: decoration,
+    );
+  }
+
+  static TextStyle getFontForLocale(
+    Locale locale, {
+    required double fontSize,
+    FontWeight fontWeight = FontWeight.w400,
+    Color? color,
+    double height = 1.2,
+    double? letterSpacing,
+    bool isSerif = false,
+    TextDecoration decoration = TextDecoration.none,
+  }) {
+    final String gujaratiFont = GoogleFonts.notoSansGujarati().fontFamily!;
+    final String devanagariFont = GoogleFonts.notoSansDevanagari().fontFamily!;
+    final String englishSerif = GoogleFonts.cormorantGaramond().fontFamily!;
+    final String englishSans = GoogleFonts.manrope().fontFamily!;
+
+    String primaryFont;
+    List<String> fallbacks;
+
+    if (locale.languageCode == 'gu') {
+      primaryFont = gujaratiFont;
+      fallbacks = [gujaratiFont, devanagariFont, englishSerif, englishSans];
+    } else if (locale.languageCode == 'hi') {
+      primaryFont = devanagariFont;
+      fallbacks = [devanagariFont, gujaratiFont, englishSerif, englishSans];
+    } else {
+      primaryFont = isSerif ? englishSerif : englishSans;
+      fallbacks = [primaryFont, gujaratiFont, devanagariFont];
+    }
+
+    return TextStyle(
+      fontFamily: primaryFont,
+      fontFamilyFallback: fallbacks,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color ?? AppColors.darkText,
+      height: height,
+      letterSpacing: letterSpacing,
+      decoration: decoration,
+    );
+  }
+
+  static final List<String> _fallbacks = [
+    GoogleFonts.notoSansGujarati().fontFamily!,
+    GoogleFonts.notoSansDevanagari().fontFamily!,
+    GoogleFonts.cormorantGaramond().fontFamily!,
+    GoogleFonts.manrope().fontFamily!,
+  ];
+
+  static TextStyle get _serif => GoogleFonts.cormorantGaramond().copyWith(fontFamilyFallback: _fallbacks);
+  static TextStyle get _sans => GoogleFonts.manrope().copyWith(fontFamilyFallback: _fallbacks);
 
   static TextStyle pageHeading = _serif.copyWith(
     fontSize: 28,
@@ -76,7 +148,7 @@ class AppTextStyles {
   static TextStyle splashSubtitle = _sans.copyWith(
     fontSize: 13,
     fontWeight: FontWeight.w400,
-    color: Color(0xCCFFFFFF),
+    color: const Color(0xCCFFFFFF),
     letterSpacing: 2.0,
     height: 1.4,
   );

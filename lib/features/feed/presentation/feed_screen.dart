@@ -1,12 +1,12 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../core/widgets/language_selector_button.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
@@ -21,99 +21,58 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  Timer? _completionTimer;
-  bool _isShowingCompletion = false;
-
   @override
-  void dispose() {
-    _completionTimer?.cancel();
-    super.dispose();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkCompletionDialog();
+    });
   }
 
-  Future<void> _showPendingCompletion(BuildContext context) async {
-    if (!mounted || _isShowingCompletion) {
-      return;
+  void _checkCompletionDialog() {
+    final completionProvider = context.read<ChapterCompletionProvider>();
+    final pending = completionProvider.takePending();
+    if (pending != null) {
+      showDialog(
+        context: context,
+        builder: (_) => _CompletionDialog(
+          bookTitle: pending.bookTitle,
+          chapterTitle: pending.chapterTitle,
+        ),
+      );
     }
-
-    final completion = context.read<ChapterCompletionProvider>().takePending();
-
-    if (completion == null) {
-      return;
-    }
-
-    _isShowingCompletion = true;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return _CompletionDialog(
-          bookTitle: completion.bookTitle,
-          chapterTitle: completion.chapterTitle,
-        );
-      },
-    );
-
-    _isShowingCompletion = false;
   }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-
-    final horizontalPadding = width >= 900
-        ? 40.0
-        : width >= 600
-            ? 28.0
-            : 18.0;
-
-    final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showPendingCompletion(context);
-    });
+    final horizontalPadding = width >= 600 ? 32.0 : 20.0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: 0,
+        onTap: (index) {
+          context.read<NavigationProvider>().setIndex(index);
+        },
+      ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: maxContentWidth,
-            ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(
-                left: horizontalPadding,
-                right: horizontalPadding,
-                top: 14,
-                bottom: 24,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  // 1. Header (Namaste, Bansi + 7 Days Pill)
-                  _HomeHeaderRow(),
-
-                  SizedBox(height: 24),
-
-                  // 2. Daily Wisdom Card
-                  _DailyWisdomCard(),
-
-                  SizedBox(height: 24),
-
-                  // 3. Continue Your Journey Card
-                  _ContinueJourneyCard(),
-
-                  SizedBox(height: 28),
-
-                  // 4. Explore Scriptures Section (4 side-by-side cards)
-                  _ExploreScripturesSection(),
-
-                  SizedBox(height: 24),
-                ],
-              ),
-            ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              SizedBox(height: 12),
+              _HomeHeaderRow(),
+              SizedBox(height: 20),
+              _DailyWisdomCard(),
+              SizedBox(height: 24),
+              _ContinueJourneyCard(),
+              SizedBox(height: 28),
+              _ExploreScripturesSection(),
+              SizedBox(height: 28),
+            ],
           ),
         ),
       ),
@@ -135,56 +94,67 @@ class _HomeHeaderRow extends StatelessWidget {
     final userName = rawName.isNotEmpty ? rawName : 'Bansi';
     final l10n = context.l10n;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            '${l10n.namaste}, $userName',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.cormorantGaramond(
-              fontSize: 30,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1B1B1B),
-              height: 1.0,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                '${l10n.namaste}, $userName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.getFont(
+                  context,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1B1B1B),
+                  height: 1.0,
+                  isSerif: true,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => context.read<NavigationProvider>().setIndex(1),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7BE78),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 18,
+                      color: Color(0xFFE46D24),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      l10n.daysStreak(7),
+                      style: AppTextStyles.getFont(
+                        context,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF23180C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        const LanguageSelectorButton(),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: () => context.read<NavigationProvider>().setIndex(1),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7BE78),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  size: 18,
-                  color: Color(0xFFE46D24),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  l10n.daysStreak(7),
-                  style: GoogleFonts.manrope(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF23180C),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        const SizedBox(height: 8),
+        const Align(
+          alignment: Alignment.centerRight,
+          child: LanguageSelectorButton(),
         ),
       ],
     );
@@ -247,7 +217,8 @@ class _DailyWisdomCard extends StatelessWidget {
                     children: [
                       Text(
                         'DAILY WISDOM',
-                        style: GoogleFonts.manrope(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF7A7E5A),
@@ -257,11 +228,13 @@ class _DailyWisdomCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         'Bhagavad Gita 2.47',
-                        style: GoogleFonts.cormorantGaramond(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 26,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF1B1B1B),
                           height: 1.05,
+                          isSerif: true,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -269,7 +242,8 @@ class _DailyWisdomCard extends StatelessWidget {
                         'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansDevanagari(
+                        style: AppTextStyles.getFontForLocale(
+                          const Locale('hi'),
                           fontSize: 15.5,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF222222),
@@ -281,7 +255,8 @@ class _DailyWisdomCard extends StatelessWidget {
                         'You have the right to perform your duty, but not to the fruits of your actions.',
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 13.5,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF383838),
@@ -300,17 +275,12 @@ class _DailyWisdomCard extends StatelessWidget {
   }
 }
 
-// ============================================================
-// DAILY WISDOM BACKGROUND PAINTER (Organic Sage Blob & Star)
-// ============================================================
-
 class _DailyWisdomBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // 1. Organic Blob Shape (Sage Green)
     final blobPaint = Paint()
       ..color = const Color(0xFFB8C296)
       ..style = PaintingStyle.fill;
@@ -327,7 +297,6 @@ class _DailyWisdomBackgroundPainter extends CustomPainter {
 
     canvas.drawPath(blob, blobPaint);
 
-    // 2. 8-Pointed Golden Star (Top Right inside Blob)
     final starPaint = Paint()
       ..color = const Color(0xFFF8C87A)
       ..style = PaintingStyle.fill;
@@ -413,17 +382,20 @@ class _ContinueJourneyCard extends StatelessWidget {
                     children: [
                       Text(
                         'Continue Your Journey',
-                        style: GoogleFonts.cormorantGaramond(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF1E1208),
                           height: 1.05,
+                          isSerif: true,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Pick up where you left off',
-                        style: GoogleFonts.manrope(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF3D2614),
@@ -492,7 +464,8 @@ class _ExploreScripturesSection extends StatelessWidget {
       children: [
         Text(
           'EXPLORE SCRIPTURES',
-          style: GoogleFonts.manrope(
+          style: AppTextStyles.getFont(
+            context,
             fontSize: 11.5,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF7A7E5A),
@@ -502,7 +475,8 @@ class _ExploreScripturesSection extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Dive into timeless wisdom',
-          style: GoogleFonts.manrope(
+          style: AppTextStyles.getFont(
+            context,
             fontSize: 15,
             fontWeight: FontWeight.w500,
             color: const Color(0xFF1B1B1B),
@@ -599,7 +573,8 @@ class _BookCard extends StatelessWidget {
                     title,
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    style: GoogleFonts.manrope(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1B1B1B),
@@ -612,7 +587,8 @@ class _BookCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF3B3B3B),
@@ -644,10 +620,6 @@ class _BookCard extends StatelessWidget {
     }
   }
 }
-
-// ============================================================
-// CARD ICONS (LOTUS, BOW, LEAVES, WHEEL)
-// ============================================================
 
 class _LotusIconPainter extends CustomPainter {
   final Color color;
@@ -850,7 +822,8 @@ class _CompletionDialog extends StatelessWidget {
                   Text(
                     'You completed $chapterTitle',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1B1B1B),
@@ -860,7 +833,8 @@ class _CompletionDialog extends StatelessWidget {
                   Text(
                     bookTitle,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 13,
                       color: const Color(0xFF555555),
                     ),
@@ -874,7 +848,15 @@ class _CompletionDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    child: const Text('Continue journey'),
+                    child: Text(
+                      'Continue journey',
+                      style: AppTextStyles.getFont(
+                        context,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../data/sacred_books_data.dart';
@@ -91,7 +91,7 @@ class SacredChapterListScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // Chariot Line-Art Image at upper right (Enlarged 25-30%)
+                      // Chariot Line-Art Image at upper right
                       Positioned(
                         right: -12,
                         top: -10,
@@ -120,11 +120,13 @@ class SacredChapterListScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   book.getLocalizedTitle(langCode),
-                                  style: GoogleFonts.cormorantGaramond(
+                                  style: AppTextStyles.getFont(
+                                    context,
                                     fontSize: 38,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFF1B1B1B),
                                     height: 1.05,
+                                    isSerif: true,
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -132,7 +134,8 @@ class SacredChapterListScreen extends StatelessWidget {
                                   book.getLocalizedSubtitle(langCode).isNotEmpty
                                       ? book.getLocalizedSubtitle(langCode)
                                       : 'The Divine Song of Lord Krishna',
-                                  style: GoogleFonts.manrope(
+                                  style: AppTextStyles.getFont(
+                                    context,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w400,
                                     color: const Color(0xFF555555),
@@ -141,7 +144,8 @@ class SacredChapterListScreen extends StatelessWidget {
                                 const SizedBox(height: 8),
                                 Text(
                                   '${book.totalChapters} ${l10n.chapters}',
-                                  style: GoogleFonts.manrope(
+                                  style: AppTextStyles.getFont(
+                                    context,
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF8C6647),
@@ -163,10 +167,12 @@ class SacredChapterListScreen extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   child: Text(
                     'Select a Chapter',
-                    style: GoogleFonts.cormorantGaramond(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1B1B1B),
+                      isSerif: true,
                     ),
                   ),
                 ),
@@ -266,11 +272,13 @@ class SacredChapterListScreen extends StatelessWidget {
                 ),
                 child: Text(
                   '${chapter.chapterNumber}',
-                  style: GoogleFonts.cormorantGaramond(
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
                     color: boxStyle.textColor,
                     height: 1.0,
+                    isSerif: true,
                   ),
                 ),
               ),
@@ -284,11 +292,13 @@ class SacredChapterListScreen extends StatelessWidget {
                   children: [
                     Text(
                       chapter.title,
-                      style: GoogleFonts.cormorantGaramond(
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF1B1B1B),
                         height: 1.1,
+                        isSerif: true,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -296,7 +306,8 @@ class SacredChapterListScreen extends StatelessWidget {
                       '${chapter.subtitle} • Chapter ${chapter.chapterNumber}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
                         color: const Color(0xFF666666),
@@ -311,8 +322,8 @@ class SacredChapterListScreen extends StatelessWidget {
               // Right Arrow Chevron
               const Icon(
                 Icons.chevron_right_rounded,
+                color: Color(0xFF8C6647),
                 size: 24,
-                color: Color(0xFF666666),
               ),
             ],
           ),
@@ -321,163 +332,128 @@ class SacredChapterListScreen extends StatelessWidget {
     );
   }
 
-  // Alternating Warm Box Colors for Chapter Numbers
-  _BoxStyleConfig _getChapterBoxStyle(int index) {
-    final styles = const [
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFF8A9A68), // Sage green
-        textColor: Colors.white,
-      ),
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFFE47B3E), // Warm orange
-        textColor: Colors.white,
-      ),
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFFEBD5AA), // Soft gold
-        textColor: Color(0xFF1B1B1B),
-      ),
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFFB2C498), // Light sage green
-        textColor: Color(0xFF1B1B1B),
-      ),
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFFF4A75E), // Warm yellow/orange
-        textColor: Color(0xFF1B1B1B),
-      ),
-      _BoxStyleConfig(
-        backgroundColor: Color(0xFFC6D0AC), // Soft olive green
-        textColor: Color(0xFF1B1B1B),
-      ),
-    ];
-
-    return styles[index % styles.length];
+  _ChapterBoxStyle _getChapterBoxStyle(int index) {
+    switch (index % 4) {
+      case 0:
+        return const _ChapterBoxStyle(
+          backgroundColor: Color(0xFFFDECDA),
+          textColor: Color(0xFFC85A32),
+        );
+      case 1:
+        return const _ChapterBoxStyle(
+          backgroundColor: Color(0xFFEAEFD8),
+          textColor: Color(0xFF5A6C38),
+        );
+      case 2:
+        return const _ChapterBoxStyle(
+          backgroundColor: Color(0xFFF9EED4),
+          textColor: Color(0xFF8C6647),
+        );
+      case 3:
+      default:
+        return const _ChapterBoxStyle(
+          backgroundColor: Color(0xFFFDE6D5),
+          textColor: Color(0xFFD96E28),
+        );
+    }
   }
-
-  // ============================================================
-  // FIND BOOK HELPER
-  // ============================================================
 
   SacredBookModel? _findBook(String id) {
-    final normalizedId = id.trim().toLowerCase();
-
-    for (final book in SacredBooksData.all) {
-      if (book.id.trim().toLowerCase() == normalizedId) {
-        return book;
-      }
+    try {
+      return SacredBooksData.all.firstWhere((b) => b.id == id);
+    } catch (_) {
+      return null;
     }
-
-    if (normalizedId == 'bhagavad_gita' ||
-        normalizedId == 'bhagavad-gita' ||
-        normalizedId == 'bhagavadgita' ||
-        normalizedId == 'gita') {
-      return SacredBooksData.all.firstWhere(
-        (book) => book.id.trim().toLowerCase() == 'bhagavad_gita',
-        orElse: () => throw Exception(
-          'Bhagavad Gita not found in SacredBooksData.all',
-        ),
-      );
-    }
-
-    return null;
   }
-
-  // ============================================================
-  // BOOK NOT FOUND
-  // ============================================================
 
   Widget _bookNotFound(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF5ED),
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.menu_book_rounded,
-                  size: 80,
-                  color: Color(0xFFC85A32),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Book not found',
-                  style: GoogleFonts.cormorantGaramond(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Book ID: $textId',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    color: const Color(0xFF555555),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFC85A32),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 34,
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text('Go Back'),
-                ),
-              ],
-            ),
+      backgroundColor: const Color(0xFFFAF7F2),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF1B1B1B)),
+      ),
+      body: Center(
+        child: Text(
+          'Scripture not found',
+          style: AppTextStyles.getFont(
+            context,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
     );
   }
 
-  // ============================================================
-  // SIGN IN PROMPT
-  // ============================================================
-
   void _showSignInPrompt(BuildContext context) {
-    showDialog<void>(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Continue your journey'),
-          content: const Text(
-            'You have completed your free chapter. Sign in now to continue reading all sacred books and chapters.',
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Unlock Full Access',
+                style: AppTextStyles.getFont(
+                  ctx,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  isSerif: true,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Guest users can read Chapter 1 for free. Sign in to access all chapters.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.getFont(
+                  ctx,
+                  fontSize: 14,
+                  color: const Color(0xFF555555),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).pushNamed(AppRoutes.auth);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B1B1B),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Text(
+                    'Sign In',
+                    style: AppTextStyles.getFont(
+                      ctx,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Later'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                Navigator.of(context).pushNamed(AppRoutes.auth);
-              },
-              child: const Text('Sign in now'),
-            ),
-          ],
         );
       },
     );
   }
 }
 
-class _BoxStyleConfig {
+class _ChapterBoxStyle {
   final Color backgroundColor;
   final Color textColor;
 
-  const _BoxStyleConfig({
+  const _ChapterBoxStyle({
     required this.backgroundColor,
     required this.textColor,
   });

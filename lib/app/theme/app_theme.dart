@@ -1,15 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'app_colors.dart';
-import 'app_text_styles.dart';
 import 'app_dimensions.dart';
+import 'app_text_styles.dart';
 
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light {
+  static ThemeData get light => getThemeForLocale(const Locale('en'));
+
+  static ThemeData getThemeForLocale(Locale locale) {
+    final String gujaratiFont = GoogleFonts.notoSansGujarati().fontFamily!;
+    final String devanagariFont = GoogleFonts.notoSansDevanagari().fontFamily!;
+    final String englishFont = GoogleFonts.manrope().fontFamily!;
+
+    List<String> fallbacks;
+    String primaryFont;
+
+    if (locale.languageCode == 'gu') {
+      primaryFont = gujaratiFont;
+      fallbacks = [gujaratiFont, devanagariFont, englishFont];
+    } else if (locale.languageCode == 'hi') {
+      primaryFont = devanagariFont;
+      fallbacks = [devanagariFont, gujaratiFont, englishFont];
+    } else {
+      primaryFont = englishFont;
+      fallbacks = [englishFont, gujaratiFont, devanagariFont];
+    }
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: primaryFont,
+      fontFamilyFallback: fallbacks,
       brightness: Brightness.light,
       scaffoldBackgroundColor: Colors.transparent,
       colorScheme: ColorScheme.light(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../app/theme/app_text_styles.dart';
 import '../constants/app_constants.dart';
 import '../localization/app_localizations.dart';
 
@@ -90,7 +90,8 @@ class CustomBottomNavigation extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           label,
-                          style: GoogleFonts.manrope(
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 11.5,
                             fontWeight: isSelected
                                 ? FontWeight.w700

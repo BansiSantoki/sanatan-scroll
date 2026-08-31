@@ -71,7 +71,7 @@ class SanatanScrollApp extends StatelessWidget {
           return MaterialApp(
             title: 'Sanatan Scroll',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
+            theme: AppTheme.getThemeForLocale(localeProvider.locale),
             locale: localeProvider.locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: const [
