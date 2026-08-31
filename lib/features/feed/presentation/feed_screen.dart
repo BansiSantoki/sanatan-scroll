@@ -4,7 +4,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../app/routes/app_routes.dart';
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/language_selector_button.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/navigation_provider.dart';
@@ -130,13 +133,14 @@ class _HomeHeaderRow extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final rawName = auth.firstName;
     final userName = rawName.isNotEmpty ? rawName : 'Bansi';
+    final l10n = context.l10n;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Text(
-            'Namaste, $userName',
+            '${l10n.namaste}, $userName',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.cormorantGaramond(
@@ -147,7 +151,9 @@ class _HomeHeaderRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
+        const LanguageSelectorButton(),
+        const SizedBox(width: 8),
         GestureDetector(
           onTap: () => context.read<NavigationProvider>().setIndex(1),
           child: Container(
@@ -169,7 +175,7 @@ class _HomeHeaderRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  '7 Days',
+                  l10n.daysStreak(7),
                   style: GoogleFonts.manrope(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,

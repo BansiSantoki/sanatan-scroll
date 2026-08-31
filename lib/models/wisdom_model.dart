@@ -5,6 +5,9 @@ class WisdomModel {
     required this.source,
     required this.chapter,
     required this.verse,
+    this.quoteEn,
+    this.quoteGu,
+    this.quoteHi,
     this.sanskrit,
     this.reflection,
     this.sageAdvice,
@@ -16,10 +19,26 @@ class WisdomModel {
   final String source;
   final String chapter;
   final String verse;
+  final String? quoteEn;
+  final String? quoteGu;
+  final String? quoteHi;
   final String? sanskrit;
   final String? reflection;
   final String? sageAdvice;
   final List<String> tags;
+
+  String getLocalizedQuote(String languageCode) {
+    if (languageCode == 'gu' && quoteGu != null && quoteGu!.isNotEmpty) {
+      return quoteGu!;
+    }
+    if (languageCode == 'hi' && quoteHi != null && quoteHi!.isNotEmpty) {
+      return quoteHi!;
+    }
+    if (quoteEn != null && quoteEn!.isNotEmpty) {
+      return quoteEn!;
+    }
+    return quote;
+  }
 }
 
 class DailyActivity {

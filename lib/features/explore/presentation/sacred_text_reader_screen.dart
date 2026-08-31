@@ -2,24 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_gradients.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../app/routes/app_routes.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/widgets/tts_audio_button.dart';
-import '../../../../data/sacred_books_repository.dart';
 import '../../../../data/sacred_books_data.dart';
+import '../../../../data/sacred_books_repository.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
 import '../../../../models/saved_item_model.dart';
-import '../../../../providers/saved_provider.dart';
-import '../../../../providers/reading_progress_provider.dart';
-import '../../../../providers/chapter_rating_provider.dart';
-import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../providers/chapter_completion_provider.dart';
+import '../../../../providers/chapter_rating_provider.dart';
 import '../../../../providers/guest_access_provider.dart';
+import '../../../../providers/locale_provider.dart';
+import '../../../../providers/reading_progress_provider.dart';
+import '../../../../providers/saved_provider.dart';
 import '../../../../providers/streak_provider.dart';
 
 class SacredTextReaderScreen extends StatefulWidget {
@@ -699,9 +701,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   Widget _buildMeaningSection(
     SacredVerseModel verse,
   ) {
-    final String meaning = selectedLanguage == 'Gujarati'
-        ? verse.meaningGujarati
-        : verse.meaningEnglish;
+    final langCode = context.watch<LocaleProvider>().languageCode;
+    final String meaning = verse.getLocalizedMeaning(langCode);
 
     return Container(
       width: double.infinity,
@@ -720,7 +721,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                selectedLanguage == 'Gujarati' ? 'અર્થ' : 'Meaning',
+                context.l10n.meaning,
                 style: AppTextStyles.sectionHeading.copyWith(
                   color: AppColors.darkText,
                   fontSize: 22,

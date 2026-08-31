@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/saved_provider.dart';
 import 'widgets/saved_content_card.dart';
 
@@ -54,7 +55,7 @@ class SavedScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Saved',
+                            context.l10n.saved,
                             style: GoogleFonts.cormorantGaramond(
                               fontSize: 42,
                               fontWeight: FontWeight.w700,

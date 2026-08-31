@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_constants.dart';
+import '../localization/app_localizations.dart';
 
 class CustomBottomNavigation extends StatelessWidget {
   const CustomBottomNavigation({
@@ -12,6 +13,24 @@ class CustomBottomNavigation extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onTap;
+
+  String _getLocalizedLabel(BuildContext context, int index) {
+    final l10n = context.l10n;
+    switch (index) {
+      case 0:
+        return l10n.home;
+      case 1:
+        return l10n.streak;
+      case 2:
+        return l10n.saved;
+      case 3:
+        return l10n.feed;
+      case 4:
+        return l10n.profile;
+      default:
+        return AppConstants.bottomNavigationItems[index].label;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +65,7 @@ class CustomBottomNavigation extends StatelessWidget {
               final isSelected = currentIndex == index;
               final activeColor = const Color(0xFFC85A32);
               final inactiveColor = const Color(0xFF4A4B46);
+              final label = _getLocalizedLabel(context, index);
 
               return Expanded(
                 child: GestureDetector(
@@ -69,7 +89,7 @@ class CustomBottomNavigation extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          item.label,
+                          label,
                           style: GoogleFonts.manrope(
                             fontSize: 11.5,
                             fontWeight: isSelected

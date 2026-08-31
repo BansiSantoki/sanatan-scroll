@@ -3,12 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../data/sacred_books_data.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/guest_access_provider.dart';
+import '../../../../providers/locale_provider.dart';
 import '../../../../providers/navigation_provider.dart';
 
 class SacredChapterListScreen extends StatelessWidget {
@@ -108,39 +110,46 @@ class SacredChapterListScreen extends StatelessWidget {
                       // Header Text (Title, Subtitle, Chapter count)
                       Padding(
                         padding: EdgeInsets.only(right: width >= 600 ? 220 : 155),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              book.title,
-                              style: GoogleFonts.cormorantGaramond(
-                                fontSize: 38,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1B1B1B),
-                                height: 1.05,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              book.subtitle.isNotEmpty
-                                  ? book.subtitle
-                                  : 'The Divine Song of Lord Krishna',
-                              style: GoogleFonts.manrope(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF555555),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${book.totalChapters} Chapters',
-                              style: GoogleFonts.manrope(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF8C6647),
-                              ),
-                            ),
-                          ],
+                        child: Builder(
+                          builder: (context) {
+                            final langCode = context.watch<LocaleProvider>().languageCode;
+                            final l10n = context.l10n;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  book.getLocalizedTitle(langCode),
+                                  style: GoogleFonts.cormorantGaramond(
+                                    fontSize: 38,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1B1B1B),
+                                    height: 1.05,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  book.getLocalizedSubtitle(langCode).isNotEmpty
+                                      ? book.getLocalizedSubtitle(langCode)
+                                      : 'The Divine Song of Lord Krishna',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF555555),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${book.totalChapters} ${l10n.chapters}',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF8C6647),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ],

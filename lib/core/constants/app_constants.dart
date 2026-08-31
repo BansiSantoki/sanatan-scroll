@@ -11,9 +11,9 @@ class AppNavigationItem {
     required this.label,
   });
 }
-
 class AppConstants {
   AppConstants._();
+
 
   static const String appName = 'Sanatan Scroll';
   static const String tagline = 'Wisdom for your journey';

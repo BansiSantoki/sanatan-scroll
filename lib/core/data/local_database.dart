@@ -245,5 +245,22 @@ class LocalDatabase {
     return rows.map((r) => r['chapter_number'] as int).toList();
   }
 
+  // Settings storage
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final rows = await db.query('settings', where: 'key = ?', whereArgs: [key]);
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   String _dateKey(DateTime d) => DateTime(d.year, d.month, d.day).toIso8601String();
 }

@@ -13,11 +13,14 @@ dependencies:
   flutter:
     sdk: flutter
 
+  flutter_localizations:
+    sdk: flutter
+
   cupertino_icons: ^1.0.8
 
   provider: ^6.1.2
   google_fonts: ^6.2.1
-  intl: ^0.19.0
+  intl: any
 
   firebase_core: ^4.13.0
   firebase_auth: ^6.5.7
@@ -50,6 +53,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  generate: true
 
   assets:
     - assets/images/

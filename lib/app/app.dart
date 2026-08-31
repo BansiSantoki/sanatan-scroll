@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+
+import '../core/localization/app_localizations.dart';
 import '../providers/auth_provider.dart';
+import '../providers/chapter_completion_provider.dart';
+import '../providers/chapter_rating_provider.dart';
 import '../providers/daily_progress_provider.dart';
 import '../providers/guest_access_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/onboarding_provider.dart';
-import '../providers/saved_provider.dart';
 import '../providers/reading_progress_provider.dart';
-import '../providers/chapter_rating_provider.dart';
-import '../providers/chapter_completion_provider.dart';
+import '../providers/saved_provider.dart';
 import '../providers/streak_provider.dart';
 import 'routes/app_pages.dart';
 import 'routes/app_routes.dart';
@@ -22,6 +26,7 @@ class SanatanScrollApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
@@ -61,18 +66,30 @@ class SanatanScrollApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DailyProgressProvider()),
         ChangeNotifierProvider(create: (_) => GuestAccessProvider()),
       ],
-      child: MaterialApp(
-        title: 'Sanatan Scroll',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        initialRoute: AppRoutes.splash,
-        onGenerateRoute: AppPages.generateRoute,
-        builder: (context, child) {
-          return DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: AppGradients.screenBackground,
-            ),
-            child: child ?? const SizedBox.shrink(),
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, child) {
+          return MaterialApp(
+            title: 'Sanatan Scroll',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            locale: localeProvider.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            initialRoute: AppRoutes.splash,
+            onGenerateRoute: AppPages.generateRoute,
+            builder: (context, child) {
+              return DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: AppGradients.screenBackground,
+                ),
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
           );
         },
       ),
