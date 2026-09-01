@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'social_auth_button.dart';
 
 class GoogleSignInButton extends StatelessWidget {

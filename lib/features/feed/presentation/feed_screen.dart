@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../core/widgets/language_selector_button.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
@@ -50,12 +49,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),
-      bottomNavigationBar: CustomBottomNavigation(
-        currentIndex: 0,
-        onTap: (index) {
-          context.read<NavigationProvider>().setIndex(index);
-        },
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
