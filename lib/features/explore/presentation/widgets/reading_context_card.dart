@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
@@ -35,6 +36,7 @@ class ReadingContextCard extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 600 ? 32.0 : 20.0;
     final locale = Locale(languageCode);
+    final l10n = AppLocalizations.of(context);
 
     final contextText = verse.getContextText(languageCode);
     final whyItMatters = verse.getWhyItMattersText(languageCode);
@@ -94,6 +96,7 @@ class ReadingContextCard extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: onToggleSave,
+                          tooltip: isSaved ? l10n.savedAction : l10n.save,
                           icon: Icon(
                             isSaved
                                 ? Icons.bookmark_rounded
@@ -118,13 +121,14 @@ class ReadingContextCard extends StatelessWidget {
 
                           // CONTEXT Heading
                           Text(
-                            'CONTEXT',
+                            l10n.context,
                             style: AppTextStyles.getFontForLocale(
                               locale,
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF6B784B),
                               letterSpacing: 1.0,
+                              decoration: TextDecoration.none,
                             ),
                           ),
 
@@ -140,6 +144,7 @@ class ReadingContextCard extends StatelessWidget {
                               color: const Color(0xFF1B1B1B),
                               height: 1.45,
                               isSerif: true,
+                              decoration: TextDecoration.none,
                             ),
                           ),
 
@@ -154,14 +159,17 @@ class ReadingContextCard extends StatelessWidget {
                                 color: Color(0xFF7A7E5A),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'WHY THIS MATTERS NOW',
-                                style: AppTextStyles.getFontForLocale(
-                                  locale,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF7A7E5A),
-                                  letterSpacing: 0.8,
+                              Expanded(
+                                child: Text(
+                                  l10n.whyThisMattersNow,
+                                  style: AppTextStyles.getFontForLocale(
+                                    locale,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF7A7E5A),
+                                    letterSpacing: 0.8,
+                                    decoration: TextDecoration.none,
+                                  ),
                                 ),
                               ),
                             ],
@@ -187,7 +195,8 @@ class ReadingContextCard extends StatelessWidget {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF2B331F),
-                                height: 1.45,
+                                height: 1.5,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                           ),
@@ -208,14 +217,17 @@ class ReadingContextCard extends StatelessWidget {
                                 color: Color(0xFF7A7E5A),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'REFLECTION PREVIEW',
-                                style: AppTextStyles.getFontForLocale(
-                                  locale,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF7A7E5A),
-                                  letterSpacing: 0.8,
+                              Expanded(
+                                child: Text(
+                                  l10n.reflectionPreview,
+                                  style: AppTextStyles.getFontForLocale(
+                                    locale,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF7A7E5A),
+                                    letterSpacing: 0.8,
+                                    decoration: TextDecoration.none,
+                                  ),
                                 ),
                               ),
                             ],
@@ -233,6 +245,7 @@ class ReadingContextCard extends StatelessWidget {
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xFF2A2A2A),
                                 height: 1.5,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                           ),
@@ -270,12 +283,13 @@ class ReadingContextCard extends StatelessWidget {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
-                                        'Tap for full reflection',
+                                        l10n.tapForFullReflection,
                                         style: AppTextStyles.getFontForLocale(
                                           locale,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.white,
+                                          decoration: TextDecoration.none,
                                         ),
                                       ),
                                     ),

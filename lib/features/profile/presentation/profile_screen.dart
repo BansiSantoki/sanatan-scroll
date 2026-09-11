@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -11,6 +12,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final width = MediaQuery.sizeOf(context).width;
 
     final horizontalPadding = width >= 900
@@ -68,7 +70,7 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header (My Profile & Subtitle)
-                          _buildHeader(),
+                          _buildHeader(context),
 
                           const SizedBox(height: 20),
 
@@ -88,14 +90,14 @@ class ProfileScreen extends StatelessWidget {
                             iconBgColor: const Color(0xFFE0E5CE),
                             iconColor: const Color(0xFF495736),
                             cardBgColor: const Color(0xFFEFF2E4),
-                            title: 'Milestones & Achievements',
-                            subtitle: 'Track your growth and celebrate.',
+                            title: l10n.milestonesAndAchievements,
+                            subtitle: l10n.milestonesSubtitle,
                             onTap: () {
                               ScaffoldMessenger.of(context)
                                 ..hideCurrentSnackBar()
                                 ..showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Milestones & Achievements'),
+                                  SnackBar(
+                                    content: Text(l10n.milestonesAndAchievements),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
@@ -110,8 +112,8 @@ class ProfileScreen extends StatelessWidget {
                             iconBgColor: const Color(0xFFF7D4B6),
                             iconColor: const Color(0xFFD96E28),
                             cardBgColor: const Color(0xFFFDECDA),
-                            title: 'Settings',
-                            subtitle: 'Manage your preferences.',
+                            title: l10n.settings,
+                            subtitle: l10n.settingsSubtitle,
                             onTap: () => Navigator.of(context).pushNamed(AppRoutes.settings),
                           ),
 
@@ -123,11 +125,11 @@ class ProfileScreen extends StatelessWidget {
                             iconBgColor: const Color(0xFFF9E7B6),
                             iconColor: const Color(0xFFC8932A),
                             cardBgColor: const Color(0xFFFDF4DA),
-                            title: 'Help & Support',
-                            subtitle: "We're here to help you.",
+                            title: l10n.helpAndSupport,
+                            subtitle: l10n.helpSubtitle,
                             onTap: () => _showInfoDialog(
                               context,
-                              'Help & Support',
+                              l10n.helpAndSupport,
                               'Need help with Sanatan Scroll? We are here to support your spiritual journey.',
                             ),
                           ),
@@ -146,9 +148,9 @@ class ProfileScreen extends StatelessWidget {
                             iconBgColor: const Color(0xFFFAD1C7),
                             iconColor: const Color(0xFFC83A2A),
                             cardBgColor: const Color(0xFFFDE8E4),
-                            title: 'Sign Out',
+                            title: l10n.signOut,
                             titleColor: const Color(0xFFC83A2A),
-                            subtitle: 'Log out of your account.',
+                            subtitle: l10n.signOutSubtitle,
                             onTap: () => _confirmSignOut(context),
                           ),
 
@@ -170,13 +172,15 @@ class ProfileScreen extends StatelessWidget {
   // HEADER (My Profile & Subtitle)
   // ============================================================
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'My Profile',
-          style: GoogleFonts.cormorantGaramond(
+          l10n.myProfile,
+          style: AppTextStyles.getFont(
+            context,
             fontSize: 36,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF1B1B1B),
@@ -185,8 +189,9 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Your account, your journey.',
-          style: GoogleFonts.manrope(
+          l10n.yourAccountYourJourney,
+          style: AppTextStyles.getFont(
+            context,
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: const Color(0xFF555555),
@@ -201,6 +206,7 @@ class ProfileScreen extends StatelessWidget {
   // ============================================================
 
   void _confirmSignOut(BuildContext context) {
+    final l10n = context.l10n;
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -210,16 +216,18 @@ class ProfileScreen extends StatelessWidget {
           ),
           backgroundColor: const Color(0xFFFAF7F2),
           title: Text(
-            'Sign Out',
-            style: GoogleFonts.manrope(
+            l10n.signOutConfirmTitle,
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF1B1B1B),
             ),
           ),
           content: Text(
-            'Are you sure you want to sign out of your account?',
-            style: GoogleFonts.manrope(
+            l10n.signOutConfirmMessage,
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 14,
               height: 1.45,
               color: const Color(0xFF555555),
@@ -228,7 +236,10 @@ class ProfileScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(
+                l10n.cancel,
+                style: AppTextStyles.getFont(context, fontSize: 14),
+              ),
             ),
             FilledButton(
               key: const Key('logout_confirm'),
@@ -245,7 +256,10 @@ class ProfileScreen extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFC83A2A),
               ),
-              child: const Text('Sign Out'),
+              child: Text(
+                l10n.signOut,
+                style: AppTextStyles.getFont(context, fontSize: 14, color: Colors.white),
+              ),
             ),
           ],
         );
@@ -258,6 +272,7 @@ class ProfileScreen extends StatelessWidget {
   // ============================================================
 
   Future<void> _showProfileEditor(BuildContext context) async {
+    final l10n = context.l10n;
     final auth = context.read<AuthProvider>();
     final nameController = TextEditingController(text: auth.userName);
     final photoController = TextEditingController(text: auth.userPhotoUrl ?? '');
@@ -271,8 +286,9 @@ class ProfileScreen extends StatelessWidget {
           ),
           backgroundColor: const Color(0xFFFAF7F2),
           title: Text(
-            'Edit Profile',
-            style: GoogleFonts.manrope(
+            l10n.editProfile,
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -284,18 +300,20 @@ class ProfileScreen extends StatelessWidget {
                 TextField(
                   controller: nameController,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Display name',
-                    border: OutlineInputBorder(),
+                  style: AppTextStyles.getFont(context, fontSize: 15),
+                  decoration: InputDecoration(
+                    labelText: l10n.displayName,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: photoController,
                   keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Photo URL',
-                    border: OutlineInputBorder(),
+                  style: AppTextStyles.getFont(context, fontSize: 15),
+                  decoration: InputDecoration(
+                    labelText: l10n.photoUrl,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -304,7 +322,10 @@ class ProfileScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(
+                l10n.cancel,
+                style: AppTextStyles.getFont(context, fontSize: 14),
+              ),
             ),
             FilledButton(
               onPressed: () async {
@@ -332,7 +353,10 @@ class ProfileScreen extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF1B1B1B),
               ),
-              child: const Text('Save'),
+              child: Text(
+                l10n.save,
+                style: AppTextStyles.getFont(context, fontSize: 14, color: Colors.white),
+              ),
             ),
           ],
         );
@@ -344,6 +368,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showInfoDialog(BuildContext context, String title, String message) {
+    final l10n = context.l10n;
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -354,14 +379,16 @@ class ProfileScreen extends StatelessWidget {
           backgroundColor: const Color(0xFFFAF7F2),
           title: Text(
             title,
-            style: GoogleFonts.manrope(
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
             message,
-            style: GoogleFonts.manrope(
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 14,
               height: 1.5,
             ),
@@ -369,7 +396,10 @@ class ProfileScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
+              child: Text(
+                l10n.close,
+                style: AppTextStyles.getFont(context, fontSize: 14),
+              ),
             ),
           ],
         );
@@ -490,7 +520,8 @@ class _ProfileSummaryCard extends StatelessWidget {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.cormorantGaramond(
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1B1B1B),
@@ -502,7 +533,8 @@ class _ProfileSummaryCard extends StatelessWidget {
                   email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 13,
                     color: const Color(0xFF555555),
                     fontWeight: FontWeight.w400,
@@ -528,8 +560,9 @@ class _ProfileSummaryCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Google Verified',
-                        style: GoogleFonts.manrope(
+                        context.l10n.googleVerified,
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF495736),
@@ -627,7 +660,8 @@ class _MenuTileCard extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.cormorantGaramond(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 19,
                           fontWeight: FontWeight.w700,
                           color: titleColor ?? const Color(0xFF1B1B1B),
@@ -637,7 +671,8 @@ class _MenuTileCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         subtitle,
-                        style: GoogleFonts.manrope(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 12.5,
                           color: titleColor != null ? titleColor!.withValues(alpha: 0.7) : const Color(0xFF555555),
                           fontWeight: FontWeight.w400,
@@ -735,8 +770,9 @@ class _SyncedDevicesCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Synced across devices',
-                  style: GoogleFonts.cormorantGaramond(
+                  context.l10n.syncedAcrossDevices,
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 21,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1B1B1B),
@@ -745,8 +781,9 @@ class _SyncedDevicesCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'Your account is connected and your journey can be synced across devices.',
-                  style: GoogleFonts.manrope(
+                  context.l10n.syncedSubtitle,
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 12.5,
                     color: const Color(0xFF4A5538),
                     fontWeight: FontWeight.w400,
@@ -773,8 +810,9 @@ class _SyncedDevicesCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Account Connected',
-                        style: GoogleFonts.manrope(
+                        context.l10n.accountConnected,
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,

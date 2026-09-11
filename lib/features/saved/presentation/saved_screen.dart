@@ -67,7 +67,7 @@ class SavedScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            'Your personal collection of wisdom',
+                            context.l10n.savedWisdom,
                             style: AppTextStyles.getFont(
                               context,
                               fontSize: 14.5,
@@ -164,7 +164,7 @@ class SavedScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      'No saved wisdom yet',
+                                      context.l10n.noSavedWisdomYet,
                                       style: AppTextStyles.getFont(
                                         context,
                                         fontSize: 24,
@@ -175,7 +175,7 @@ class SavedScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      'Save verses, reflections, and wisdom that inspire you.',
+                                      context.l10n.saveVersesPrompt,
                                       textAlign: TextAlign.center,
                                       style: AppTextStyles.getFont(
                                         context,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../providers/navigation_provider.dart';
@@ -39,31 +40,33 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // BOOK INFORMATION
   // ============================================================
 
-  String get _title {
+  String _getLocalizedTitle(BuildContext context) {
+    final l10n = context.l10n;
     switch (widget.bookId) {
       case 'ramayana':
-        return 'Ramayana';
+        return l10n.ramayana;
       case 'upanishads':
-        return 'Upanishads';
+        return l10n.upanishads;
       case 'mahabharata':
-        return 'Mahabharata';
+        return l10n.mahabharata;
       case 'bhagavad_gita':
       default:
-        return 'Bhagavad Gita';
+        return l10n.bhagavadGita;
     }
   }
 
-  String get _subtitle {
+  String _getLocalizedSubtitle(BuildContext context) {
+    final l10n = context.l10n;
     switch (widget.bookId) {
       case 'ramayana':
-        return 'The Epic of Duty';
+        return l10n.ramayanaSubtitle;
       case 'upanishads':
-        return 'Wisdom of the Self';
+        return l10n.upanishadsSubtitle;
       case 'mahabharata':
-        return 'The Greatest Epic';
+        return l10n.mahabharataSubtitle;
       case 'bhagavad_gita':
       default:
-        return 'The Song of the Divine';
+        return l10n.gitaSubtitle;
     }
   }
 
@@ -216,8 +219,6 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
     }
   }
 
-
-
   // ============================================================
   // STATS
   // ============================================================
@@ -328,25 +329,25 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                       const SizedBox(height: 6),
 
                       // Hero Card
-                      _buildHeroCard(),
+                      _buildHeroCard(context),
 
                       // Floating 3-Stat Cards
-                      _buildStatsRow(),
+                      _buildStatsRow(context),
 
                       const SizedBox(height: 4),
 
                       // About this text
-                      _buildAboutSection(),
+                      _buildAboutSection(context),
 
                       const SizedBox(height: 28),
 
                       // Key Teachings
-                      _buildTeachingsSection(),
+                      _buildTeachingsSection(context),
 
                       const SizedBox(height: 32),
 
                       // Start Reading Button
-                      _buildStartReadingButton(),
+                      _buildStartReadingButton(context),
 
                       const SizedBox(height: 24),
                     ],
@@ -400,11 +401,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // HERO CARD
   // ============================================================
 
-  // ============================================================
-  // HERO CARD
-  // ============================================================
-
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(BuildContext context) {
     final bool isRamayanaOrUpanishads =
         widget.bookId == 'ramayana' || widget.bookId == 'upanishads';
 
@@ -453,7 +450,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                 children: [
                   Text(
                     'SACRED SCRIPTURE',
-                    style: GoogleFonts.manrope(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -465,19 +463,22 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      _title,
-                      style: GoogleFonts.cormorantGaramond(
+                      _getLocalizedTitle(context),
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 38,
                         fontWeight: FontWeight.w700,
                         height: 1.05,
                         color: _cardTitleColor,
+                        isSerif: true,
                       ),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _subtitle,
-                    style: GoogleFonts.manrope(
+                    _getLocalizedSubtitle(context),
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                       color: _cardSubtitleColor,
@@ -487,7 +488,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _extraBadge!,
-                      style: GoogleFonts.manrope(
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: _cardHeaderTextColor,
@@ -556,7 +558,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // 3 STATS ROW
   // ============================================================
 
-  Widget _buildStatsRow() {
+  Widget _buildStatsRow(BuildContext context) {
     return Transform.translate(
       offset: const Offset(0, -38),
       child: Padding(
@@ -589,7 +591,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         stat.value,
-                        style: GoogleFonts.manrope(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
                           color: darkTextColor,
@@ -601,7 +604,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                       stat.label,
                       textAlign: TextAlign.center,
                       maxLines: 2,
-                      style: GoogleFonts.manrope(
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF555555),
@@ -622,7 +626,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // ABOUT SECTION
   // ============================================================
 
-  Widget _buildAboutSection() {
+  Widget _buildAboutSection(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -630,16 +634,19 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         children: [
           Text(
             'About this text',
-            style: GoogleFonts.cormorantGaramond(
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 26,
               fontWeight: FontWeight.w700,
               color: darkTextColor,
+              isSerif: true,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             _about,
-            style: GoogleFonts.manrope(
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 14.5,
               height: 1.55,
               fontWeight: FontWeight.w400,
@@ -655,7 +662,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // KEY TEACHINGS SECTION
   // ============================================================
 
-  Widget _buildTeachingsSection() {
+  Widget _buildTeachingsSection(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -663,10 +670,12 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         children: [
           Text(
             'Key Teachings',
-            style: GoogleFonts.cormorantGaramond(
+            style: AppTextStyles.getFont(
+              context,
               fontSize: 26,
               fontWeight: FontWeight.w700,
               color: darkTextColor,
+              isSerif: true,
             ),
           ),
           const SizedBox(height: 14),
@@ -696,7 +705,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                     ],
                     Text(
                       chip.text,
-                      style: GoogleFonts.manrope(
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         color: darkTextColor,
@@ -716,7 +726,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // START READING BUTTON
   // ============================================================
 
-  Widget _buildStartReadingButton() {
+  Widget _buildStartReadingButton(BuildContext context) {
+    final l10n = context.l10n;
     return SizedBox(
       width: double.infinity,
       height: 56,
@@ -734,8 +745,9 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Start Reading',
-              style: GoogleFonts.manrope(
+              l10n.startReading,
+              style: AppTextStyles.getFont(
+                context,
                 fontSize: 16.5,
                 fontWeight: FontWeight.w600,
                 color: _buttonTextColor,
@@ -779,10 +791,12 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   }
 
   void _shareBook() {
+    final title = _getLocalizedTitle(context);
+    final subtitle = _getLocalizedSubtitle(context);
     ShareService.showOptions(
       context: context,
-      title: _title,
-      text: '$_title — $_subtitle\n\n$_about\n\nSanatan Scroll',
+      title: title,
+      text: '$title — $subtitle\n\n$_about\n\nSanatan Scroll',
     );
   }
 }

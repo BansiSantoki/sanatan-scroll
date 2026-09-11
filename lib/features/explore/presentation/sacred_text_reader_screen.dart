@@ -109,15 +109,18 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required String langCode,
   }) {
     final bookTitle = book.getLocalizedTitle(langCode);
-    final intro = '$bookTitle, Chapter ${chapter.chapterNumber}, Verse ${verse.verseNumber}.';
+    final chapterWord = AppLocalizations.of(context).chapter;
+    final verseWord = AppLocalizations.of(context).verse;
+    final intro = '$bookTitle, $chapterWord ${chapter.chapterNumber}, $verseWord ${verse.verseNumber}.';
     final quote = verse.getQuoteText(langCode);
-    final sanskrit = verse.sanskrit.isNotEmpty ? 'Sanskrit verse: ${verse.sanskrit}.' : '';
-    final translation = 'Translation: ${verse.getLocalizedTranslation(langCode)}.';
-    final contextText = verse.getContextText(langCode).isNotEmpty
-        ? 'Context: ${verse.getContextText(langCode)}.'
-        : '';
+    final sanskrit = verse.sanskrit.isNotEmpty ? verse.sanskrit : '';
+    final translation = verse.getLocalizedTranslation(langCode);
+    final contextText = verse.getContextText(langCode);
 
-    return '$intro $quote $sanskrit $translation $contextText';
+    final parts = [intro, quote, sanskrit, translation, contextText]
+        .where((element) => element.trim().isNotEmpty)
+        .join(' ');
+    return parts;
   }
 
   void _shareVerse({
@@ -126,7 +129,9 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
-    final title = '${book.getLocalizedTitle(langCode)} - Chapter ${chapter.chapterNumber}, Verse ${verse.verseNumber}';
+    final chapterWord = AppLocalizations.of(context).chapter;
+    final verseWord = AppLocalizations.of(context).verse;
+    final title = '${book.getLocalizedTitle(langCode)} - $chapterWord ${chapter.chapterNumber}, $verseWord ${verse.verseNumber}';
     final content = '${verse.getQuoteText(langCode)}\n\n${verse.getLocalizedTranslation(langCode)}';
 
     ShareService.showOptions(
@@ -148,8 +153,9 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
     final langCode = localeProvider.languageCode;
+    final l10n = AppLocalizations.of(context);
     final savedProvider = context.watch<SavedProvider>();
-    final isBhagavadGita = (widget.textId == 'bhagavad_gita');
+    final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
     final cardsPerVerse = isBhagavadGita ? 3 : 2;
 
     return FutureBuilder<SacredBookModel?>(
@@ -177,10 +183,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
             ),
             body: Center(
               child: Text(
-                'Scripture not found',
-                style: AppLocalizations.of(context).appName.isNotEmpty
-                    ? Theme.of(context).textTheme.titleMedium
-                    : null,
+                l10n.scriptureNotFound,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
           );
@@ -195,8 +199,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
               elevation: 0,
               iconTheme: const IconThemeData(color: Color(0xFF1B1B1B)),
             ),
-            body: const Center(
-              child: Text('No verses available for this chapter.'),
+            body: Center(
+              child: Text(l10n.noVersesAvailable),
             ),
           );
         }

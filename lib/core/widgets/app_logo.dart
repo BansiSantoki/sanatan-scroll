@@ -6,7 +6,8 @@ class AppLogo extends StatelessWidget {
     super.key,
     this.size = 120,
     this.showShadow = false,
-  });
+  }
+  );
 
   final double size;
   final bool showShadow;

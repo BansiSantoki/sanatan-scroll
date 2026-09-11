@@ -166,7 +166,7 @@ class SacredChapterListScreen extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   child: Text(
-                    'Select a Chapter',
+                    context.l10n.chapters,
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 24,
@@ -303,7 +303,7 @@ class SacredChapterListScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${chapter.subtitle} • Chapter ${chapter.chapterNumber}',
+                      '${chapter.subtitle} • ${context.l10n.chapter} ${chapter.chapterNumber}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.getFont(
@@ -376,7 +376,7 @@ class SacredChapterListScreen extends StatelessWidget {
       ),
       body: Center(
         child: Text(
-          'Scripture not found',
+          context.l10n.scriptureNotFound,
           style: AppTextStyles.getFont(
             context,
             fontSize: 18,

@@ -1,0 +1,117 @@
+{
+  "collections": [
+    {
+      "name": "users",
+      "path": "users/{uid}",
+      "fields": [
+        { "name": "uid", "type": "String", "required": true },
+        { "name": "email", "type": "String", "required": false },
+        { "name": "displayName", "type": "String", "required": false },
+        { "name": "photoURL", "type": "String", "required": false },
+        { "name": "signInProvider", "type": "String", "required": true },
+        { "name": "createdAt", "type": "Timestamp", "required": false },
+        { "name": "lastLoginAt", "type": "Timestamp", "required": true }
+      ],
+      "subcollections": [
+        {
+          "name": "saved_items",
+          "path": "users/{uid}/saved_items/{itemId}",
+          "fields": [
+            { "name": "id", "type": "String", "required": true },
+            { "name": "title", "type": "String", "required": true },
+            { "name": "source", "type": "String", "required": true },
+            { "name": "content", "type": "String", "required": true },
+            { "name": "type", "type": "String", "required": true },
+            { "name": "savedAt", "type": "Timestamp", "required": true }
+          ]
+        },
+        {
+          "name": "streak",
+          "path": "users/{uid}/streak/{docId}",
+          "fields": [
+            { "name": "currentStreak", "type": "Integer", "required": true },
+            { "name": "longestStreak", "type": "Integer", "required": true },
+            { "name": "totalDays", "type": "Integer", "required": true },
+            { "name": "lastReadDate", "type": "String", "required": false },
+            { "name": "completedDates", "type": "List<String>", "required": true },
+            { "name": "updatedAt", "type": "Timestamp", "required": true }
+          ]
+        },
+        {
+          "name": "reading_progress",
+          "path": "users/{uid}/reading_progress/{bookId}",
+          "fields": [
+            { "name": "bookId", "type": "String", "required": true },
+            { "name": "chapterNumber", "type": "Integer", "required": true },
+            { "name": "verseNumber", "type": "Integer", "required": true },
+            { "name": "updatedAt", "type": "Timestamp", "required": true }
+          ]
+        },
+        {
+          "name": "completed_chapters",
+          "path": "users/{uid}/completed_chapters/{chapterId}",
+          "fields": [
+            { "name": "bookId", "type": "String", "required": true },
+            { "name": "bookTitle", "type": "String", "required": true },
+            { "name": "chapterNumber", "type": "Integer", "required": true },
+            { "name": "chapterTitle", "type": "String", "required": true },
+            { "name": "completedAt", "type": "Timestamp", "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "books",
+      "path": "books/{bookId}",
+      "fields": [
+        { "name": "id", "type": "String", "required": true },
+        { "name": "title", "type": "String", "required": true },
+        { "name": "subtitle", "type": "String", "required": false },
+        { "name": "totalChapters", "type": "Integer", "required": true },
+        { "name": "coverImage", "type": "String", "required": false },
+        { "name": "description", "type": "String", "required": false }
+      ],
+      "subcollections": [
+        {
+          "name": "chapters",
+          "path": "books/{bookId}/chapters/{chapterId}",
+          "fields": [
+            { "name": "chapterNumber", "type": "Integer", "required": true },
+            { "name": "title", "type": "String", "required": true },
+            { "name": "subtitle", "type": "String", "required": false },
+            { "name": "descriptionEnglish", "type": "String", "required": false },
+            { "name": "descriptionGujarati", "type": "String", "required": false }
+          ],
+          "subcollections": [
+            {
+              "name": "verses",
+              "path": "books/{bookId}/chapters/{chapterId}/verses/{verseId}",
+              "fields": [
+                { "name": "verseNumber", "type": "Integer", "required": true },
+                { "name": "sanskrit", "type": "String", "required": true },
+                { "name": "english", "type": "String", "required": true },
+                { "name": "gujarati", "type": "String", "required": true },
+                { "name": "meaningEnglish", "type": "String", "required": false },
+                { "name": "meaningGujarati", "type": "String", "required": false }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "daily_readings",
+      "path": "daily_readings/{docId}",
+      "fields": [
+        { "name": "id", "type": "String", "required": true },
+        { "name": "date", "type": "String", "required": true },
+        { "name": "quote", "type": "String", "required": true },
+        { "name": "source", "type": "String", "required": true },
+        { "name": "chapter", "type": "String", "required": false },
+        { "name": "verse", "type": "String", "required": false },
+        { "name": "sanskrit", "type": "String", "required": false },
+        { "name": "reflection", "type": "String", "required": false }
+      ]
+    }
+  ]
+}

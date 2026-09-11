@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -17,10 +16,11 @@ class SettingsScreen extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
+        final l10n = dialogContext.l10n;
         final options = [
-          {'code': 'en', 'label': 'English'},
-          {'code': 'hi', 'label': 'हिंदी'},
-          {'code': 'gu', 'label': 'ગુજરાતી'},
+          {'code': 'en', 'label': l10n.english},
+          {'code': 'hi', 'label': l10n.hindi},
+          {'code': 'gu', 'label': l10n.gujarati},
         ];
 
         return AlertDialog(
@@ -30,7 +30,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           title: Text(
             dialogContext.l10n.selectLanguage,
-            style: GoogleFonts.cormorantGaramond(
+            style: AppTextStyles.getFont(
+              dialogContext,
               fontSize: 24,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF1B1B1B),
@@ -50,7 +51,9 @@ class SettingsScreen extends StatelessWidget {
                 tileColor: isSelected ? const Color(0xFFFDECDA) : Colors.transparent,
                 title: Text(
                   label,
-                  style: GoogleFonts.manrope(
+                  style: AppTextStyles.getFont(
+                    dialogContext,
+                    fontSize: 15,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: const Color(0xFF23180C),
                   ),
@@ -77,7 +80,10 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.settings),
+        title: Text(
+          l10n.settings,
+          style: AppTextStyles.getFont(context, fontSize: 18),
+        ),
         backgroundColor: AppColors.cardBackground,
         foregroundColor: AppColors.darkText,
         elevation: 0,
@@ -88,7 +94,14 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.settings, style: AppTextStyles.pageHeading),
+              Text(
+                l10n.settings,
+                style: AppTextStyles.getFont(
+                  context,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 16),
               Card(
                 color: const Color(0xFFFFFDF9),
@@ -103,11 +116,19 @@ class SettingsScreen extends StatelessWidget {
                   leading: const Icon(Icons.language_rounded, color: Color(0xFFC85A32)),
                   title: Text(
                     l10n.language,
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   subtitle: Text(
                     localeProvider.currentLanguageName,
-                    style: GoogleFonts.manrope(color: Colors.black54),
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 13,
+                      color: Colors.black54,
+                    ),
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _showLanguageDialog(context),

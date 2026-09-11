@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId);
+      allow delete: if false; // Users should not be deleted directly from client
+
+      // Saved Items Subcollection
+      match /saved_items/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Daily Streak Subcollection
+      match /streak/{docId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Reading Progress Subcollection
+      match /reading_progress/{bookId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Completed Chapters Subcollection
+      match /completed_chapters/{chapterId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Ratings / Reviews Subcollection
+      match /ratings/{ratingId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Sacred Books & Content (Public Read-Only)
+    match /books/{bookId} {
+      allow read: if true;
+      allow write: if false; // Only Admin SDK / Cloud Functions
+
+      match /chapters/{chapterId} {
+        allow read: if true;
+        allow write: if false;
+
+        match /verses/{verseId} {
+          allow read: if true;
+          allow write: if false;
+        }
+      }
+    }
+
+    // Daily Wisdom / Readings (Public Read-Only)
+    match /daily_readings/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // App Configuration (Public Read-Only)
+    match /app_config/{configId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

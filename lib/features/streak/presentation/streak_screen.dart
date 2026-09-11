@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/navigation_provider.dart';
 import '../../../../providers/streak_provider.dart';
 
@@ -11,6 +12,7 @@ class StreakScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final l10n = context.l10n;
 
     final horizontalPadding = width >= 900
         ? 40.0
@@ -39,18 +41,21 @@ class StreakScreen extends StatelessWidget {
                   // 1. HEADER (Your Journey)
                   // ============================================================
                   Text(
-                    'Your Journey',
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 42,
+                    l10n.yourJourney,
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 38,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1B1B1B),
                       height: 1.05,
+                      isSerif: true,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Small steps, deeper transformation.',
-                    style: GoogleFonts.manrope(
+                    l10n.smallStepsText,
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF555555),
@@ -98,6 +103,8 @@ class _MainTrackerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
         final streakCount = provider.streak.currentStreak;
@@ -127,8 +134,9 @@ class _MainTrackerCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Tracker',
-                    style: GoogleFonts.manrope(
+                    l10n.tracker,
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF222222),
@@ -179,19 +187,23 @@ class _MainTrackerCard extends StatelessWidget {
                       children: [
                         Text(
                           '$streakCount',
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 44,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 40,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF1B1B1B),
                             height: 1.0,
+                            isSerif: true,
                           ),
                         ),
                         Text(
-                          streakCount == 1 ? 'Day' : 'Days',
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 18,
+                          streakCount == 1 ? l10n.day : l10n.days,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 16,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF1B1B1B),
+                            isSerif: true,
                           ),
                         ),
                       ],
@@ -206,8 +218,9 @@ class _MainTrackerCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Current Daily Streak',
-                          style: GoogleFonts.manrope(
+                          l10n.currentDailyStreak,
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF1B1B1B),
@@ -215,8 +228,9 @@ class _MainTrackerCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Keep your spiritual\njourney going.',
-                          style: GoogleFonts.manrope(
+                          l10n.keepSpiritualJourneyGoing,
+                          style: AppTextStyles.getFont(
+                            context,
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
                             color: const Color(0xFF383838),
@@ -248,8 +262,9 @@ class _MainTrackerCard extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'Track your daily progress',
-                    style: GoogleFonts.manrope(
+                    l10n.trackDailyProgress,
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 15.5,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -274,10 +289,22 @@ class _ThisWeekSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
         final thisWeekCount = provider.thisWeekCount;
         final weeklyMap = provider.weeklyCompletedMap;
+
+        final dayLabels = [
+          {'key': 'Mon', 'localized': l10n.mon},
+          {'key': 'Tue', 'localized': l10n.tue},
+          {'key': 'Wed', 'localized': l10n.wed},
+          {'key': 'Thu', 'localized': l10n.thu},
+          {'key': 'Fri', 'localized': l10n.fri},
+          {'key': 'Sat', 'localized': l10n.sat},
+          {'key': 'Sun', 'localized': l10n.sun},
+        ];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,11 +314,13 @@ class _ThisWeekSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'This Week',
-                  style: GoogleFonts.cormorantGaramond(
+                  l10n.thisWeek,
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1B1B1B),
+                    isSerif: true,
                   ),
                 ),
                 GestureDetector(
@@ -301,8 +330,9 @@ class _ThisWeekSection extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'View all',
-                        style: GoogleFonts.manrope(
+                        l10n.viewAll,
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A6C38),
@@ -338,8 +368,9 @@ class _ThisWeekSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$thisWeekCount / 7 Days',
-                    style: GoogleFonts.manrope(
+                    l10n.daysProgress(thisWeekCount),
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF1B1B1B),
@@ -347,8 +378,9 @@ class _ThisWeekSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Keep going, you\'re building\na beautiful habit.',
-                    style: GoogleFonts.manrope(
+                    l10n.keepGoingHabit,
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF555555),
@@ -366,14 +398,17 @@ class _ThisWeekSection extends StatelessWidget {
                   // 7 Days Circles Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) {
-                      final isDone = weeklyMap[day] ?? false;
+                    children: dayLabels.map((dayItem) {
+                      final dayKey = dayItem['key']!;
+                      final dayName = dayItem['localized']!;
+                      final isDone = weeklyMap[dayKey] ?? false;
 
                       return Column(
                         children: [
                           Text(
-                            day,
-                            style: GoogleFonts.manrope(
+                            dayName,
+                            style: AppTextStyles.getFont(
+                              context,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF333333),
@@ -429,6 +464,8 @@ class _MilestonesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
         final currentStreak = provider.streak.currentStreak;
@@ -441,16 +478,19 @@ class _MilestonesSection extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Milestones',
-                  style: GoogleFonts.cormorantGaramond(
+                  l10n.milestones,
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1B1B1B),
+                    isSerif: true,
                   ),
                 ),
                 Text(
-                  '${currentStreak.clamp(0, 30)} / 30 days',
-                  style: GoogleFonts.manrope(
+                  '${currentStreak.clamp(0, 30)} / 30 ${l10n.days}',
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFD96E28),
@@ -463,7 +503,7 @@ class _MilestonesSection extends StatelessWidget {
 
             // 4 Milestone Cards
             _MilestoneCard(
-              title: 'Beginning',
+              title: l10n.milestoneBeginning,
               targetDays: 7,
               icon: Icons.eco_outlined,
               iconBgColor: const Color(0xFFEAF0D8),
@@ -472,7 +512,7 @@ class _MilestonesSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
-              title: 'Steady',
+              title: l10n.milestoneSteady,
               targetDays: 30,
               icon: Icons.local_florist_outlined,
               iconBgColor: const Color(0xFFFDF0D8),
@@ -481,7 +521,7 @@ class _MilestonesSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
-              title: 'Practiced',
+              title: l10n.milestonePracticed,
               targetDays: 60,
               icon: Icons.nature_outlined,
               iconBgColor: const Color(0xFFEAF0D8),
@@ -490,7 +530,7 @@ class _MilestonesSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
-              title: 'Devoted',
+              title: l10n.milestoneDevoted,
               targetDays: 100,
               icon: Icons.filter_vintage_outlined,
               iconBgColor: const Color(0xFFFDECDA),
@@ -523,6 +563,8 @@ class _MilestoneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -560,7 +602,8 @@ class _MilestoneCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.manrope(
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1B1B1B),
@@ -568,8 +611,9 @@ class _MilestoneCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$targetDays Days',
-                  style: GoogleFonts.manrope(
+                  '$targetDays ${l10n.days}',
+                  style: AppTextStyles.getFont(
+                    context,
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF666666),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../providers/navigation_provider.dart';
-
 import '../../feed/presentation/feed_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../saved/presentation/saved_screen.dart';

@@ -11,6 +11,7 @@ import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/navigation_provider.dart';
 import '../../../../providers/reading_progress_provider.dart';
+import '../../../../providers/streak_provider.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -74,7 +75,7 @@ class _FeedScreenState extends State<FeedScreen> {
 }
 
 // ============================================================
-// 1. HEADER ROW (Namaste, Bansi & 7 Days Pill)
+// 1. HEADER ROW (Namaste, User Name & Streak Pill)
 // ============================================================
 
 class _HomeHeaderRow extends StatelessWidget {
@@ -83,6 +84,8 @@ class _HomeHeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final streakProvider = context.watch<StreakProvider>();
+    final currentStreak = streakProvider.streak.currentStreak;
     final rawName = auth.firstName;
     final userName = rawName.isNotEmpty ? rawName : 'Bansi';
     final l10n = context.l10n;
@@ -130,7 +133,7 @@ class _HomeHeaderRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      l10n.daysStreak(7),
+                      l10n.daysStreak(currentStreak),
                       style: AppTextStyles.getFont(
                         context,
                         fontSize: 13.5,
@@ -209,7 +212,7 @@ class _DailyWisdomCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'DAILY WISDOM',
+                        context.l10n.dailyWisdom,
                         style: AppTextStyles.getFont(
                           context,
                           fontSize: 11.5,
@@ -220,10 +223,10 @@ class _DailyWisdomCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Bhagavad Gita 2.47',
+                        '${context.l10n.bhagavadGita} 2.47',
                         style: AppTextStyles.getFont(
                           context,
-                          fontSize: 26,
+                          fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF1B1B1B),
                           height: 1.05,
@@ -245,7 +248,11 @@ class _DailyWisdomCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'You have the right to perform your duty, but not to the fruits of your actions.',
+                        context.l10n.locale.languageCode == 'gu'
+                            ? 'તમને તમારું કર્તવ્ય કરવાનો અધિકાર છે, પરંતુ તેના ફળ પર નહીં.'
+                            : context.l10n.locale.languageCode == 'hi'
+                                ? 'आपको अपने कर्तव्य का पालन करने का अधिकार है, लेकिन उसके फलों पर नहीं।'
+                                : 'You have the right to perform your duty, but not to the fruits of your actions.',
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.getFont(
@@ -332,6 +339,7 @@ class _ContinueJourneyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final readingProvider = context.watch<ReadingProgressProvider>();
     final savedPos = readingProvider.positionFor('bhagavad_gita');
+    final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
@@ -374,7 +382,7 @@ class _ContinueJourneyCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Continue Your Journey',
+                        l10n.continueYourJourney,
                         style: AppTextStyles.getFont(
                           context,
                           fontSize: 24,
@@ -386,7 +394,7 @@ class _ContinueJourneyCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Pick up where you left off',
+                        l10n.pickUpWhereYouLeftOff,
                         style: AppTextStyles.getFont(
                           context,
                           fontSize: 14,
@@ -419,44 +427,46 @@ class _ContinueJourneyCard extends StatelessWidget {
 class _ExploreScripturesSection extends StatelessWidget {
   const _ExploreScripturesSection();
 
-  static const List<Map<String, dynamic>> _fourBooks = [
-    {
-      'id': 'bhagavad_gita',
-      'title': 'Gita',
-      'subtitle': 'The Song of\nthe Divine',
-      'color': Color(0xFFF7BD77),
-      'iconType': 0,
-    },
-    {
-      'id': 'ramayana',
-      'title': 'Ramayana',
-      'subtitle': 'The Epic of\nDuty',
-      'color': Color(0xFFF0A77E),
-      'iconType': 1,
-    },
-    {
-      'id': 'upanishads',
-      'title': 'Upanishads',
-      'subtitle': 'Wisdom of\nthe Self',
-      'color': Color(0xFFB8C296),
-      'iconType': 2,
-    },
-    {
-      'id': 'mahabharata',
-      'title': 'Mahabharata',
-      'subtitle': 'The Great\nEpic',
-      'color': Color(0xFFEBC78C),
-      'iconType': 3,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    final books = [
+      {
+        'id': 'bhagavad_gita',
+        'title': l10n.gita,
+        'subtitle': l10n.gitaSubtitle,
+        'color': const Color(0xFFF7BD77),
+        'iconType': 0,
+      },
+      {
+        'id': 'ramayana',
+        'title': l10n.ramayana,
+        'subtitle': l10n.ramayanaSubtitle,
+        'color': const Color(0xFFF0A77E),
+        'iconType': 1,
+      },
+      {
+        'id': 'upanishads',
+        'title': l10n.upanishads,
+        'subtitle': l10n.upanishadsSubtitle,
+        'color': const Color(0xFFB8C296),
+        'iconType': 2,
+      },
+      {
+        'id': 'mahabharata',
+        'title': l10n.mahabharata,
+        'subtitle': l10n.mahabharataSubtitle,
+        'color': const Color(0xFFEBC78C),
+        'iconType': 3,
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'EXPLORE SCRIPTURES',
+          l10n.exploreScriptures,
           style: AppTextStyles.getFont(
             context,
             fontSize: 11.5,
@@ -467,7 +477,7 @@ class _ExploreScripturesSection extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Dive into timeless wisdom',
+          l10n.diveIntoTimelessWisdom,
           style: AppTextStyles.getFont(
             context,
             fontSize: 15,
@@ -483,10 +493,10 @@ class _ExploreScripturesSection extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            itemCount: _fourBooks.length,
+            itemCount: books.length,
             separatorBuilder: (context, index) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final info = _fourBooks[index];
+              final info = books[index];
               return SizedBox(
                 width: 132,
                 child: _BookCard(

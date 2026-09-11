@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
@@ -32,6 +33,7 @@ class ReadingWisdomCard extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 600 ? 32.0 : 20.0;
     final locale = Locale(languageCode);
+    final l10n = AppLocalizations.of(context);
 
     final quoteText = verse.getQuoteText(languageCode);
     final translationText = verse.getLocalizedTranslation(languageCode);
@@ -85,13 +87,14 @@ class ReadingWisdomCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'WISDOM',
+                              l10n.wisdom,
                               style: AppTextStyles.getFontForLocale(
                                 locale,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF2A1808),
                                 letterSpacing: 1.2,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                             const SizedBox(height: 3),
@@ -104,7 +107,7 @@ class ReadingWisdomCard extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: onToggleSave,
-                          tooltip: isSaved ? 'Unsave' : 'Save',
+                          tooltip: isSaved ? l10n.savedAction : l10n.save,
                           icon: Icon(
                             isSaved
                                 ? Icons.bookmark_rounded
@@ -135,6 +138,7 @@ class ReadingWisdomCard extends StatelessWidget {
                                 color: const Color(0xFF1B1B1B),
                                 height: 0.8,
                                 isSerif: true,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -147,8 +151,9 @@ class ReadingWisdomCard extends StatelessWidget {
                                 fontSize: width >= 600 ? 36 : 30,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF1B1B1B),
-                                height: 1.15,
+                                height: 1.25,
                                 isSerif: true,
+                                decoration: TextDecoration.none,
                               ),
                             ),
 
@@ -162,13 +167,14 @@ class ReadingWisdomCard extends StatelessWidget {
 
                             // SANSKRIT Section
                             Text(
-                              'SANSKRIT',
+                              l10n.sanskrit,
                               style: AppTextStyles.getFontForLocale(
                                 locale,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF2A1808),
                                 letterSpacing: 1.0,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -180,6 +186,7 @@ class ReadingWisdomCard extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF1B1B1B),
                                 height: 1.45,
+                                decoration: TextDecoration.none,
                               ),
                             ),
 
@@ -203,6 +210,7 @@ class ReadingWisdomCard extends StatelessWidget {
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF1B1B1B),
                                       isSerif: true,
+                                      decoration: TextDecoration.none,
                                     ),
                                   ),
                                 ),
@@ -219,13 +227,14 @@ class ReadingWisdomCard extends StatelessWidget {
 
                             // TRANSLATION Section
                             Text(
-                              'TRANSLATION',
+                              l10n.translation,
                               style: AppTextStyles.getFontForLocale(
                                 locale,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF2A1808),
                                 letterSpacing: 1.0,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -236,7 +245,8 @@ class ReadingWisdomCard extends StatelessWidget {
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF1B1B1B),
-                                height: 1.4,
+                                height: 1.45,
+                                decoration: TextDecoration.none,
                               ),
                             ),
 
@@ -246,7 +256,7 @@ class ReadingWisdomCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Audio Player Pill at bottom (Reference Image 2)
+                    // Audio Player Pill at bottom
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -290,12 +300,13 @@ class ReadingWisdomCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'Listen to Audio',
+                            l10n.listenToAudio,
                             style: AppTextStyles.getFontForLocale(
                               locale,
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF1B1B1B),
+                              decoration: TextDecoration.none,
                             ),
                           ),
                           const Spacer(),
@@ -331,12 +342,13 @@ class ReadingWisdomCard extends StatelessWidget {
                             color: Color(0xFF2A1808),
                           ),
                           Text(
-                            'Swipe up for more',
+                            l10n.swipeUpForMore,
                             style: AppTextStyles.getFontForLocale(
                               locale,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF2A1808),
+                              decoration: TextDecoration.none,
                             ),
                           ),
                           const SizedBox(height: 8),

@@ -1,0 +1,36 @@
+{
+  "themeName": "Sanatan Scroll Production Theme",
+  "colors": {
+    "primaryBurgundy": "#6B1F2A",
+    "darkBurgundy": "#4A1018",
+    "deepMaroon": "#7A2630",
+    "accentRed": "#9B2E35",
+    "warmOrange": "#D97745",
+    "goldenOrange": "#E6A15B",
+    "softGold": "#E8B36B",
+    "mainBackground": "#F8F6F2",
+    "warmCream": "#F4F0E9",
+    "cardBackground": "#FFFFFF",
+    "softBeige": "#EEE9E1",
+    "lightSand": "#E6DED2",
+    "darkText": "#2E2525",
+    "secondaryText": "#827777",
+    "divider": "#E9E4DE",
+    "peachHighlight": "#FDE2E1"
+  },
+  "fonts": {
+    "primarySerif": "Cormorant Garamond",
+    "primarySans": "Manrope",
+    "gujarati": "Noto Sans Gujarati",
+    "devanagari": "Noto Sans Devanagari"
+  },
+  "gradients": {
+    "primary": ["#6B1F2A", "#A64036"],
+    "warmSpiritual": ["#D97745", "#8B2730"],
+    "goldenAccent": ["#E8B36B", "#D97745"],
+    "splash": ["#4A1018", "#6B1F2A", "#D97745"],
+    "heroOverlay": ["#00000000", "#CC2E2525"],
+    "streakCard": ["#4A1018", "#7A2630", "#9B2E35"],
+    "screenBackground": ["#FFF8EA", "#FBF2DE", "#F4E7D2"]
+  }
+}

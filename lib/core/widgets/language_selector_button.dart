@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../app/theme/app_text_styles.dart';
 import '../../providers/locale_provider.dart';
+import '../localization/app_localizations.dart';
 
 class LanguageSelectorButton extends StatefulWidget {
   const LanguageSelectorButton({super.key});
@@ -53,11 +54,12 @@ class _LanguageSelectorButtonState extends State<LanguageSelectorButton> {
       builder: (overlayContext) {
         final localeProvider = context.watch<LocaleProvider>();
         final currentCode = localeProvider.languageCode;
+        final l10n = overlayContext.l10n;
 
         final options = [
-          {'code': 'en', 'label': 'English'},
-          {'code': 'hi', 'label': 'हिंदी'},
-          {'code': 'gu', 'label': 'ગુજરાતી'},
+          {'code': 'en', 'label': l10n.english},
+          {'code': 'hi', 'label': l10n.hindi},
+          {'code': 'gu', 'label': l10n.gujarati},
         ];
 
         return Stack(
@@ -196,7 +198,7 @@ class _LanguageSelectorButtonState extends State<LanguageSelectorButton> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Language',
+                context.l10n.language,
                 style: AppTextStyles.getFont(
                   context,
                   fontSize: 13.5,

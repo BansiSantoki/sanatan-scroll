@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
@@ -33,6 +34,7 @@ class ReadingReflectionCard extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 600 ? 32.0 : 20.0;
     final locale = Locale(languageCode);
+    final l10n = AppLocalizations.of(context);
 
     final reflectionText = verse.getReflectionFullText(languageCode);
     final oneThingToNotice = verse.getOneThingToNotice(languageCode);
@@ -82,18 +84,20 @@ class ReadingReflectionCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'REFLECTION',
+                          l10n.reflection,
                           style: AppTextStyles.getFontForLocale(
                             locale,
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFFD96E28),
                             letterSpacing: 1.2,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                         const Spacer(),
                         IconButton(
                           onPressed: onToggleSave,
+                          tooltip: isSaved ? l10n.savedAction : l10n.save,
                           icon: Icon(
                             isSaved
                                 ? Icons.bookmark_rounded
@@ -125,6 +129,7 @@ class ReadingReflectionCard extends StatelessWidget {
                               fontWeight: FontWeight.w400,
                               color: const Color(0xFF232323),
                               height: 1.6,
+                              decoration: TextDecoration.none,
                             ),
                           ),
 
@@ -139,7 +144,7 @@ class ReadingReflectionCard extends StatelessWidget {
                           _buildSectionRow(
                             locale: locale,
                             icon: Icons.remove_red_eye_outlined,
-                            title: 'ONE THING TO NOTICE TODAY',
+                            title: l10n.oneThingToNoticeToday,
                             content: oneThingToNotice,
                           ),
 
@@ -154,7 +159,7 @@ class ReadingReflectionCard extends StatelessWidget {
                           _buildSectionRow(
                             locale: locale,
                             icon: Icons.track_changes_rounded,
-                            title: 'TRY THIS',
+                            title: l10n.tryThis,
                             content: tryThis,
                           ),
 
@@ -169,7 +174,7 @@ class ReadingReflectionCard extends StatelessWidget {
                           _buildSectionRow(
                             locale: locale,
                             icon: Icons.favorite_border_rounded,
-                            title: 'CARRY THIS WITH YOU',
+                            title: l10n.carryThisWithYou,
                             content: carryThisWithYou,
                           ),
 
@@ -212,12 +217,13 @@ class ReadingReflectionCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  isSaved ? 'Saved' : 'Save',
+                                  isSaved ? l10n.savedAction : l10n.save,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                               ],
@@ -236,8 +242,8 @@ class ReadingReflectionCard extends StatelessWidget {
                               ScaffoldMessenger.of(context)
                                 ..hideCurrentSnackBar()
                                 ..showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Wallpaper setting feature triggered!'),
+                                  SnackBar(
+                                    content: Text(l10n.wallpaperSet),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
@@ -251,12 +257,13 @@ class ReadingReflectionCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Set Wallpaper',
+                                  l10n.setWallpaper,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                               ],
@@ -281,12 +288,13 @@ class ReadingReflectionCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Share',
+                                  l10n.share,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
+                                    decoration: TextDecoration.none,
                                   ),
                                 ),
                               ],
@@ -332,6 +340,7 @@ class ReadingReflectionCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF6B784B),
                   letterSpacing: 0.8,
+                  decoration: TextDecoration.none,
                 ),
               ),
               const SizedBox(height: 4),
@@ -342,7 +351,8 @@ class ReadingReflectionCard extends StatelessWidget {
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF2B2B2B),
-                  height: 1.4,
+                  height: 1.5,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ],
