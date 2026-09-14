@@ -62,7 +62,19 @@ class VersesScreen extends StatelessWidget {
     final selectedBookId = navProvider.selectedBookId ?? (books.isNotEmpty ? books.first.id : '');
     final selectedChapterNum = navProvider.selectedChapterNumber ?? 1;
 
-    final selectedBook = books.firstWhere((b) => b.id == selectedBookId, orElse: () => books.first);
+    if (books.isEmpty) {
+      return EmptyStateWidget(
+        title: 'No Sacred Books Found',
+        message: 'No sacred books available in Firestore. Please sync or create a book first.',
+        actionLabel: 'Sync Mobile Content',
+        onAction: () => booksProvider.syncMobileContent(force: true),
+      );
+    }
+
+    final selectedBook = books.firstWhere(
+      (b) => b.id == selectedBookId,
+      orElse: () => books.first,
+    );
 
     if (selectedBookId.isNotEmpty && chaptersProvider.activeBookId != selectedBookId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,6 +95,15 @@ class VersesScreen extends StatelessWidget {
 
     final verses = versesProvider.verses;
     final chapters = chaptersProvider.chapters;
+
+    if (chapters.isEmpty) {
+      return EmptyStateWidget(
+        title: 'No Chapters Found',
+        message: 'No chapters available for book "${selectedBook.title}". Please create a chapter first.',
+        actionLabel: 'Manage Chapters',
+        onAction: () => navProvider.selectBook(selectedBookId),
+      );
+    }
 
     final selectedChapter = chapters.firstWhere(
       (c) => c.chapterNumber == selectedChapterNum,

@@ -193,8 +193,10 @@ class _ImportPreviewDialogState extends State<ImportPreviewDialog> {
                     onChanged: (val) {
                       setState(() {
                         _selectedBookId = val;
-                        final b = books.firstWhere((element) => element.id == val, orElse: () => books.first);
-                        _selectedBookName = b.title;
+                        final b = books.any((element) => element.id == val)
+                            ? books.firstWhere((element) => element.id == val)
+                            : (books.isNotEmpty ? books.first : null);
+                        _selectedBookName = b?.title ?? 'Default';
                       });
                       _parseAndAnalyze();
                     },

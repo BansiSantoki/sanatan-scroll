@@ -19,11 +19,72 @@ class BooksScreen extends StatelessWidget {
     final booksProvider = context.watch<BooksProvider>();
     final navProvider = context.read<AdminNavigationProvider>();
 
-    if (booksProvider.isLoading || booksProvider.isSeeding) {
-      return LoadingStateWidget(
-        message: booksProvider.isSeeding
-            ? 'Migrating and Syncing Mobile App Content to Firestore...'
-            : 'Loading Sacred Books from Firestore...',
+    if (booksProvider.isLoading && !booksProvider.isSeeding) {
+      return const LoadingStateWidget(message: 'Loading Sacred Books from Firestore...');
+    }
+
+    if (booksProvider.isSeeding) {
+      final p = booksProvider.migrationProgress;
+      return Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 560),
+          padding: const EdgeInsets.all(24),
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(AdminColors.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Migrating Mobile Content to Firestore',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.cinzel(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AdminColors.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    p?.currentItem ?? 'Writing sacred books, chapters, and verses to Firestore...',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 13, color: AdminColors.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: p?.progressPercentage,
+                      minHeight: 8,
+                      backgroundColor: AdminColors.bgSubtle,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AdminColors.saffron),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildProgressBadge('Books', '${p?.booksDone ?? 0} / ${p?.totalBooks ?? 16}'),
+                      _buildProgressBadge('Chapters', '${p?.chaptersDone ?? 0} / ${p?.totalChapters ?? 110}'),
+                      _buildProgressBadge('Verses', '${p?.versesDone ?? 0} / ${p?.totalVerses ?? 900}'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     }
 
@@ -245,6 +306,33 @@ class BooksScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBadge(String label, String count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AdminColors.bgSubtle,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(fontSize: 11, color: AdminColors.textMuted),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            count,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: AdminColors.primaryDark,
+            ),
           ),
         ],
       ),

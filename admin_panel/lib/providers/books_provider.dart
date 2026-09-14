@@ -14,6 +14,8 @@ class BooksProvider extends ChangeNotifier {
   List<SacredBookAdminModel> _books = [];
   bool _isLoading = true;
   bool _isSeeding = false;
+  bool _hasAttemptedAutoSeed = false;
+  MigrationProgress? _migrationProgress;
   String? _errorMessage;
   String _searchQuery = '';
   String _filterStatus = 'All'; // All, Published, Draft, Archived
@@ -49,6 +51,7 @@ class BooksProvider extends ChangeNotifier {
   List<SacredBookAdminModel> get rawBooks => _books;
   bool get isLoading => _isLoading;
   bool get isSeeding => _isSeeding;
+  MigrationProgress? get migrationProgress => _migrationProgress;
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   String get filterStatus => _filterStatus;
@@ -60,22 +63,14 @@ class BooksProvider extends ChangeNotifier {
 
   void _init() {
     _subscription = _booksService.streamBooks().listen(
-      (data) async {
+      (data) {
         _books = data;
         _isLoading = false;
-        _errorMessage = null;
 
-        // Auto-seed if Firestore has 0 books
-        if (data.isEmpty && !_isSeeding) {
-          _isSeeding = true;
-          notifyListeners();
-          try {
-            await _seedService.syncExistingMobileContentToFirestore(force: false);
-          } catch (e) {
-            _errorMessage = 'Auto-seed note: $e';
-          } finally {
-            _isSeeding = false;
-          }
+        // Auto-seed if Firestore has 0 books and we haven't attempted yet
+        if (data.isEmpty && !_isSeeding && !_hasAttemptedAutoSeed) {
+          _hasAttemptedAutoSeed = true;
+          syncMobileContent(force: false);
         } else {
           notifyListeners();
         }
@@ -91,16 +86,25 @@ class BooksProvider extends ChangeNotifier {
   Future<bool> syncMobileContent({bool force = true}) async {
     try {
       _isSeeding = true;
+      _errorMessage = null;
+      _migrationProgress = null;
       notifyListeners();
 
-      await _seedService.syncExistingMobileContentToFirestore(force: force);
+      await _seedService.syncExistingMobileContentToFirestore(
+        force: force,
+        onProgress: (progress) {
+          _migrationProgress = progress;
+          notifyListeners();
+        },
+      );
 
       _isSeeding = false;
+      _migrationProgress = null;
       notifyListeners();
       return true;
     } catch (e) {
       _isSeeding = false;
-      _errorMessage = 'Failed to sync mobile content: $e';
+      _errorMessage = 'Migration failed: $e';
       notifyListeners();
       return false;
     }

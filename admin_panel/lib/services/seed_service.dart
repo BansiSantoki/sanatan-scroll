@@ -2,21 +2,83 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sanatan_scroll/data/sacred_books_data.dart';
 import 'activity_logs_service.dart';
 
+class MigrationProgress {
+  final int booksDone;
+  final int totalBooks;
+  final int chaptersDone;
+  final int totalChapters;
+  final int versesDone;
+  final int totalVerses;
+  final String currentItem;
+
+  const MigrationProgress({
+    required this.booksDone,
+    required this.totalBooks,
+    required this.chaptersDone,
+    required this.totalChapters,
+    required this.versesDone,
+    required this.totalVerses,
+    required this.currentItem,
+  });
+
+  double get progressPercentage {
+    final total = totalBooks + totalChapters + totalVerses;
+    if (total == 0) return 1.0;
+    final done = booksDone + chaptersDone + versesDone;
+    return (done / total).clamp(0.0, 1.0);
+  }
+}
+
 class SeedService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ActivityLogsService _logsService = ActivityLogsService();
 
-  Future<int> syncExistingMobileContentToFirestore({bool force = false}) async {
+  Future<int> syncExistingMobileContentToFirestore({
+    bool force = false,
+    void Function(MigrationProgress progress)? onProgress,
+  }) async {
     try {
       final booksSnapshot = await _firestore.collection('sacred_books').get();
 
-      // If books already exist and force is false, skip migration
+      // If books already exist in Firestore and force is false, skip migration
       if (!force && booksSnapshot.docs.isNotEmpty) {
         return booksSnapshot.docs.length;
       }
 
-      int totalBooksSeeded = 0;
       final existingBooks = SacredBooksData.all;
+      int totalBooks = existingBooks.length;
+      int totalChapters = 0;
+      int totalVerses = 0;
+
+      for (final book in existingBooks) {
+        totalChapters += book.chapters.length;
+        for (final chapter in book.chapters) {
+          totalVerses += chapter.verses.length;
+        }
+      }
+
+      int booksDone = 0;
+      int chaptersDone = 0;
+      int versesDone = 0;
+
+      WriteBatch batch = _firestore.batch();
+      int opCount = 0;
+
+      void notify(String currentItem) {
+        onProgress?.call(
+          MigrationProgress(
+            booksDone: booksDone,
+            totalBooks: totalBooks,
+            chaptersDone: chaptersDone,
+            totalChapters: totalChapters,
+            versesDone: versesDone,
+            totalVerses: totalVerses,
+            currentItem: currentItem,
+          ),
+        );
+      }
+
+      notify('Preparing migration...');
 
       for (int i = 0; i < existingBooks.length; i++) {
         final book = existingBooks[i];
@@ -40,8 +102,16 @@ class SeedService {
           'updatedAt': FieldValue.serverTimestamp(),
         };
 
-        await bookDocRef.set(bookMap, SetOptions(merge: true));
-        totalBooksSeeded++;
+        batch.set(bookDocRef, bookMap, SetOptions(merge: true));
+        opCount++;
+        booksDone++;
+
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+          notify('Migrating Book: ${book.title}...');
+        }
 
         for (final chapter in book.chapters) {
           final chapterDocRef = bookDocRef.collection('chapters').doc(chapter.chapterNumber.toString());
@@ -66,7 +136,16 @@ class SeedService {
             'updatedAt': FieldValue.serverTimestamp(),
           };
 
-          await chapterDocRef.set(chapterMap, SetOptions(merge: true));
+          batch.set(chapterDocRef, chapterMap, SetOptions(merge: true));
+          opCount++;
+          chaptersDone++;
+
+          if (opCount >= 400) {
+            await batch.commit();
+            batch = _firestore.batch();
+            opCount = 0;
+            notify('Migrating ${book.title} - Chapter ${chapter.chapterNumber}...');
+          }
 
           for (final verse in chapter.verses) {
             final verseDocRef = chapterDocRef.collection('verses').doc(verse.verseNumber.toString());
@@ -111,18 +190,34 @@ class SeedService {
               'updatedAt': FieldValue.serverTimestamp(),
             };
 
-            await verseDocRef.set(verseMap, SetOptions(merge: true));
+            batch.set(verseDocRef, verseMap, SetOptions(merge: true));
+            opCount++;
+            versesDone++;
+
+            if (opCount >= 400) {
+              await batch.commit();
+              batch = _firestore.batch();
+              opCount = 0;
+              notify('Migrating ${book.title} Ch ${chapter.chapterNumber} Verse ${verse.verseNumber}...');
+            }
           }
         }
       }
 
+      if (opCount > 0) {
+        await batch.commit();
+        opCount = 0;
+      }
+
+      notify('Migration completed successfully.');
+
       await _logsService.logAction(
         action: 'Migrated Mobile App Content',
         target: 'Firestore sacred_books',
-        details: 'Seeded $totalBooksSeeded sacred books to Firestore',
+        details: 'Seeded $totalBooks books, $totalChapters chapters, $totalVerses verses to Firestore',
       );
 
-      return totalBooksSeeded;
+      return totalBooks;
     } catch (e) {
       rethrow;
     }

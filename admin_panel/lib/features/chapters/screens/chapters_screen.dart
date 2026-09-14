@@ -34,12 +34,19 @@ class ChaptersScreen extends StatelessWidget {
       return const LoadingStateWidget(message: 'Loading Chapters...');
     }
 
+    if (books.isEmpty) {
+      return EmptyStateWidget(
+        title: 'No Sacred Books Found',
+        message: 'No sacred books available in Firestore. Please sync or create a book first.',
+        actionLabel: 'Sync Mobile Content',
+        onAction: () => booksProvider.syncMobileContent(force: true),
+      );
+    }
+
     final chapters = chaptersProvider.chapters;
     final selectedBook = books.firstWhere(
       (b) => b.id == selectedBookId,
-      orElse: () => books.isNotEmpty
-          ? books.first
-          : throw Exception('No book available'),
+      orElse: () => books.first,
     );
 
     return Padding(
