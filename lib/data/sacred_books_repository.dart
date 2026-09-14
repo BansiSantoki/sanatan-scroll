@@ -11,8 +11,41 @@ class SacredBooksRepository {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final Map<String, SacredBookModel> _cache = {};
 
-  static Future<SacredBookModel?> fetchBookById(String bookId) async {
-    if (_cache.containsKey(bookId)) {
+  static void clearCache() {
+    _cache.clear();
+  }
+
+  static Future<List<SacredBookModel>> fetchAllBooks({bool forceRefresh = false}) async {
+    try {
+      final snapshot = await _firestore
+          .collection('sacred_books')
+          .orderBy('order')
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return SacredBooksData.all;
+      }
+
+      final books = <SacredBookModel>[];
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['published'] == false || data['archived'] == true) continue;
+        final book = await fetchBookById(doc.id, forceRefresh: forceRefresh);
+        if (book != null) {
+          books.add(book);
+        }
+      }
+      return books.isNotEmpty ? books : SacredBooksData.all;
+    } catch (_) {
+      return SacredBooksData.all;
+    }
+  }
+
+  static Future<SacredBookModel?> fetchBookById(
+    String bookId, {
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _cache.containsKey(bookId)) {
       return _cache[bookId];
     }
 
@@ -36,6 +69,7 @@ class SacredBooksRepository {
 
       for (final chapterDoc in chaptersSnapshot.docs) {
         final chapterData = chapterDoc.data();
+        if (chapterData['published'] == false || chapterData['archived'] == true) continue;
 
         final versesSnapshot = await chapterDoc.reference
             .collection('verses')
@@ -43,7 +77,9 @@ class SacredBooksRepository {
             .get();
 
         final verses = versesSnapshot.docs
-            .map((verseDoc) => SacredVerseModel.fromMap(verseDoc.data()))
+            .map((verseDoc) => verseDoc.data())
+            .where((data) => data['published'] != false && data['archived'] != true)
+            .map((data) => SacredVerseModel.fromMap(data))
             .toList();
 
         chapters.add(
@@ -51,10 +87,17 @@ class SacredBooksRepository {
             chapterNumber: _asInt(chapterData['chapterNumber'], fallback: 1),
             title: (chapterData['title'] ?? '').toString(),
             subtitle: (chapterData['subtitle'] ?? '').toString(),
+            titleEn: chapterData['title_en']?.toString(),
+            titleGu: chapterData['title_gu']?.toString(),
+            titleHi: chapterData['title_hi']?.toString(),
+            subtitleEn: chapterData['subtitle_en']?.toString(),
+            subtitleGu: chapterData['subtitle_gu']?.toString(),
+            subtitleHi: chapterData['subtitle_hi']?.toString(),
             descriptionEnglish:
-                (chapterData['descriptionEnglish'] ?? '').toString(),
+                (chapterData['descriptionEnglish'] ?? chapterData['description_en'] ?? '').toString(),
             descriptionGujarati:
-                (chapterData['descriptionGujarati'] ?? '').toString(),
+                (chapterData['descriptionGujarati'] ?? chapterData['description_gu'] ?? '').toString(),
+            descriptionHindi: chapterData['descriptionHindi']?.toString() ?? chapterData['description_hi']?.toString(),
             verses: verses,
           ),
         );
@@ -64,6 +107,12 @@ class SacredBooksRepository {
         id: bookId,
         title: (bookData['title'] ?? 'Sacred Text').toString(),
         subtitle: (bookData['subtitle'] ?? '').toString(),
+        titleEn: bookData['title_en']?.toString(),
+        titleGu: bookData['title_gu']?.toString(),
+        titleHi: bookData['title_hi']?.toString(),
+        subtitleEn: bookData['subtitle_en']?.toString(),
+        subtitleGu: bookData['subtitle_gu']?.toString(),
+        subtitleHi: bookData['subtitle_hi']?.toString(),
         iconEmoji: (bookData['iconEmoji'] ?? '📜').toString(),
         totalChapters: _asInt(
           bookData['totalChapters'],
@@ -82,6 +131,7 @@ class SacredBooksRepository {
   static Future<SacredChapterModel?> fetchChapter({
     required String bookId,
     required int chapterNumber,
+    bool forceRefresh = false,
   }) async {
     try {
       final chapterDoc = await _firestore
@@ -96,13 +146,17 @@ class SacredBooksRepository {
       }
 
       final chapterData = chapterDoc.data()!;
+      if (chapterData['published'] == false || chapterData['archived'] == true) return null;
+
       final versesSnapshot = await chapterDoc.reference
           .collection('verses')
           .orderBy('verseNumber')
           .get();
 
       final verses = versesSnapshot.docs
-          .map((verseDoc) => SacredVerseModel.fromMap(verseDoc.data()))
+          .map((verseDoc) => verseDoc.data())
+          .where((data) => data['published'] != false && data['archived'] != true)
+          .map((data) => SacredVerseModel.fromMap(data))
           .toList();
 
       return SacredChapterModel(
@@ -110,10 +164,17 @@ class SacredBooksRepository {
             _asInt(chapterData['chapterNumber'], fallback: chapterNumber),
         title: (chapterData['title'] ?? '').toString(),
         subtitle: (chapterData['subtitle'] ?? '').toString(),
+        titleEn: chapterData['title_en']?.toString(),
+        titleGu: chapterData['title_gu']?.toString(),
+        titleHi: chapterData['title_hi']?.toString(),
+        subtitleEn: chapterData['subtitle_en']?.toString(),
+        subtitleGu: chapterData['subtitle_gu']?.toString(),
+        subtitleHi: chapterData['subtitle_hi']?.toString(),
         descriptionEnglish:
-            (chapterData['descriptionEnglish'] ?? '').toString(),
+            (chapterData['descriptionEnglish'] ?? chapterData['description_en'] ?? '').toString(),
         descriptionGujarati:
-            (chapterData['descriptionGujarati'] ?? '').toString(),
+            (chapterData['descriptionGujarati'] ?? chapterData['description_gu'] ?? '').toString(),
+        descriptionHindi: chapterData['descriptionHindi']?.toString() ?? chapterData['description_hi']?.toString(),
         verses: verses,
       );
     } catch (_) {

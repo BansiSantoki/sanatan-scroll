@@ -44,7 +44,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   void initState() {
     super.initState();
     currentChapter = widget.initialChapterNumber;
-    _bookFuture = SacredBooksRepository.fetchBookById(widget.textId);
+    _bookFuture = SacredBooksRepository.fetchBookById(widget.textId, forceRefresh: true);
     _pageController = PageController();
     _tts = FlutterTts();
   }

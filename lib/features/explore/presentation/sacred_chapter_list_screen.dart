@@ -6,6 +6,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../data/sacred_books_data.dart';
+import '../../../../data/sacred_books_repository.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../providers/auth_provider.dart';
@@ -13,7 +14,7 @@ import '../../../../providers/guest_access_provider.dart';
 import '../../../../providers/locale_provider.dart';
 import '../../../../providers/navigation_provider.dart';
 
-class SacredChapterListScreen extends StatelessWidget {
+class SacredChapterListScreen extends StatefulWidget {
   const SacredChapterListScreen({
     super.key,
     required this.textId,
@@ -22,41 +23,57 @@ class SacredChapterListScreen extends StatelessWidget {
   final String textId;
 
   @override
+  State<SacredChapterListScreen> createState() => _SacredChapterListScreenState();
+}
+
+class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
+  late Future<SacredBookModel?> _bookFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _bookFuture = SacredBooksRepository.fetchBookById(widget.textId, forceRefresh: true);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final book = _findBook(textId);
+    return FutureBuilder<SacredBookModel?>(
+      future: _bookFuture,
+      builder: (context, snapshot) {
+        final book = snapshot.data ?? SacredBooksData.findById(widget.textId);
 
-    if (book == null) {
-      return _bookNotFound(context);
-    }
+        if (book == null) {
+          return _bookNotFound(context);
+        }
 
-    final width = MediaQuery.sizeOf(context).width;
+        final width = MediaQuery.sizeOf(context).width;
 
-    final horizontalPadding = width >= 900
-        ? 40.0
-        : width >= 600
-            ? 28.0
-            : 20.0;
+        final horizontalPadding = width >= 900
+            ? 40.0
+            : width >= 600
+                ? 28.0
+                : 20.0;
 
-    final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
+        final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF5ED),
-      bottomNavigationBar: CustomBottomNavigation(
-        currentIndex: 3,
-        onTap: (index) {
-          context.read<NavigationProvider>().setIndex(index);
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        },
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxContentWidth),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 6),
+        return Scaffold(
+          backgroundColor: const Color(0xFFFAF5ED),
+          bottomNavigationBar: CustomBottomNavigation(
+            currentIndex: 3,
+            onTap: (index) {
+              context.read<NavigationProvider>().setIndex(index);
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+          ),
+          body: SafeArea(
+            bottom: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
 
                 // Top Back Arrow
                 Padding(
@@ -204,6 +221,8 @@ class SacredChapterListScreen extends StatelessWidget {
         ),
       ),
     );
+  },
+);
   }
 
   // ============================================================
@@ -355,14 +374,6 @@ class SacredChapterListScreen extends StatelessWidget {
           backgroundColor: Color(0xFFFDE6D5),
           textColor: Color(0xFFD96E28),
         );
-    }
-  }
-
-  SacredBookModel? _findBook(String id) {
-    try {
-      return SacredBooksData.all.firstWhere((b) => b.id == id);
-    } catch (_) {
-      return null;
     }
   }
 

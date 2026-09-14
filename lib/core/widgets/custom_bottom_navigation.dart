@@ -88,15 +88,19 @@ class CustomBottomNavigation extends StatelessWidget {
                           size: 22,
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          label,
-                          style: AppTextStyles.getFont(
-                            context,
-                            fontSize: 11.5,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: isSelected ? activeColor : inactiveColor,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            style: AppTextStyles.getFont(
+                              context,
+                              fontSize: 11.5,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected ? activeColor : inactiveColor,
+                            ),
                           ),
                         ),
                       ],
