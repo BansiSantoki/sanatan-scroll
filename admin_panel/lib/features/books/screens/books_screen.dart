@@ -19,8 +19,12 @@ class BooksScreen extends StatelessWidget {
     final booksProvider = context.watch<BooksProvider>();
     final navProvider = context.read<AdminNavigationProvider>();
 
-    if (booksProvider.isLoading) {
-      return const LoadingStateWidget(message: 'Loading Sacred Books from Firestore...');
+    if (booksProvider.isLoading || booksProvider.isSeeding) {
+      return LoadingStateWidget(
+        message: booksProvider.isSeeding
+            ? 'Migrating and Syncing Mobile App Content to Firestore...'
+            : 'Loading Sacred Books from Firestore...',
+      );
     }
 
     final books = booksProvider.books;
@@ -60,6 +64,7 @@ class BooksScreen extends StatelessWidget {
                   ButtonSegment(value: 'All', label: Text('All')),
                   ButtonSegment(value: 'Published', label: Text('Published')),
                   ButtonSegment(value: 'Draft', label: Text('Draft')),
+                  ButtonSegment(value: 'Archived', label: Text('Archived')),
                 ],
                 selected: {booksProvider.filterStatus},
                 onSelectionChanged: (set) {
@@ -67,6 +72,22 @@ class BooksScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(width: 16),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final ok = await booksProvider.syncMobileContent(force: true);
+                  if (ok && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Mobile app content successfully synced to Firestore!'),
+                        backgroundColor: AdminColors.success,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.sync_rounded, size: 18),
+                label: const Text('Sync Mobile Content'),
+              ),
+              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: () {
                   BookEditorDialog.show(context);
@@ -82,12 +103,22 @@ class BooksScreen extends StatelessWidget {
           Expanded(
             child: books.isEmpty
                 ? EmptyStateWidget(
-                    title: 'No Sacred Books Found',
+                    title: 'No Sacred Books Found in Firestore',
                     message: booksProvider.searchQuery.isNotEmpty
                         ? 'No books matching "${booksProvider.searchQuery}"'
-                        : 'Get started by creating your first sacred scripture text.',
-                    actionLabel: 'Add Sacred Book',
-                    onAction: () => BookEditorDialog.show(context),
+                        : 'Firestore currently has 0 books. Click below to automatically seed and sync all existing mobile app scriptures (Bhagavad Gita, Ramayana, Upanishads, Mahabharata, etc.).',
+                    actionLabel: 'Sync Existing Mobile Content to Firestore',
+                    onAction: () async {
+                      final ok = await booksProvider.syncMobileContent(force: true);
+                      if (ok && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Existing mobile content successfully seeded to Firestore!'),
+                            backgroundColor: AdminColors.success,
+                          ),
+                        );
+                      }
+                    },
                   )
                 : Card(
                     child: SingleChildScrollView(
