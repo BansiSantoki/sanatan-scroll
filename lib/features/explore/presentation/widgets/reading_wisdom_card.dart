@@ -41,7 +41,7 @@ class ReadingWisdomCard extends StatelessWidget {
     final verseRef = '$bookTitle ${chapter.chapterNumber}.${verse.verseNumber}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7762D),
+      backgroundColor: const Color(0xFFE88B52),
       body: Material(
         color: Colors.transparent,
         child: Stack(
@@ -54,8 +54,8 @@ class ReadingWisdomCard extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xFFF7762D),
-                      Color(0xFFF65B1C),
+                      Color(0xFFE88B52),
+                      Color(0xFFE27B42),
                     ],
                   ),
                 ),

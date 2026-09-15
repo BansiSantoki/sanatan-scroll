@@ -37,9 +37,6 @@ class ReadingReflectionCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     final reflectionText = verse.getReflectionFullText(languageCode);
-    final oneThingToNotice = verse.getOneThingToNotice(languageCode);
-    final tryThis = verse.getTryThis(languageCode);
-    final carryThisWithYou = verse.getCarryThisWithYou(languageCode);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),
@@ -89,7 +86,7 @@ class ReadingReflectionCard extends StatelessWidget {
                             locale,
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFFD96E28),
+                            color: const Color(0xFFE0824E),
                             letterSpacing: 1.2,
                             decoration: TextDecoration.none,
                           ),
@@ -125,7 +122,7 @@ class ReadingReflectionCard extends StatelessWidget {
                             reflectionText,
                             style: AppTextStyles.getFontForLocale(
                               locale,
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w400,
                               color: const Color(0xFF232323),
                               height: 1.6,
@@ -134,51 +131,6 @@ class ReadingReflectionCard extends StatelessWidget {
                           ),
 
                           const SizedBox(height: 24),
-                          const Divider(
-                            color: Color(0xFFE5DEC8),
-                            thickness: 1,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // ONE THING TO NOTICE TODAY
-                          _buildSectionRow(
-                            locale: locale,
-                            icon: Icons.remove_red_eye_outlined,
-                            title: l10n.oneThingToNoticeToday,
-                            content: oneThingToNotice,
-                          ),
-
-                          const SizedBox(height: 18),
-                          const Divider(
-                            color: Color(0xFFEFE8D6),
-                            height: 1,
-                          ),
-                          const SizedBox(height: 18),
-
-                          // TRY THIS
-                          _buildSectionRow(
-                            locale: locale,
-                            icon: Icons.track_changes_rounded,
-                            title: l10n.tryThis,
-                            content: tryThis,
-                          ),
-
-                          const SizedBox(height: 18),
-                          const Divider(
-                            color: Color(0xFFEFE8D6),
-                            height: 1,
-                          ),
-                          const SizedBox(height: 18),
-
-                          // CARRY THIS WITH YOU
-                          _buildSectionRow(
-                            locale: locale,
-                            icon: Icons.favorite_border_rounded,
-                            title: l10n.carryThisWithYou,
-                            content: carryThisWithYou,
-                          ),
-
-                          const SizedBox(height: 28),
                         ],
                       ),
                     ),
@@ -220,7 +172,7 @@ class ReadingReflectionCard extends StatelessWidget {
                                   isSaved ? l10n.savedAction : l10n.save,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
-                                    fontSize: 13.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
                                     decoration: TextDecoration.none,
@@ -260,7 +212,7 @@ class ReadingReflectionCard extends StatelessWidget {
                                   l10n.setWallpaper,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
-                                    fontSize: 13.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
                                     decoration: TextDecoration.none,
@@ -291,7 +243,7 @@ class ReadingReflectionCard extends StatelessWidget {
                                   l10n.share,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
-                                    fontSize: 13.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1B1B1B),
                                     decoration: TextDecoration.none,
@@ -312,62 +264,13 @@ class ReadingReflectionCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildSectionRow({
-    required Locale locale,
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: const Color(0xFF6B784B),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.getFontForLocale(
-                  locale,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF6B784B),
-                  letterSpacing: 0.8,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                content,
-                style: AppTextStyles.getFontForLocale(
-                  locale,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF2B2B2B),
-                  height: 1.5,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _ReflectionTopArtPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final blobPaint = Paint()
-      ..color = const Color(0xFFE28C59).withValues(alpha: 0.85)
+      ..color = const Color(0xFFEAA277).withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
 
     final path = Path()

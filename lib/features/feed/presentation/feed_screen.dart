@@ -86,32 +86,39 @@ class _HomeHeaderRow extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final streakProvider = context.watch<StreakProvider>();
     final currentStreak = streakProvider.streak.currentStreak;
-    final rawName = auth.firstName;
-    final userName = rawName.isNotEmpty ? rawName : 'Bansi';
     final l10n = context.l10n;
+
+    final rawName = auth.userName.trim();
+    final String greetingText;
+    if (rawName.isEmpty || rawName == 'Seeker') {
+      greetingText = l10n.namaste;
+    } else {
+      greetingText = '${l10n.namaste}, $rawName';
+    }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final greetingFontSize = screenWidth < 360 ? 20.0 : (screenWidth > 600 ? 26.0 : 22.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
-                '${l10n.namaste}, $userName',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                greetingText,
                 style: AppTextStyles.getFont(
                   context,
-                  fontSize: 32,
+                  fontSize: greetingFontSize,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1B1B1B),
-                  height: 1.0,
+                  height: 1.15,
                   isSerif: true,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             GestureDetector(
               onTap: () => context.read<NavigationProvider>().setIndex(1),
               child: Container(

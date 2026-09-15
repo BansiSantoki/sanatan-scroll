@@ -22,7 +22,7 @@ class ParsedVerseRow {
   final String imageUrl;
   final String status; // 'draft' or 'published'
   
-  // Validation / Upsert Status
+  
   String action; // 'new', 'update', 'skip', 'error'
   List<String> validationErrors;
 

@@ -39,7 +39,6 @@ class ReadingContextCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     final contextText = verse.getContextText(languageCode);
-    final whyItMatters = verse.getWhyItMattersText(languageCode);
     final reflectionPreview = verse.getReflectionPreviewText(languageCode);
 
     return Scaffold(
@@ -139,65 +138,12 @@ class ReadingContextCard extends StatelessWidget {
                             contextText,
                             style: AppTextStyles.getFontForLocale(
                               locale,
-                              fontSize: 22,
+                              fontSize: 21,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF1B1B1B),
                               height: 1.45,
                               isSerif: true,
                               decoration: TextDecoration.none,
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // WHY THIS MATTERS NOW Section
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.person_outline_rounded,
-                                size: 18,
-                                color: Color(0xFF7A7E5A),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  l10n.whyThisMattersNow,
-                                  style: AppTextStyles.getFontForLocale(
-                                    locale,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF7A7E5A),
-                                    letterSpacing: 0.8,
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF2E4),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE2E7D4),
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Text(
-                              whyItMatters,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF2B331F),
-                                height: 1.5,
-                                decoration: TextDecoration.none,
-                              ),
                             ),
                           ),
 
@@ -222,7 +168,7 @@ class ReadingContextCard extends StatelessWidget {
                                   l10n.reflectionPreview,
                                   style: AppTextStyles.getFontForLocale(
                                     locale,
-                                    fontSize: 11,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w800,
                                     color: const Color(0xFF7A7E5A),
                                     letterSpacing: 0.8,
@@ -340,7 +286,7 @@ class _ContextTopArtPainter extends CustomPainter {
     canvas.drawPath(path, blobPaint);
 
     final starPaint = Paint()
-      ..color = const Color(0xFFE28C59)
+      ..color = const Color(0xFFEAA277)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke;
     final starCenter = Offset(size.width * 0.75, size.height * 0.5);

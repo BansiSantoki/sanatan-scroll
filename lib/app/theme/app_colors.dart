@@ -10,8 +10,8 @@ class AppColors {
   static const Color accentRed = Color(0xFF9B2E35);
 
   // Warm accents
-  static const Color warmOrange = Color(0xFFD97745);
-  static const Color goldenOrange = Color(0xFFE6A15B);
+  static const Color warmOrange = Color(0xFFE0824E);
+  static const Color goldenOrange = Color(0xFFE8A663);
   static const Color softGold = Color(0xFFE8B36B);
 
   // Backgrounds
