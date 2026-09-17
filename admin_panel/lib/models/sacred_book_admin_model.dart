@@ -12,6 +12,8 @@ class SacredBookAdminModel {
   final String? subtitleHi;
   final String iconEmoji;
   final String? coverUrl;
+  final String? sourceUrl;
+  final String? sourceName;
   final int totalChapters;
   final int order;
   final bool published;
@@ -31,6 +33,8 @@ class SacredBookAdminModel {
     this.subtitleHi,
     required this.iconEmoji,
     this.coverUrl,
+    this.sourceUrl,
+    this.sourceName,
     required this.totalChapters,
     this.order = 1,
     this.published = true,
@@ -58,6 +62,8 @@ class SacredBookAdminModel {
       subtitleHi: map['subtitle_hi']?.toString(),
       iconEmoji: (map['iconEmoji'] ?? '📜').toString(),
       coverUrl: map['coverUrl']?.toString(),
+      sourceUrl: map['source_url']?.toString() ?? map['sourceUrl']?.toString(),
+      sourceName: map['source_name']?.toString() ?? map['sourceName']?.toString(),
       totalChapters: _asInt(map['totalChapters'], fallback: 0),
       order: _asInt(map['order'], fallback: 1),
       published: map['published'] as bool? ?? true,
@@ -80,6 +86,8 @@ class SacredBookAdminModel {
       'subtitle_hi': subtitleHi,
       'iconEmoji': iconEmoji,
       'coverUrl': coverUrl,
+      'source_url': sourceUrl,
+      'source_name': sourceName,
       'totalChapters': totalChapters,
       'order': order,
       'published': published,
@@ -101,6 +109,8 @@ class SacredBookAdminModel {
     String? subtitleHi,
     String? iconEmoji,
     String? coverUrl,
+    String? sourceUrl,
+    String? sourceName,
     int? totalChapters,
     int? order,
     bool? published,
@@ -120,6 +130,8 @@ class SacredBookAdminModel {
       subtitleHi: subtitleHi ?? this.subtitleHi,
       iconEmoji: iconEmoji ?? this.iconEmoji,
       coverUrl: coverUrl ?? this.coverUrl,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      sourceName: sourceName ?? this.sourceName,
       totalChapters: totalChapters ?? this.totalChapters,
       order: order ?? this.order,
       published: published ?? this.published,

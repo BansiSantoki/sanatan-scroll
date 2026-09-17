@@ -22,6 +22,8 @@ class TopBar extends StatelessWidget {
         return 'Verse Content Editor';
       case AdminNavItem.dailyReadings:
         return 'Daily Readings Manager';
+      case AdminNavItem.importContent:
+        return 'Ramayana & Content Importer';
       case AdminNavItem.media:
         return 'Firebase Storage Media';
       case AdminNavItem.users:

@@ -9,6 +9,7 @@ import '../../features/books/screens/books_screen.dart';
 import '../../features/chapters/screens/chapters_screen.dart';
 import '../../features/verses/screens/verses_screen.dart';
 import '../../features/daily_readings/screens/daily_readings_screen.dart';
+import '../../features/import/screens/ramayana_import_screen.dart';
 import '../../features/media/screens/media_screen.dart';
 import '../../features/users/screens/users_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
@@ -38,6 +39,8 @@ class _AdminShellState extends State<AdminShell> {
         return const VersesScreen();
       case AdminNavItem.dailyReadings:
         return const DailyReadingsScreen();
+      case AdminNavItem.importContent:
+        return const RamayanaImportScreen();
       case AdminNavItem.media:
         return const MediaScreen();
       case AdminNavItem.users:

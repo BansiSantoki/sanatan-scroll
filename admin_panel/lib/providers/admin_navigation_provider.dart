@@ -6,6 +6,7 @@ enum AdminNavItem {
   chapters,
   verses,
   dailyReadings,
+  importContent,
   media,
   users,
   notifications,

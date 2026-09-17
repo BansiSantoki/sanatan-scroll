@@ -11,6 +11,11 @@ class SacredBookModel {
   final String? subtitleGu;
   final String? subtitleHi;
   final String iconEmoji;
+  final String? coverUrl;
+  final String? description;
+  final int order;
+  final bool published;
+  final bool archived;
   final int totalChapters;
   final List<SacredChapterModel> chapters;
 
@@ -25,6 +30,11 @@ class SacredBookModel {
     this.subtitleGu,
     this.subtitleHi,
     required this.iconEmoji,
+    this.coverUrl,
+    this.description,
+    this.order = 1,
+    this.published = true,
+    this.archived = false,
     required this.totalChapters,
     required this.chapters,
   });
@@ -49,15 +59,20 @@ class SacredBookModel {
 
     return SacredBookModel(
       id: (map['id'] ?? '').toString(),
-      title: (map['title'] ?? '').toString(),
-      subtitle: (map['subtitle'] ?? '').toString(),
+      title: (map['title'] ?? map['title_en'] ?? '').toString(),
+      subtitle: (map['subtitle'] ?? map['subtitle_en'] ?? '').toString(),
       titleEn: map['title_en']?.toString(),
       titleGu: map['title_gu']?.toString(),
       titleHi: map['title_hi']?.toString(),
       subtitleEn: map['subtitle_en']?.toString(),
       subtitleGu: map['subtitle_gu']?.toString(),
       subtitleHi: map['subtitle_hi']?.toString(),
-      iconEmoji: (map['iconEmoji'] ?? '').toString(),
+      iconEmoji: (map['iconEmoji'] ?? '📜').toString(),
+      coverUrl: map['coverUrl']?.toString() ?? map['cover_url']?.toString(),
+      description: (map['description'] ?? map['about'] ?? '').toString(),
+      order: _asInt(map['order'], fallback: 1),
+      published: map['published'] as bool? ?? true,
+      archived: map['archived'] as bool? ?? false,
       totalChapters: inferredTotal > 0 ? inferredTotal : chapters.length,
       chapters: chapters,
     );

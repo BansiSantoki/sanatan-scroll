@@ -1,7 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp, FieldValue;
 
 class SacredVerseAdminModel {
+  final String? verseId;
   final int verseNumber;
+  final int? kandaNumber;
+  final int? sargaNumber;
   final String sanskrit;
   final String english;
   final String gujarati;
@@ -47,12 +50,21 @@ class SacredVerseAdminModel {
   final String? audioUrlHi;
   final String? audioUrlGu;
 
+  final String? sourceUrl;
+  final String? sourceName;
+  final String qaStatus; // Draft, Review, Approved, Rejected
+  final String? notes;
+
   final bool published;
+  final bool archived;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   const SacredVerseAdminModel({
+    this.verseId,
     required this.verseNumber,
+    this.kandaNumber,
+    this.sargaNumber,
     required this.sanskrit,
     required this.english,
     required this.gujarati,
@@ -88,7 +100,12 @@ class SacredVerseAdminModel {
     this.audioUrl,
     this.audioUrlHi,
     this.audioUrlGu,
+    this.sourceUrl,
+    this.sourceName,
+    this.qaStatus = 'Approved',
+    this.notes,
     this.published = true,
+    this.archived = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -101,7 +118,10 @@ class SacredVerseAdminModel {
     }
 
     return SacredVerseAdminModel(
+      verseId: map['verse_id']?.toString() ?? map['verseId']?.toString(),
       verseNumber: _asInt(map['verseNumber'], fallback: 1),
+      kandaNumber: map['kanda_number'] != null ? _asInt(map['kanda_number'], fallback: 1) : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: 1) : null),
+      sargaNumber: map['sarga_number'] != null ? _asInt(map['sarga_number'], fallback: 1) : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: 1) : null),
       sanskrit: (map['sanskrit'] ?? '').toString(),
       english: (map['english'] ?? map['translation_en'] ?? '').toString(),
       gujarati: (map['gujarati'] ?? map['translation_gu'] ?? '').toString(),
@@ -137,7 +157,12 @@ class SacredVerseAdminModel {
       audioUrl: map['audioUrl']?.toString() ?? map['audio_url']?.toString() ?? map['audio_url_en']?.toString(),
       audioUrlHi: map['audioUrlHi']?.toString() ?? map['audio_url_hi']?.toString(),
       audioUrlGu: map['audioUrlGu']?.toString() ?? map['audio_url_gu']?.toString(),
+      sourceUrl: map['source_url']?.toString() ?? map['sourceUrl']?.toString(),
+      sourceName: map['source_name']?.toString() ?? map['sourceName']?.toString(),
+      qaStatus: (map['qa_status'] ?? map['qaStatus'] ?? 'Approved').toString(),
+      notes: map['notes']?.toString(),
       published: map['published'] as bool? ?? true,
+      archived: map['archived'] as bool? ?? false,
       createdAt: parseDate(map['createdAt']),
       updatedAt: parseDate(map['updatedAt']),
     );
@@ -145,7 +170,10 @@ class SacredVerseAdminModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'verse_id': verseId,
       'verseNumber': verseNumber,
+      'kanda_number': kandaNumber,
+      'sarga_number': sargaNumber,
       'sanskrit': sanskrit,
       'english': english,
       'gujarati': gujarati,
@@ -181,7 +209,12 @@ class SacredVerseAdminModel {
       'audioUrl': audioUrl,
       'audio_url_hi': audioUrlHi,
       'audio_url_gu': audioUrlGu,
+      'source_url': sourceUrl,
+      'source_name': sourceName,
+      'qa_status': qaStatus,
+      'notes': notes,
       'published': published,
+      'archived': archived,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };

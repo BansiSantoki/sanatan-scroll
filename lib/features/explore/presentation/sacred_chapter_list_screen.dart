@@ -27,18 +27,10 @@ class SacredChapterListScreen extends StatefulWidget {
 }
 
 class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
-  late Future<SacredBookModel?> _bookFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _bookFuture = SacredBooksRepository.fetchBookById(widget.textId, forceRefresh: true);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<SacredBookModel?>(
-      future: _bookFuture,
+    return StreamBuilder<SacredBookModel?>(
+      stream: SacredBooksRepository.streamBookById(widget.textId),
       builder: (context, snapshot) {
         final book = snapshot.data ?? SacredBooksData.findById(widget.textId);
 

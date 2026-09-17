@@ -14,18 +14,6 @@ class SacredBooksData {
   static const Map<String, String> _additionalBookTitles = {
     'mahabharata': 'Mahabharata',
     'upanishads': 'Upanishads',
-    'vedas': 'Vedas',
-    'puranas': 'Puranas',
-    'yoga_sutras': 'Yoga Sutras',
-    'arthashastra': 'Arthashastra',
-    'karma_yoga': 'Karma Yoga',
-    'meditation': 'Meditation',
-    'bhakti': 'Bhakti',
-    'self_realization': 'Self Realization',
-    'krishna_teachings': "Krishna's Teachings",
-    'inner_peace': 'Inner Peace',
-    'shiva_purana': 'Shiva Purana',
-    'vishnu_purana': 'Vishnu Purana',
   };
 
   static final List<String> _additionalBookIds =

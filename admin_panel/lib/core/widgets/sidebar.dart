@@ -121,6 +121,13 @@ class Sidebar extends StatelessWidget {
                 ),
                 _buildNavItem(
                   context: context,
+                  item: AdminNavItem.importContent,
+                  activeItem: currentItem,
+                  icon: Icons.cloud_upload_outlined,
+                  label: 'Content Import',
+                ),
+                _buildNavItem(
+                  context: context,
                   item: AdminNavItem.media,
                   activeItem: currentItem,
                   icon: Icons.perm_media_outlined,

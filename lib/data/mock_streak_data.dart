@@ -3,9 +3,7 @@ import '../models/streak_model.dart';
 class MockStreakData {
   MockStreakData._();
 
-  // ==========================================================
-  // INITIAL STREAK DATA
-  // ==========================================================
+
 
   static StreakModel get initial {
     final now = DateTime.now();

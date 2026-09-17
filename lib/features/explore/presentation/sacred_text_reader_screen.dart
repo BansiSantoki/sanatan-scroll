@@ -32,7 +32,6 @@ class SacredTextReaderScreen extends StatefulWidget {
 }
 
 class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
-  late final Future<SacredBookModel?> _bookFuture;
   late final PageController _pageController;
   late final FlutterTts _tts;
   bool _isSpeaking = false;
@@ -44,7 +43,6 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   void initState() {
     super.initState();
     currentChapter = widget.initialChapterNumber;
-    _bookFuture = SacredBooksRepository.fetchBookById(widget.textId, forceRefresh: true);
     _pageController = PageController();
     _tts = FlutterTts();
   }
@@ -158,8 +156,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
     final cardsPerVerse = isBhagavadGita ? 3 : 2;
 
-    return FutureBuilder<SacredBookModel?>(
-      future: _bookFuture,
+    return StreamBuilder<SacredBookModel?>(
+      stream: SacredBooksRepository.streamBookById(widget.textId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(

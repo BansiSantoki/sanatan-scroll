@@ -13,7 +13,7 @@ class AppSettingsAdminModel {
     required this.dailyReadingEnabled,
     required this.supportedLanguages,
     this.updatedAt,
-  });
+  }); 
 
   factory AppSettingsAdminModel.fromMap(Map<String, dynamic> map) {
     DateTime? parseDate(dynamic val) {

@@ -7,6 +7,10 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/language_selector_button.dart';
+import '../../../../data/daily_readings_repository.dart';
+import '../../../../data/sacred_books_repository.dart';
+import '../../../../models/sacred_book_model.dart';
+import '../../../../models/wisdom_model.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/navigation_provider.dart';
@@ -173,109 +177,122 @@ class _DailyWisdomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final cardHeight = width >= 600 ? 320.0 : 290.0;
+    return StreamBuilder<WisdomModel>(
+      stream: DailyReadingsRepository.streamDailyWisdom(),
+      builder: (context, snapshot) {
+        final wisdom = snapshot.data;
+        final title = wisdom?.reflection ?? '${context.l10n.bhagavadGita} 2.47';
+        final sanskrit = wisdom?.sanskrit ?? 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।';
+        final quote = wisdom?.getLocalizedQuote(context.l10n.locale.languageCode) ??
+            (context.l10n.locale.languageCode == 'gu'
+                ? 'તમને તમારું કર્તવ્ય કરવાનો અધિકાર છે, પરંતુ તેના ફળ પર નહીં.'
+                : context.l10n.locale.languageCode == 'hi'
+                    ? 'आपको अपने कर्तव्य का पालन करने का अधिकार है, लेकिन उसके फलों पर नहीं।'
+                    : 'You have the right to perform your duty, but not to the fruits of your actions.');
 
-        return SizedBox(
-          width: double.infinity,
-          height: cardHeight,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Background Blob Graphic & Golden Star
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _DailyWisdomBackgroundPainter(),
-                ),
-              ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final cardHeight = width >= 600 ? 320.0 : 290.0;
 
-              // Enlarged Chariot Line-Art Image inside Green Blob
-              Positioned(
-                right: 0,
-                bottom: 0,
-                width: width * 0.52,
-                height: cardHeight * 0.88,
-                child: Image.asset(
-                  'assets/images/chariot_lineart.png',
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomRight,
-                  filterQuality: FilterQuality.high,
-                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                ),
-              ),
-
-              // Left side Text Content
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: width * 0.52,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 4, top: 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        context.l10n.dailyWisdom,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF7A7E5A),
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${context.l10n.bhagavadGita} 2.47',
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1B1B1B),
-                          height: 1.05,
-                          isSerif: true,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.getFontForLocale(
-                          const Locale('hi'),
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF222222),
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        context.l10n.locale.languageCode == 'gu'
-                            ? 'તમને તમારું કર્તવ્ય કરવાનો અધિકાર છે, પરંતુ તેના ફળ પર નહીં.'
-                            : context.l10n.locale.languageCode == 'hi'
-                                ? 'आपको अपने कर्तव्य का पालन करने का अधिकार है, लेकिन उसके फलों पर नहीं।'
-                                : 'You have the right to perform your duty, but not to the fruits of your actions.',
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF383838),
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
+            return SizedBox(
+              width: double.infinity,
+              height: cardHeight,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Background Blob Graphic & Golden Star
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _DailyWisdomBackgroundPainter(),
+                    ),
                   ),
-                ),
+
+                  // Enlarged Chariot Line-Art Image inside Green Blob
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    width: width * 0.52,
+                    height: cardHeight * 0.88,
+                    child: Image.asset(
+                      'assets/images/chariot_lineart.png',
+                      fit: BoxFit.contain,
+                      alignment: Alignment.bottomRight,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                    ),
+                  ),
+
+                  // Left side Text Content
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: width * 0.52,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4, top: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            context.l10n.dailyWisdom,
+                            style: AppTextStyles.getFont(
+                              context,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF7A7E5A),
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.getFont(
+                              context,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1B1B1B),
+                              height: 1.05,
+                              isSerif: true,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            sanskrit,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.getFontForLocale(
+                              const Locale('hi'),
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF222222),
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            quote,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.getFont(
+                              context,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF383838),
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -434,40 +451,17 @@ class _ContinueJourneyCard extends StatelessWidget {
 class _ExploreScripturesSection extends StatelessWidget {
   const _ExploreScripturesSection();
 
+  static const List<Color> _cardColors = [
+    Color(0xFFF7BD77),
+    Color(0xFFF0A77E),
+    Color(0xFFB8C296),
+    Color(0xFFEBC78C),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
-    final books = [
-      {
-        'id': 'bhagavad_gita',
-        'title': l10n.gita,
-        'subtitle': l10n.gitaSubtitle,
-        'color': const Color(0xFFF7BD77),
-        'iconType': 0,
-      },
-      {
-        'id': 'ramayana',
-        'title': l10n.ramayana,
-        'subtitle': l10n.ramayanaSubtitle,
-        'color': const Color(0xFFF0A77E),
-        'iconType': 1,
-      },
-      {
-        'id': 'upanishads',
-        'title': l10n.upanishads,
-        'subtitle': l10n.upanishadsSubtitle,
-        'color': const Color(0xFFB8C296),
-        'iconType': 2,
-      },
-      {
-        'id': 'mahabharata',
-        'title': l10n.mahabharata,
-        'subtitle': l10n.mahabharataSubtitle,
-        'color': const Color(0xFFEBC78C),
-        'iconType': 3,
-      },
-    ];
+    final langCode = l10n.locale.languageCode;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,29 +487,46 @@ class _ExploreScripturesSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Horizontally Scrollable Scripture Cards
-        SizedBox(
-          height: 195,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: books.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final info = books[index];
-              return SizedBox(
-                width: 132,
-                child: _BookCard(
-                  bookId: info['id'] as String,
-                  title: info['title'] as String,
-                  subtitle: info['subtitle'] as String,
-                  bgColor: info['color'] as Color,
-                  iconType: info['iconType'] as int,
+        StreamBuilder<List<SacredBookModel>>(
+          stream: SacredBooksRepository.streamAllBooks(),
+          builder: (context, snapshot) {
+            final books = snapshot.data ?? [];
+            if (books.isEmpty) {
+              return const SizedBox(
+                height: 195,
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFFF7BD77)),
                 ),
               );
-            },
-          ),
+            }
+
+            return SizedBox(
+              height: 195,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: books.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final book = books[index];
+                  final title = book.getLocalizedTitle(langCode);
+                  final subtitle = book.getLocalizedSubtitle(langCode);
+                  final bgColor = _cardColors[index % _cardColors.length];
+
+                  return SizedBox(
+                    width: 132,
+                    child: _BookCard(
+                      bookId: book.id,
+                      title: title,
+                      subtitle: subtitle,
+                      bgColor: bgColor,
+                      iconType: index % 4,
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
       ],
     );
