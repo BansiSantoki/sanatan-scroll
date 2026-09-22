@@ -94,23 +94,46 @@ class SacredVerseModel {
   factory SacredVerseModel.fromMap(Map<String, dynamic> map) {
     final translationsMap = map['translations'] is Map ? Map<String, dynamic>.from(map['translations']) : null;
 
-    final sanskritText = (map['sanskrit'] ?? map['sanskritText'] ?? map['shloka'] ?? '').toString();
-    final englishText = (map['english'] ?? map['translation_en'] ?? map['english_translation'] ?? translationsMap?['en'] ?? '').toString();
-    final gujaratiText = (map['gujarati'] ?? map['translation_gu'] ?? map['gujarati_translation'] ?? translationsMap?['gu'] ?? '').toString();
-    final hindiText = map['hindi']?.toString() ?? map['translation_hi']?.toString() ?? map['hindi_translation']?.toString() ?? translationsMap?['hi']?.toString();
+    String sanskritText = (map['sanskrit'] ?? map['sanskritText'] ?? map['shloka'] ?? '').toString();
+    String englishText = (map['english'] ?? map['translation_en'] ?? map['english_translation'] ?? map['translation'] ?? translationsMap?['en'] ?? '').toString();
+    String gujaratiText = (map['gujarati'] ?? map['translation_gu'] ?? map['gujarati_translation'] ?? translationsMap?['gu'] ?? '').toString();
+    String? hindiText = map['hindi']?.toString() ?? map['translation_hi']?.toString() ?? map['hindi_translation']?.toString() ?? translationsMap?['hi']?.toString();
 
-    final meaningEn = (map['meaningEnglish'] ?? map['explanation_en'] ?? map['explanation'] ?? map['meaning_en'] ?? map['meaning'] ?? '').toString();
-    final meaningGu = (map['meaningGujarati'] ?? map['explanation_gu'] ?? map['meaning_gu'] ?? '').toString();
-    final meaningHi = map['meaningHindi']?.toString() ?? map['explanation_hi']?.toString() ?? map['meaning_hi']?.toString();
+    String meaningEn = (map['meaningEnglish'] ?? map['explanation_en'] ?? map['explanation'] ?? map['meaning_en'] ?? map['meaning'] ?? '').toString();
+    String meaningGu = (map['meaningGujarati'] ?? map['explanation_gu'] ?? map['meaning_gu'] ?? '').toString();
+    String? meaningHi = map['meaningHindi']?.toString() ?? map['explanation_hi']?.toString() ?? map['meaning_hi']?.toString();
 
     final kanda = map['kanda_number'] != null ? _asInt(map['kanda_number'], fallback: -1) : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: -1) : null);
     final sarga = map['sarga_number'] != null ? _asInt(map['sarga_number'], fallback: -1) : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: -1) : null);
+    final vNum = _asInt(map['verseNumber'] ?? map['verse_number'], fallback: 1);
+
+    // Fallback for Ramayana 1.2.15 ("Ma Nishada...") if translations in Firestore are empty
+    if (sanskritText.contains('मा निषाद') || sanskritText.contains('1.2.15') || (vNum == 15 && (sarga == 2 || kanda == 1))) {
+      if (sanskritText.isEmpty) {
+        sanskritText = 'मा निषाद प्रतिष्ठां त्वमगमश्शाश्वतीस्समा: । यत्क्रौञ्चमिथुनादेकमवधी: काममोहितम् ।।1.2.15।।';
+      }
+      if (englishText.isEmpty || englishText == 'Translation not available.') {
+        englishText = 'O niṣāda, may you not attain enduring standing for endless years, because you killed one of the krauñca pair while it was overcome by desire.';
+      }
+      if (hindiText == null || hindiText.isEmpty || hindiText == 'Translation not available.') {
+        hindiText = 'हे निषाद, तू दीर्घकाल तक प्रतिष्ठा प्राप्त न करे, क्योंकि तूने काम-मोहित क्रौञ्च-युगल में से एक को मार डाला।';
+      }
+      if (gujaratiText.isEmpty || gujaratiText == 'Translation not available.') {
+        gujaratiText = 'હે નિષાદ, તું દીર્ઘકાળ સુધી પ્રતિષ્ઠા પ્રાપ્ત ન કરે, કારણ કે તું કામમોહિત ક્રૌંચ-યુગલમાંથી એકને મારી નાખ્યો.';
+      }
+      if (meaningEn.isEmpty) {
+        meaningEn = englishText;
+      }
+      if (meaningGu.isEmpty) {
+        meaningGu = gujaratiText;
+      }
+      if (meaningHi == null || meaningHi.isEmpty) {
+        meaningHi = hindiText;
+      }
+    }
 
     return SacredVerseModel(
-      verseNumber: _asInt(
-        map['verseNumber'] ?? map['verse_number'],
-        fallback: 1,
-      ),
+      verseNumber: vNum,
       kandaNumber: kanda != null && kanda > 0 ? kanda : null,
       sargaNumber: sarga != null && sarga > 0 ? sarga : null,
       sanskrit: sanskritText,
@@ -149,6 +172,43 @@ class SacredVerseModel {
       audioUrlHi: map['audioUrlHi']?.toString() ?? map['audio_url_hi']?.toString(),
       audioUrlGu: map['audioUrlGu']?.toString() ?? map['audio_url_gu']?.toString(),
     );
+  }
+
+  String getLocalizedTranslation(String languageCode) {
+    if (languageCode == 'gu') {
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
+      if (english.trim().isNotEmpty) return english;
+      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+      return 'અનુવાદ ઉપલબ્ધ નથી.';
+    }
+    if (languageCode == 'hi') {
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
+      if (english.trim().isNotEmpty) return english;
+      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+      return 'अनुवाद उपलब्ध नहीं है।';
+    }
+    if (languageCode == 'sa') {
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
+      if (english.trim().isNotEmpty) return english;
+      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+      return 'अनुवाद उपलब्ध नहीं है।';
+    }
+    if (english.trim().isNotEmpty) return english;
+    if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+    if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+    if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
+    if (gujarati.trim().isNotEmpty) return gujarati;
+    if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
+    return 'Translation not available.';
   }
 
   Map<String, dynamic> toMap() {
@@ -192,31 +252,6 @@ class SacredVerseModel {
       'audio_url_hi': audioUrlHi,
       'audio_url_gu': audioUrlGu,
     };
-  }
-
-  String getLocalizedTranslation(String languageCode) {
-    if (languageCode == 'gu') {
-      if (gujarati.trim().isNotEmpty) return gujarati;
-      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-      if (english.trim().isNotEmpty) return english;
-      return 'અનુવાદ ઉપલબ્ધ નથી.';
-    }
-    if (languageCode == 'hi') {
-      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-      if (gujarati.trim().isNotEmpty) return gujarati;
-      if (english.trim().isNotEmpty) return english;
-      return 'अनुवाद उपलब्ध नहीं है।';
-    }
-    if (languageCode == 'sa') {
-      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-      if (gujarati.trim().isNotEmpty) return gujarati;
-      if (english.trim().isNotEmpty) return english;
-      return 'अनुवाद उपलब्ध नहीं है।';
-    }
-    if (english.trim().isNotEmpty) return english;
-    if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-    if (gujarati.trim().isNotEmpty) return gujarati;
-    return 'Translation not available.';
   }
 
   String getLocalizedMeaning(String languageCode) {

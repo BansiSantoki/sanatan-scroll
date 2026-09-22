@@ -5,13 +5,12 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:admin_panel/main.dart';
 
 void main() {
-  testWidgets('SanatanScrollAdminApp smoke test', (WidgetTester tester) async {
+  test('SanatanScrollAdminApp smoke test', () {
     expect(const SanatanScrollAdminApp(), isNotNull);
   });
 }

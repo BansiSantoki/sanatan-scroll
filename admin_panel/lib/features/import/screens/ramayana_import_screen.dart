@@ -8,6 +8,7 @@ import '../../../core/constants/admin_colors.dart';
 import '../../../providers/admin_auth_provider.dart';
 import '../../../services/bulk_import_service.dart';
 import '../../../services/csv_import_service.dart';
+import '../../../services/excel_export_service.dart';
 import '../../../services/ramayana_parser_service.dart';
 import '../../../services/source_fetcher_service.dart';
 import '../../../services/universal_web_file_picker.dart';
@@ -23,6 +24,8 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   final CsvImportService _csvImportService = CsvImportService();
   final SourceFetcherService _sourceFetcherService = SourceFetcherService();
   final BulkImportService _bulkImportService = BulkImportService();
+
+  bool _isExporting = false;
 
   final TextEditingController _urlController = TextEditingController(text: 'https://ramayana.info/');
 
@@ -558,8 +561,38 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
     );
   }
 
+  Future<void> _performExport({required bool asCsv}) async {
+    setState(() => _isExporting = true);
+    try {
+      final count = await ExcelExportService.exportBookData(
+        bookId: _selectedBookId,
+        bookName: _selectedBookName,
+        asCsv: asCsv,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully exported $count verses from $_selectedBookName to ${asCsv ? "CSV" : "Excel"}.'),
+            backgroundColor: Colors.green[800],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red[800],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
   // ============================================================
-  // STEP 1: UPLOAD / SOURCE SELECTION
+  // STEP 1: UPLOAD / SOURCE SELECTION / EXPORT
   // ============================================================
 
   Widget _buildStep1UploadSection() {
@@ -570,6 +603,8 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         return Column(
           children: [
             _buildBookSelectorCard(),
+            const SizedBox(height: 20),
+            _buildExportCard(),
             const SizedBox(height: 20),
             if (isWide)
               Row(
@@ -593,6 +628,70 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildExportCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.download_for_offline_outlined, color: AdminColors.saffron, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                'EXPORT CURRENT FIRESTORE DATA',
+                style: GoogleFonts.cinzel(fontSize: 15, fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Export all current Firestore records for $_selectedBookName (including all Admin Panel edits) into Excel (.xlsx) or CSV format for external editing or offline archiving.',
+            style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey[700]),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _isExporting ? null : () => _performExport(asCsv: false),
+                icon: _isExporting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.table_chart, size: 18),
+                label: Text(_isExporting ? 'Exporting...' : 'Export Excel (.xlsx)', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AdminColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _isExporting ? null : () => _performExport(asCsv: true),
+                icon: const Icon(Icons.description, size: 18, color: AdminColors.primaryDark),
+                label: Text('Export CSV (.csv)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AdminColors.primaryDark)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  side: const BorderSide(color: AdminColors.primaryDark),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -676,14 +775,14 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
               const Icon(Icons.table_chart_outlined, color: AdminColors.primaryDark, size: 24),
               const SizedBox(width: 10),
               Text(
-                'WORKFLOW A: CSV Master Sheet Upload',
+                'WORKFLOW A: Excel (.xlsx) / CSV Upload',
                 style: GoogleFonts.cinzel(fontSize: 15, fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Upload $_selectedBookName Master Sheet containing Shloks, Chapters/Sections, and translations in CSV format.',
+            'Upload $_selectedBookName Master Sheet containing Shloks, Chapters/Sections, and translations in Excel (.xlsx) or CSV format.',
             style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey[700]),
           ),
           const SizedBox(height: 20),
@@ -703,12 +802,12 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                   const Icon(Icons.upload_file, size: 48, color: AdminColors.saffron),
                   const SizedBox(height: 12),
                   Text(
-                    'Click to Upload CSV File for $_selectedBookName',
+                    'Click to Upload Excel / CSV File for $_selectedBookName',
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AdminColors.primaryDark),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Supports: .csv',
+                    'Supports: .xlsx, .xls, .csv',
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],

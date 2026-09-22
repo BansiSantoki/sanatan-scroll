@@ -43,6 +43,9 @@ class SeedService {
       // Always clean up legacy static Ramayana chapter documents ('1'..'7') if present
       await cleanupOldStaticRamayanaDocs();
 
+      // Ensure exact Ramayana 1.2.15 verse ("Ma Nishada...") is upserted in Firestore
+      await upsertRamayanaMaNishadaVerse();
+
       // If books already exist in Firestore and force is false, skip migration
       if (!force && booksSnapshot.docs.isNotEmpty) {
         return booksSnapshot.docs.length;
@@ -278,6 +281,110 @@ class SeedService {
         return 8;
       default:
         return defaultOrder;
+    }
+  }
+
+  /// Ensures Ramayana 1.2.15 ("Ma Nishada...") verse exists in Firestore
+  /// under sacred_books/ramayana/chapters/{balaKandaChapterId}/verses/{verseId}.
+  Future<void> upsertRamayanaMaNishadaVerse() async {
+    try {
+      final ramayanaRef = _firestore.collection('sacred_books').doc('ramayana');
+
+      // Ensure 'ramayana' book document exists
+      await ramayanaRef.set({
+        'id': 'ramayana',
+        'title': 'Ramayana',
+        'subtitle': 'The Epic of Duty',
+        'title_en': 'Ramayana',
+        'iconEmoji': '🏹',
+        'order': 2,
+        'published': true,
+        'archived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      final chaptersRef = ramayanaRef.collection('chapters');
+      final chaptersSnap = await chaptersRef.get();
+
+      final exactVerseMap = {
+        'book_id': 'ramayana',
+        'book_name': 'Ramayana',
+        'kanda_number': 1,
+        'kanda_name': 'Bala Kanda',
+        'sarga_number': 2,
+        'verse_number': 15,
+        'verseNumber': 15,
+        'sanskrit': 'मा निषाद प्रतिष्ठां त्वमगमश्शाश्वतीस्समा: । यत्क्रौञ्चमिथुनादेकमवधी: काममोहितम् ।।1.2.15।।',
+        'english': 'O niṣāda, may you not attain enduring standing for endless years, because you killed one of the krauñca pair while it was overcome by desire.',
+        'hindi': 'हे निषाद, तू दीर्घकाल तक प्रतिष्ठा प्राप्त न करे, क्योंकि तूने काम-मोहित क्रौञ्च-युगल में से एक को मार डाला।',
+        'gujarati': 'હે નિષાદ, તું દીર્ઘકાળ સુધી પ્રતિષ્ઠા પ્રાપ્ત ન કરે, કારણ કે તું કામમોહિત ક્રૌંચ-યુગલમાંથી એકને મારી નાખ્યો.',
+        'meaningEnglish': 'O niṣāda, may you not attain enduring standing for endless years, because you killed one of the krauñca pair while it was overcome by desire.',
+        'meaningHindi': 'हे निषाद, तू दीर्घकाल तक प्रतिष्ठा प्राप्त न करे, क्योंकि तूने काम-मोहित क्रौञ्च-युगल में से एक को मार डाला।',
+        'meaningGujarati': 'હે નિષાદ, તું દીર્ઘકાળ સુધી પ્રતિષ્ઠા પ્રાપ્ત ન કરે, કારણ કે તું કામમોહિત ક્રૌંચ-યુગલમાંથી એકને મારી નાખ્યો.',
+        'published': true,
+        'archived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Collect target chapter references (e.g. kanda_1_sarga_2, 1002, 1, etc.)
+      final List<DocumentReference> targetChapterRefs = [];
+
+      for (final doc in chaptersSnap.docs) {
+        final data = doc.data();
+        final kNum = data['kanda_number'] ?? data['chapterNumber'];
+        final sNum = data['sarga_number'] ?? data['order'];
+        final title = (data['title'] ?? '').toString().toLowerCase();
+
+        if (doc.id == '1002' || doc.id == 'kanda_1_sarga_2' || (kNum == 1 && sNum == 2) || (kNum == 1002 || title.contains('bala'))) {
+          targetChapterRefs.add(doc.reference);
+        }
+      }
+
+      if (targetChapterRefs.isEmpty) {
+        final newChapRef = chaptersRef.doc('kanda_1_sarga_2');
+        await newChapRef.set({
+          'chapterNumber': 1,
+          'kanda_number': 1,
+          'sarga_number': 2,
+          'kanda_name': 'Bala Kanda',
+          'title': 'Bala Kanda',
+          'subtitle': 'Sarga 2',
+          'published': true,
+          'archived': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        targetChapterRefs.add(newChapRef);
+      }
+
+      for (final chapRef in targetChapterRefs) {
+        final versesRef = chapRef.collection('verses');
+        final versesSnap = await versesRef.get();
+
+        DocumentReference? targetVerseRef;
+        for (final vDoc in versesSnap.docs) {
+          final vData = vDoc.data();
+          final vNum = vData['verseNumber'] ?? vData['verse_number'];
+          final sNum = vData['sarga_number'] ?? vData['sargaNumber'];
+
+          if (vNum == 15) {
+            if (sNum == null || sNum == 2) {
+              targetVerseRef = vDoc.reference;
+              break;
+            }
+          }
+        }
+
+        targetVerseRef ??= versesRef.doc('RAM-01-002-015');
+        await targetVerseRef.set(exactVerseMap, SetOptions(merge: true));
+      }
+
+      await _logsService.logAction(
+        action: 'Upserted Ramayana 1.2.15 Verse',
+        target: 'Firestore sacred_books/ramayana/chapters/*/verses/RAM-01-002-015',
+        details: 'Saved exact Ma Nishada shloka content in Sanskrit, English, Hindi, and Gujarati',
+      );
+    } catch (e) {
+      print('Error upserting Ramayana 1.2.15 verse: $e');
     }
   }
 }

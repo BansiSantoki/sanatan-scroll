@@ -132,12 +132,12 @@ class SacredBookImportConfig {
 /// Flexible CSV Header Mapper
 class CsvHeaderMapper {
   static const Map<String, List<String>> _aliases = {
-    'id': ['id', 'canonical_id', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id'],
+    'id': ['id', 'canonical_id', 'canonical_reference', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id'],
     'book_id': ['book_id', 'book', 'book_code', 'sacred_book'],
     'book_name': ['book_name', 'title', 'book_title', 'bookname'],
-    'kanda_number': ['kanda_number', 'kanda', 'kand', 'kanda_no', 'parva', 'parva_number', 'chapter_number', 'chapter'],
-    'sarga_number': ['sarga_number', 'sarga', 'sarg', 'sarga_no', 'section_number', 'section', 'adhyaya'],
-    'verse_number': ['verse_number', 'verse', 'shloka', 'shloka_number', 'shlok', 'shlok_number', 'verse_no'],
+    'kanda_number': ['kanda_number', 'kanda', 'kand', 'kanda_no', 'kanda_name', 'parva', 'parva_number', 'chapter_number', 'chapter'],
+    'sarga_number': ['sarga_number', 'sarga', 'sarg', 'sarga_no', 'sarga_num', 'section_number', 'section', 'adhyaya'],
+    'verse_number': ['verse_number', 'verse', 'shloka', 'shloka_number', 'shlok', 'shlok_number', 'shlok_no', 'shloka_no', 'verse_no'],
     'sanskrit': ['sanskrit', 'sanskrit_text', 'sanskrit_shloka', 'shloka_text', 'sloka', 'original_sanskrit', 'passage'],
     'english': [
       'english', 'english_meaning', 'english_translation', 'translation_en', 'en', 'eng',

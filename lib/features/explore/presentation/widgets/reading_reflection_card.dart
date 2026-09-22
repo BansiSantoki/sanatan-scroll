@@ -43,7 +43,17 @@ class ReadingReflectionCard extends StatelessWidget {
     final reflectionText = verse.getReflectionFullText(languageCode);
     final bookTitle = book.getLocalizedTitle(languageCode);
     final chapterWord = l10n.chapter;
-    final topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
+
+    String topSubtitle;
+    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
+      final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
+      final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
+      final isBalaKanda = kanda == 1;
+      final kandaName = isBalaKanda ? 'Bala Kanda' : 'Kanda $kanda';
+      topSubtitle = '$bookTitle · $kandaName (Sarga $sarga)';
+    } else {
+      topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),

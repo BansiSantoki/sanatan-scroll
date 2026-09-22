@@ -11,7 +11,7 @@ class UniversalWebFilePicker {
       try {
         final completer = Completer<PlatformFile?>();
         final uploadInput = html.FileUploadInputElement();
-        uploadInput.accept = '.csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/csv';
+        uploadInput.accept = '.xlsx,.xls,.csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         uploadInput.multiple = false;
         uploadInput.click();
 
@@ -48,7 +48,7 @@ class UniversalWebFilePicker {
 
           reader.onError.listen((e) {
             if (!completer.isCompleted) {
-              completer.completeError('Failed to read CSV file in Chrome: ${reader.error}');
+              completer.completeError('Failed to read file in Chrome: ${reader.error}');
             }
           });
 
@@ -67,7 +67,7 @@ class UniversalWebFilePicker {
     // Standard Fallback for non-web or fallback environments
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['csv', 'txt'],
+      allowedExtensions: ['xlsx', 'xls', 'csv', 'txt'],
       withData: true,
     );
 

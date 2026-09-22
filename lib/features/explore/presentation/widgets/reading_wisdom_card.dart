@@ -46,8 +46,22 @@ class ReadingWisdomCard extends StatelessWidget {
     final translationText = verse.getLocalizedTranslation(languageCode);
     final bookTitle = book.getLocalizedTitle(languageCode);
     final chapterWord = l10n.chapter;
-    final verseRef = '$bookTitle ${chapter.chapterNumber}.${verse.verseNumber}';
-    final topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
+
+    String verseRef;
+    String topSubtitle;
+
+    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
+      final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
+      final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
+
+      verseRef = '$bookTitle $kanda.$sarga.${verse.verseNumber}';
+      final isBalaKanda = kanda == 1;
+      final kandaName = isBalaKanda ? 'Bala Kanda' : 'Kanda $kanda';
+      topSubtitle = '$bookTitle · $kandaName (Sarga $sarga)';
+    } else {
+      verseRef = '$bookTitle ${chapter.chapterNumber}.${verse.verseNumber}';
+      topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),

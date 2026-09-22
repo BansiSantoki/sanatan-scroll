@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:archive/archive.dart';
+import 'package:excel/excel.dart';
 
 /// Centralized safe cell accessor with bounds checking
 dynamic getCellSafely(List<dynamic> row, int index) {
@@ -370,6 +371,75 @@ class RamayanaParserService {
     'metadata',
   ];
 
+  static Map<String, List<List<dynamic>>> parseXlsxSheets(Uint8List bytes) {
+    Map<String, List<List<dynamic>>> sheetsMap = {};
+
+    try {
+      final excel = Excel.decodeBytes(bytes);
+      for (final table in excel.tables.keys) {
+        final sheet = excel.tables[table];
+        if (sheet == null) continue;
+
+        final List<List<dynamic>> sheetRows = [];
+        for (final row in sheet.rows) {
+          final List<dynamic> rowValues = [];
+          for (final cell in row) {
+            if (cell == null || cell.value == null) {
+              rowValues.add(null);
+            } else {
+              rowValues.add(_extractCellValue(cell.value));
+            }
+          }
+          if (rowValues.any((v) => v != null && v.toString().trim().isNotEmpty)) {
+            sheetRows.add(rowValues);
+          }
+        }
+        if (sheetRows.isNotEmpty) {
+          sheetsMap[table] = sheetRows;
+        }
+      }
+    } catch (e) {
+      print('[EXCEL DECODE PACKAGE ERROR]: $e');
+    }
+
+    if (sheetsMap.isEmpty) {
+      try {
+        sheetsMap = SafeXlsxReader.decodeSheets(bytes);
+      } catch (e) {
+        print('[SAFE XLSX READER ERROR]: $e');
+      }
+    }
+
+    return sheetsMap;
+  }
+
+  static dynamic _extractCellValue(dynamic val) {
+    if (val == null) return null;
+
+    if (val is TextCellValue) {
+      return val.value.text;
+    } else if (val is IntCellValue) {
+      return val.value;
+    } else if (val is DoubleCellValue) {
+      return val.value;
+    } else if (val is BoolCellValue) {
+      return val.value;
+    } else if (val is DateCellValue) {
+      return val.toString();
+    } else if (val is TimeCellValue) {
+      return val.toString();
+    }
+
+    final str = val.toString().trim();
+    if (str.startsWith('TextCellValue(') && str.endsWith(')')) {
+      return str.substring(14, str.length - 1).trim();
+    }
+    if (str.startsWith('IntCellValue(') && str.endsWith(')')) {
+      return int.tryParse(str.substring(13, str.length - 1).trim()) ?? str;
+    }
+    return str;
+  }
+
   Future<RamayanaParseResult> parseFile(
     PlatformFile file, {
     String? targetBookId,
@@ -390,20 +460,25 @@ class RamayanaParserService {
     final String defaultBookCode = _resolveBookCode(activeBookId);
     final String extension = (file.extension ?? (file.name.contains('.') ? file.name.split('.').last : '')).toLowerCase();
 
+    final bool isZipHeader = bytes.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B;
+    final bool isCsvExt = extension == 'csv' || (!isZipHeader && (extension == 'txt' || extension.isEmpty));
+
     Map<String, List<List<dynamic>>> sheetsMap = {};
 
-    if (extension == 'csv') {
-      final csvString = utf8.decode(bytes).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-      final csvRows = const CsvToListConverter(eol: '\n').convert(csvString);
-      sheetsMap['Sheet1'] = csvRows;
-    } else if (extension == 'xlsx' || extension == 'xls') {
-      sheetsMap = SafeXlsxReader.decodeSheets(bytes);
+    if (isCsvExt && !isZipHeader) {
+      try {
+        final csvString = utf8.decode(bytes).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+        final csvRows = const CsvToListConverter(eol: '\n').convert(csvString);
+        sheetsMap['Sheet1'] = csvRows;
+      } catch (e) {
+        sheetsMap = parseXlsxSheets(bytes);
+      }
     } else {
-      throw Exception("Unsupported file format: .$extension. Please upload CSV or XLSX.");
+      sheetsMap = parseXlsxSheets(bytes);
     }
 
     if (sheetsMap.isEmpty) {
-      throw Exception("File is empty or contains no readable sheets.");
+      throw Exception("Unable to read Excel / CSV file. Please verify that the file is a valid .xlsx or .csv document.");
     }
 
     // Sheet Selection Logic: Prefer content sheet (e.g. "Ramayana Content"), avoid README/documentation
@@ -464,12 +539,12 @@ class RamayanaParserService {
     print('[IMPORT DEBUG] Normalized headers: $normalizedHeaders');
 
     // Flexible Column Mapping using normalized header names & aliases
-    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'verse_id', 'canonical_id', 'shlok_id', 'shloka_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
+    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'passage_id', 'verse_id', 'canonical_id', 'canonical_reference', 'shlok_id', 'shloka_id', 'code', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
     final bookIdIdx = _findHeaderIdx(normalizedHeaders, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book']);
     final bookNameIdx = _findHeaderIdx(normalizedHeaders, ['book_name', 'bookname', 'book_title', 'title']);
-    final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_number', 'kanda', 'kand', 'kanda_no', 'kandam', 'parva', 'parva_number', 'chapter_number', 'chapternumber', 'chapter']);
-    final sargaIdx = _findHeaderIdx(normalizedHeaders, ['sarga_number', 'sarganumber', 'sarga', 'sarg', 'sarga_no', 'section_number', 'sectionnumber', 'section', 'adhyaya']);
-    final verseIdx = _findHeaderIdx(normalizedHeaders, ['verse_number', 'versenumber', 'verse', 'shlok_number', 'shloka_number', 'shlok', 'shloka', 'verse_no']);
+    final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_name', 'kanda', 'kand', 'kanda_no', 'kandam', 'parva', 'parva_number', 'chapter_number', 'chapternumber', 'chapter']);
+    final sargaIdx = _findHeaderIdx(normalizedHeaders, ['sarga_number', 'sarganumber', 'sarga', 'sarg', 'sarga_no', 'sarga_num', 'section_number', 'sectionnumber', 'section', 'adhyaya']);
+    final verseIdx = _findHeaderIdx(normalizedHeaders, ['verse_number', 'versenumber', 'verse', 'shlok_number', 'shloka_number', 'shlok_no', 'shloka_no', 'shlok', 'shloka', 'verse_no']);
     final sanskritIdx = _findHeaderIdx(normalizedHeaders, ['sanskrit', 'sanskrit_shloka', 'sanskrit_text', 'shloka_text', 'sloka', 'original_sanskrit', 'passage']);
     int englishIdx = _findHeaderIdx(normalizedHeaders, [
       'english', 'english_translation', 'english_meaning', 'translation_en', 'en', 'eng',
@@ -666,7 +741,6 @@ class RamayanaParserService {
       final bool hasEnglish = englishText != null && englishText.trim().isNotEmpty;
       final bool hasHindi = hindiText != null && hindiText.trim().isNotEmpty;
       final bool hasGujarati = gujaratiText != null && gujaratiText.trim().isNotEmpty;
-      final bool hasExplanation = explanationText != null && explanationText.trim().isNotEmpty;
 
       if (!hasSanskrit) {
         missingSanskritCount++;
