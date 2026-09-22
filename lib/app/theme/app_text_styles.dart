@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
+import '../../theme/app_typography.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
@@ -39,10 +38,10 @@ class AppTextStyles {
     bool isSerif = false,
     TextDecoration decoration = TextDecoration.none,
   }) {
-    final String gujaratiFont = GoogleFonts.notoSansGujarati().fontFamily!;
-    final String devanagariFont = GoogleFonts.notoSansDevanagari().fontFamily!;
-    final String englishSerif = GoogleFonts.cormorantGaramond().fontFamily!;
-    final String englishSans = GoogleFonts.manrope().fontFamily!;
+    final String gujaratiFont = AppTypography.fontNotoSansGujarati;
+    final String devanagariFont = AppTypography.fontNotoSansDevanagari;
+    final String englishSerif = AppTypography.fontLora;
+    final String englishSans = AppTypography.fontDMSans;
 
     String primaryFont;
     List<String> fallbacks;
@@ -50,13 +49,20 @@ class AppTextStyles {
     if (locale.languageCode == 'gu') {
       primaryFont = gujaratiFont;
       fallbacks = [gujaratiFont, devanagariFont, englishSerif, englishSans];
-    } else if (locale.languageCode == 'hi') {
+    } else if (locale.languageCode == 'hi' || locale.languageCode == 'sa') {
       primaryFont = devanagariFont;
       fallbacks = [devanagariFont, gujaratiFont, englishSerif, englishSans];
     } else {
       primaryFont = isSerif ? englishSerif : englishSans;
       fallbacks = [primaryFont, gujaratiFont, devanagariFont];
     }
+
+    // Indic scripts (HI, GU, SA) must NOT use wide English-style letter spacing
+    final double? adjustedLetterSpacing = (locale.languageCode == 'hi' ||
+            locale.languageCode == 'gu' ||
+            locale.languageCode == 'sa')
+        ? (letterSpacing != null && letterSpacing > 0.4 ? 0.2 : letterSpacing)
+        : letterSpacing;
 
     return TextStyle(
       fontFamily: primaryFont,
@@ -65,112 +71,113 @@ class AppTextStyles {
       fontWeight: fontWeight,
       color: color ?? AppColors.darkText,
       height: height,
-      letterSpacing: letterSpacing,
+      letterSpacing: adjustedLetterSpacing,
       decoration: decoration,
     );
   }
 
   static final List<String> _fallbacks = [
-    GoogleFonts.notoSansGujarati().fontFamily!,
-    GoogleFonts.notoSansDevanagari().fontFamily!,
-    GoogleFonts.cormorantGaramond().fontFamily!,
-    GoogleFonts.manrope().fontFamily!,
+    AppTypography.fontNotoSansGujarati,
+    AppTypography.fontNotoSansDevanagari,
+    AppTypography.fontLora,
+    AppTypography.fontDMSans,
   ];
 
-  static TextStyle get _serif => GoogleFonts.cormorantGaramond().copyWith(fontFamilyFallback: _fallbacks);
-  static TextStyle get _sans => GoogleFonts.manrope().copyWith(fontFamilyFallback: _fallbacks);
+  static TextStyle get _serif => TextStyle(fontFamily: AppTypography.fontLora, fontFamilyFallback: _fallbacks);
+  static TextStyle get _sans => TextStyle(fontFamily: AppTypography.fontDMSans, fontFamilyFallback: _fallbacks);
 
   static TextStyle pageHeading = _serif.copyWith(
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
+    fontSize: 36,
+    fontWeight: FontWeight.w600,
     color: AppColors.darkText,
-    height: 1.2,
+    height: 1.10,
   );
 
   static TextStyle sectionHeading = _serif.copyWith(
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: FontWeight.w600,
     color: AppColors.darkText,
-    height: 1.3,
+    height: 1.15,
   );
 
-  static TextStyle cardTitle = _sans.copyWith(
-    fontSize: 17,
+  static TextStyle cardTitle = _serif.copyWith(
+    fontSize: 19,
     fontWeight: FontWeight.w600,
     color: AppColors.darkText,
-    height: 1.3,
+    height: 1.25,
   );
 
   static TextStyle body = _sans.copyWith(
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: FontWeight.w400,
     color: AppColors.darkText,
-    height: 1.5,
+    height: 1.50,
   );
 
   static TextStyle bodyMedium = _sans.copyWith(
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: FontWeight.w500,
     color: AppColors.darkText,
-    height: 1.5,
+    height: 1.50,
   );
 
   static TextStyle caption = _sans.copyWith(
-    fontSize: 12,
+    fontSize: 14.5,
     fontWeight: FontWeight.w400,
     color: AppColors.secondaryText,
-    height: 1.4,
+    height: 1.30,
   );
 
   static TextStyle label = _sans.copyWith(
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.secondaryText,
-    letterSpacing: 1.2,
-    height: 1.4,
+    letterSpacing: 1.4,
+    height: 1.20,
   );
 
   static TextStyle button = _sans.copyWith(
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
-    height: 1.2,
+    height: 1.20,
   );
 
   static TextStyle splashTitle = _serif.copyWith(
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
     letterSpacing: 0.5,
-    height: 1.2,
+    height: 1.10,
   );
 
   static TextStyle splashSubtitle = _sans.copyWith(
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: FontWeight.w400,
     color: const Color(0xCCFFFFFF),
-    letterSpacing: 2.0,
-    height: 1.4,
+    letterSpacing: 1.4,
+    height: 1.40,
   );
 
   static TextStyle quote = _serif.copyWith(
-    fontSize: 20,
-    fontWeight: FontWeight.w500,
+    fontSize: 21,
+    fontWeight: FontWeight.w400,
     color: AppColors.primaryBurgundy,
     fontStyle: FontStyle.italic,
-    height: 1.5,
+    height: 1.50,
   );
 
-  static TextStyle sanskrit = _serif.copyWith(
-    fontSize: 22,
-    fontWeight: FontWeight.w600,
-    color: AppColors.primaryBurgundy,
-    height: 1.4,
+  static TextStyle sanskrit = TextStyle(
+    fontFamily: AppTypography.fontNotoSansDevanagari,
+    fontSize: 28,
+    fontWeight: FontWeight.w500,
+    color: AppColors.darkText,
+    height: 1.40,
   );
 
   static TextStyle navLabel = _sans.copyWith(
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: FontWeight.w500,
-    height: 1.2,
+    height: 1.20,
   );
 }

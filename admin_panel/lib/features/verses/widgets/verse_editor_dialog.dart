@@ -211,7 +211,10 @@ class _VerseEditorDialogState extends State<VerseEditorDialog> with SingleTicker
 
     final verseNum = int.tryParse(_numberController.text) ?? 1;
     final model = SacredVerseAdminModel(
+      verseId: widget.verse?.verseId,
       verseNumber: verseNum,
+      kandaNumber: widget.verse?.kandaNumber ?? widget.chapterNumber,
+      sargaNumber: widget.verse?.sargaNumber ?? 1,
       sanskrit: _sanskritController.text.trim(),
       english: _englishController.text.trim(),
       gujarati: _gujaratiController.text.trim(),
@@ -369,13 +372,19 @@ class _VerseEditorDialogState extends State<VerseEditorDialog> with SingleTicker
                           ),
                           const SizedBox(height: 20),
 
-                          Text('Original Sanskrit Shloka (Devanagari)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          Text('Original Sanskrit Shloka (Devanagari / Unicode)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _sanskritController,
                             maxLines: 4,
                             decoration: const InputDecoration(hintText: 'धर्मक्षेत्रे कुरुक्षेत्रे समवेता युयुत्सवः।\nमामकाः पाण्डवाश्चैव किमकुर्वत सञ्जय॥'),
-                            validator: (v) => v == null || v.trim().isEmpty ? 'Sanskrit text is required' : null,
+                            validator: (v) {
+                              final hasContent = _sanskritController.text.trim().isNotEmpty ||
+                                  _englishController.text.trim().isNotEmpty ||
+                                  _gujaratiController.text.trim().isNotEmpty ||
+                                  _hindiController.text.trim().isNotEmpty;
+                              return hasContent ? null : 'Please enter Sanskrit text or at least one translation';
+                            },
                           ),
                           const SizedBox(height: 20),
 
@@ -385,7 +394,6 @@ class _VerseEditorDialogState extends State<VerseEditorDialog> with SingleTicker
                             controller: _englishController,
                             maxLines: 3,
                             decoration: const InputDecoration(hintText: 'Dhritarashtra said: O Sanjaya, assembled on the sacred plain of Kurukshetra...'),
-                            validator: (v) => v == null || v.trim().isEmpty ? 'English translation required' : null,
                           ),
                           const SizedBox(height: 16),
 
@@ -395,7 +403,6 @@ class _VerseEditorDialogState extends State<VerseEditorDialog> with SingleTicker
                             controller: _gujaratiController,
                             maxLines: 3,
                             decoration: const InputDecoration(hintText: 'ધૃતરાષ્ટ્ર કહ્યું: હે સંજય, કુરુક્ષેત્રના પવિત્ર મેદાનમાં એકઠા થયેલા...'),
-                            validator: (v) => v == null || v.trim().isEmpty ? 'Gujarati translation required' : null,
                           ),
                           const SizedBox(height: 16),
 

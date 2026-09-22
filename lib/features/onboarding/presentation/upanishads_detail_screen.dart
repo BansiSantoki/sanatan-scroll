@@ -266,7 +266,7 @@ class UpanishadsDetailScreen extends StatelessWidget {
 
           onTap: () {
             Navigator.of(context).pushNamed(
-              AppRoutes.sacredTextReading,
+              AppRoutes.sacredChapterList,
               arguments: 'upanishads',
             );
           },

@@ -66,10 +66,14 @@ class GradientButton extends StatelessWidget {
                           if (icon != null) ...[icon!, const SizedBox(width: 8)],
                           Text(
                             label,
-                            style: AppTextStyles.button.copyWith(
+                            style: AppTextStyles.getFont(
+                              context,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                               color: isEnabled
                                   ? AppColors.white
                                   : AppColors.secondaryText,
+                              height: 1.20,
                             ),
                           ),
                         ],

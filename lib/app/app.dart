@@ -62,7 +62,14 @@ class SanatanScrollApp extends StatelessWidget {
             return provider;
           },
         ),
-        ChangeNotifierProvider(create: (_) => StreakProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, StreakProvider>(
+          create: (_) => StreakProvider(),
+          update: (_, auth, streakProvider) {
+            final provider = streakProvider ?? StreakProvider();
+            provider.bindUser(auth.userId);
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => DailyProgressProvider()),
         ChangeNotifierProvider(create: (_) => GuestAccessProvider()),
       ],

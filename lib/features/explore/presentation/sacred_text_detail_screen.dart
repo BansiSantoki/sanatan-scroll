@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../theme/app_typography.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
+import '../../../../providers/locale_provider.dart';
 import '../../../../providers/navigation_provider.dart';
 
 class SacredTextDetailScreen extends StatefulWidget {
@@ -627,6 +629,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // ============================================================
 
   Widget _buildAboutSection(BuildContext context) {
+    final langCode = context.watch<LocaleProvider>().languageCode;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -634,23 +638,17 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         children: [
           Text(
             'About this text',
-            style: AppTextStyles.getFont(
-              context,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: darkTextColor,
-              isSerif: true,
+            style: AppTypography.sectionHeading(
+              langCode,
+              color: const Color(0xFF18392C),
             ),
           ),
           const SizedBox(height: 12),
           Text(
             _about,
-            style: AppTextStyles.getFont(
-              context,
-              fontSize: 14.5,
-              height: 1.55,
-              fontWeight: FontWeight.w400,
-              color: const Color(0xFF333333),
+            style: AppTypography.body(
+              langCode,
+              color: const Color(0xFF18392C),
             ),
           ),
         ],
@@ -663,6 +661,8 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // ============================================================
 
   Widget _buildTeachingsSection(BuildContext context) {
+    final langCode = context.watch<LocaleProvider>().languageCode;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
@@ -670,12 +670,9 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         children: [
           Text(
             'Key Teachings',
-            style: AppTextStyles.getFont(
-              context,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: darkTextColor,
-              isSerif: true,
+            style: AppTypography.sectionHeading(
+              langCode,
+              color: const Color(0xFF18392C),
             ),
           ),
           const SizedBox(height: 14),

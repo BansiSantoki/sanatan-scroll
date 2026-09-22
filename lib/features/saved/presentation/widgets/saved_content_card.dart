@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../../app/theme/app_text_styles.dart';
+import '../../../../theme/app_typography.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../models/saved_item_model.dart';
+import '../../../../providers/locale_provider.dart';
 
 class SavedContentCard extends StatelessWidget {
   const SavedContentCard({
@@ -19,6 +21,7 @@ class SavedContentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardStyle = _getCardStyle(index, item.title, item.source);
+    final langCode = context.watch<LocaleProvider>().languageCode;
 
     return Container(
       width: double.infinity,
@@ -69,13 +72,9 @@ class SavedContentCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
-                          style: AppTextStyles.getFont(
-                            context,
-                            fontSize: 23,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1B1B1B),
-                            height: 1.05,
-                            isSerif: true,
+                          style: AppTypography.cardTitle(
+                            langCode,
+                            color: const Color(0xFF18392C),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -83,21 +82,17 @@ class SavedContentCard extends StatelessWidget {
                           item.content,
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.getFont(
-                            context,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF4A4B46),
-                            height: 1.4,
+                          style: AppTypography.body(
+                            langCode,
+                            color: const Color(0xFF18392C),
                           ),
                         ),
                         const SizedBox(height: 14),
                         Text(
                           item.source,
-                          style: AppTextStyles.getFont(
-                            context,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
+                          style: AppTypography.compact(
+                            langCode,
+                            fontWeight: FontWeight.w500,
                             color: cardStyle.sourceColor,
                           ),
                         ),

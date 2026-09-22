@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../theme/app_typography.dart';
 import 'app_colors.dart';
 import 'app_dimensions.dart';
 import 'app_text_styles.dart';
@@ -12,9 +12,9 @@ class AppTheme {
   static ThemeData get light => getThemeForLocale(const Locale('en'));
 
   static ThemeData getThemeForLocale(Locale locale) {
-    final String gujaratiFont = GoogleFonts.notoSansGujarati().fontFamily!;
-    final String devanagariFont = GoogleFonts.notoSansDevanagari().fontFamily!;
-    final String englishFont = GoogleFonts.manrope().fontFamily!;
+    final String gujaratiFont = AppTypography.fontNotoSansGujarati;
+    final String devanagariFont = AppTypography.fontNotoSansDevanagari;
+    final String englishFont = AppTypography.fontDMSans;
 
     List<String> fallbacks;
     String primaryFont;
@@ -22,7 +22,7 @@ class AppTheme {
     if (locale.languageCode == 'gu') {
       primaryFont = gujaratiFont;
       fallbacks = [gujaratiFont, devanagariFont, englishFont];
-    } else if (locale.languageCode == 'hi') {
+    } else if (locale.languageCode == 'hi' || locale.languageCode == 'sa') {
       primaryFont = devanagariFont;
       fallbacks = [devanagariFont, gujaratiFont, englishFont];
     } else {

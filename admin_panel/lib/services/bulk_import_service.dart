@@ -324,49 +324,77 @@ class BulkImportService {
     required String mode, // 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
     String? targetBookId,
   }) async {
+    // 1. Instantly assign memory actions based on row validity and target mode
     for (final row in rows) {
       if (!row.isValid) {
         row.action = 'error';
         continue;
       }
+      row.action = (mode == 'update_existing') ? 'skip' : 'new';
+    }
 
-      final activeBookId = (targetBookId != null && targetBookId.isNotEmpty)
-          ? targetBookId.toLowerCase().replaceAll(' ', '_')
-          : row.bookId.isNotEmpty
-              ? row.bookId
-              : 'ramayana';
+    // 2. Only fetch existing document IDs if selected mode strictly requires checking Firestore existence
+    if (mode == 'create_only' || mode == 'skip_duplicates' || mode == 'update_existing') {
+      final Map<String, List<RamayanaParsedRow>> chapterGroups = {};
+      for (final row in rows) {
+        if (!row.isValid) continue;
+        final activeBookId = (targetBookId != null && targetBookId.isNotEmpty)
+            ? targetBookId.toLowerCase().replaceAll(' ', '_')
+            : row.bookId.isNotEmpty
+                ? row.bookId
+                : 'ramayana';
 
-      final String chapterDocId = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
-          ? 'chapter_${row.kandaNumber}'
-          : 'kanda_${row.kandaNumber}_sarga_${row.sargaNumber}';
+        final String chapterDocId = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
+            ? 'chapter_${row.kandaNumber}'
+            : 'kanda_${row.kandaNumber}_sarga_${row.sargaNumber}';
 
-      final verseDocRef = _firestore
-          .collection('sacred_books')
-          .doc(activeBookId)
-          .collection('chapters')
-          .doc(chapterDocId)
-          .collection('verses')
-          .doc(row.verseId);
+        final key = '$activeBookId|$chapterDocId';
+        chapterGroups.putIfAbsent(key, () => []).add(row);
+      }
 
-      try {
-        final doc = await verseDocRef.get();
-        final exists = doc.exists;
+      final groupKeys = chapterGroups.keys.toList();
+      const int batchSize = 10;
+      for (int i = 0; i < groupKeys.length; i += batchSize) {
+        final batchKeys = groupKeys.sublist(i, i + batchSize > groupKeys.length ? groupKeys.length : i + batchSize);
+        await Future.wait(batchKeys.map((key) async {
+          final parts = key.split('|');
+          final bId = parts[0];
+          final cId = parts[1];
+          final chapterRows = chapterGroups[key]!;
 
-        if (exists) {
-          if (mode == 'create_only' || mode == 'skip_duplicates') {
-            row.action = 'skip';
-          } else {
-            row.action = 'update';
+          try {
+            final snap = await _firestore
+                .collection('sacred_books')
+                .doc(bId)
+                .collection('chapters')
+                .doc(cId)
+                .collection('verses')
+                .get();
+
+            final existingDocIds = snap.docs.map((d) => d.id).toSet();
+
+            for (final row in chapterRows) {
+              final exists = existingDocIds.contains(row.verseId);
+              if (exists) {
+                if (mode == 'create_only' || mode == 'skip_duplicates') {
+                  row.action = 'skip';
+                } else {
+                  row.action = 'update';
+                }
+              } else {
+                if (mode == 'update_existing') {
+                  row.action = 'skip';
+                } else {
+                  row.action = 'new';
+                }
+              }
+            }
+          } catch (_) {
+            for (final row in chapterRows) {
+              row.action = mode == 'update_existing' ? 'skip' : 'new';
+            }
           }
-        } else {
-          if (mode == 'update_existing') {
-            row.action = 'skip';
-          } else {
-            row.action = 'new';
-          }
-        }
-      } catch (_) {
-        row.action = mode == 'update_existing' ? 'skip' : 'new';
+        }));
       }
     }
   }
@@ -427,8 +455,8 @@ class BulkImportService {
     String defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
     String defaultSourceName = '$activeBookName Source';
     if (rowsToProcess.isNotEmpty) {
-      defaultSourceUrl = rowsToProcess.first.sourceUrl;
-      defaultSourceName = rowsToProcess.first.sourceName;
+      defaultSourceUrl = rowsToProcess.first.sourceUrl ?? defaultSourceUrl;
+      defaultSourceName = rowsToProcess.first.sourceName ?? defaultSourceName;
     }
 
     final bookMap = <String, dynamic>{
@@ -535,7 +563,7 @@ class BulkImportService {
           'source_name': row.sourceName,
           'qa_status': row.qaStatus,
           'notes': row.notes,
-          'published': row.qaStatus == 'Approved',
+          'published': true,
           'archived': false,
           'updatedAt': FieldValue.serverTimestamp(),
         };
@@ -578,7 +606,7 @@ class BulkImportService {
 
     onProgress?.call(rowsToProcess.length, rowsToProcess.length, 'Finalizing import logs...');
 
-    // Write import history log
+    // Write import history log safely
     final historyRef = _firestore.collection('import_history').doc();
     final historyModel = ImportHistoryAdminModel(
       id: historyRef.id,
@@ -594,15 +622,17 @@ class BulkImportService {
       importedBy: adminEmail,
     );
 
-    await historyRef.set(historyModel.toMap());
-
-    // Record activity log
-    await _firestore.collection('admin_activity_logs').add({
-      'action': 'SACRED_BOOK_IMPORT',
-      'userEmail': adminEmail,
-      'details': 'Imported $activeBookName ($activeBookId): $versesCreated verses created, $versesUpdated updated, $skippedCount skipped from $fileName (Mode: $mode)',
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    try {
+      await historyRef.set(historyModel.toMap());
+      await _firestore.collection('admin_activity_logs').add({
+        'action': 'SACRED_BOOK_IMPORT',
+        'userEmail': adminEmail,
+        'details': 'Imported $activeBookName ($activeBookId): $versesCreated verses created, $versesUpdated updated, $skippedCount skipped from $fileName (Mode: $mode)',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('[BULK IMPORT WARNING] Could not write activity log to Firestore: $e');
+    }
 
     return RamayanaImportExecutionResult(
       booksCreated: booksCreated,

@@ -11,7 +11,9 @@ class ChaptersService {
   Stream<List<SacredChapterAdminModel>> streamChapters(String bookId) {
     return _getChaptersCollection(bookId).snapshots().map((snapshot) {
       final chapters = snapshot.docs.map((doc) {
-        return SacredChapterAdminModel.fromMap(doc.data());
+        final data = Map<String, dynamic>.from(doc.data());
+        data['id'] = doc.id;
+        return SacredChapterAdminModel.fromMap(data);
       }).toList();
       chapters.sort((a, b) => a.chapterNumber.compareTo(b.chapterNumber));
       return chapters;
@@ -21,14 +23,21 @@ class ChaptersService {
   Future<List<SacredChapterAdminModel>> getChapters(String bookId) async {
     final snapshot = await _getChaptersCollection(bookId).get();
     final chapters = snapshot.docs.map((doc) {
-      return SacredChapterAdminModel.fromMap(doc.data());
+      final data = Map<String, dynamic>.from(doc.data());
+      data['id'] = doc.id;
+      return SacredChapterAdminModel.fromMap(data);
     }).toList();
     chapters.sort((a, b) => a.chapterNumber.compareTo(b.chapterNumber));
     return chapters;
   }
 
   Future<void> saveChapter(String bookId, SacredChapterAdminModel chapter) async {
-    final docId = chapter.chapterNumber.toString();
+    final docId = (chapter.id != null && chapter.id!.isNotEmpty)
+        ? chapter.id!
+        : (chapter.kandaNumber != null && chapter.sargaNumber != null)
+            ? 'kanda_${chapter.kandaNumber}_sarga_${chapter.sargaNumber}'
+            : chapter.chapterNumber.toString();
+
     await _getChaptersCollection(bookId).doc(docId).set(
           chapter.toMap(),
           SetOptions(merge: true),
@@ -42,15 +51,17 @@ class ChaptersService {
     });
   }
 
-  Future<void> setPublishedStatus(String bookId, int chapterNumber, bool published) async {
-    await _getChaptersCollection(bookId).doc(chapterNumber.toString()).update({
+  Future<void> setPublishedStatus(String bookId, dynamic chapterIdOrNumber, bool published) async {
+    final docId = chapterIdOrNumber.toString();
+    await _getChaptersCollection(bookId).doc(docId).update({
       'published': published,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<void> deleteChapter(String bookId, int chapterNumber) async {
-    await _getChaptersCollection(bookId).doc(chapterNumber.toString()).delete();
+  Future<void> deleteChapter(String bookId, dynamic chapterIdOrNumber) async {
+    final docId = chapterIdOrNumber.toString();
+    await _getChaptersCollection(bookId).doc(docId).delete();
     
     final snapshot = await _getChaptersCollection(bookId).get();
     await _firestore.collection('sacred_books').doc(bookId).update({

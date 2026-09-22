@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../theme/app_typography.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
@@ -18,6 +18,8 @@ class ReadingReflectionCard extends StatelessWidget {
     required this.onToggleSave,
     required this.onShare,
     required this.onBack,
+    required this.onNextCard,
+    this.totalCards = 3,
   });
 
   final SacredBookModel book;
@@ -28,6 +30,8 @@ class ReadingReflectionCard extends StatelessWidget {
   final VoidCallback onToggleSave;
   final VoidCallback onShare;
   final VoidCallback onBack;
+  final VoidCallback onNextCard;
+  final int totalCards;
 
   @override
   Widget build(BuildContext context) {
@@ -37,226 +41,169 @@ class ReadingReflectionCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     final reflectionText = verse.getReflectionFullText(languageCode);
+    final bookTitle = book.getLocalizedTitle(languageCode);
+    final chapterWord = l10n.chapter;
+    final topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F2),
-      bottomNavigationBar: CustomBottomNavigation(
-        currentIndex: 3,
-        onTap: (index) {},
-      ),
       body: SafeArea(
-        bottom: false,
-        child: Material(
-          color: Colors.transparent,
-          child: Stack(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top-Right Orange Decorative Blob & Lotus Art
-              Positioned(
-                top: 10,
-                right: -15,
-                child: CustomPaint(
-                  size: const Size(140, 150),
-                  painter: _ReflectionTopArtPainter(),
+              const SizedBox(height: 8),
+
+              // Top Header Row (Back Arrow + Book/Chapter Subtitle + Bookmark Icon)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: onBack,
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 20,
+                          color: Color(0xFF18392C),
+                        ),
+                        splashRadius: 22,
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    onPressed: onToggleSave,
+                    tooltip: isSaved ? l10n.savedAction : l10n.save,
+                    icon: Icon(
+                      isSaved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_outline_rounded,
+                      color: const Color(0xFF18392C),
+                      size: 26,
+                    ),
+                    splashRadius: 22,
+                  ),
+                ],
+              ),
+
+              // Subtitle under Header: e.g. "Bhagavad Gita · Chapter 3"
+              Padding(
+                padding: const EdgeInsets.only(left: 12, bottom: 12),
+                child: Text(
+                  topSubtitle,
+                  style: AppTextStyles.getFontForLocale(
+                    locale,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF18392C),
+                    isSerif: true,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
               ),
 
-              // Main Layout Column
-              Column(
-                children: [
-                  // Top Header Row (Back Arrow, REFLECTION Title, Save Icon)
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding - 8,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: onBack,
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            size: 24,
-                            color: Color(0xFF1B1B1B),
-                          ),
+              // Main Reflection Body Content
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+
+                      // REFLECTION Section Header Label
+                      Text(
+                        l10n.reflection,
+                        style: AppTypography.sectionLabel(
+                          languageCode,
+                          color: const Color(0xFF736B5E),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.reflection,
-                          style: AppTextStyles.getFontForLocale(
-                            locale,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFFE0824E),
-                            letterSpacing: 1.2,
-                            decoration: TextDecoration.none,
-                          ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Reflection Body Paragraphs
+                      Text(
+                        reflectionText,
+                        style: AppTypography.reflectionContext(
+                          languageCode,
+                          color: const Color(0xFF18392C),
                         ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: onToggleSave,
-                          tooltip: isSaved ? l10n.savedAction : l10n.save,
-                          icon: Icon(
-                            isSaved
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_outline_rounded,
-                            size: 26,
-                            color: const Color(0xFF1B1B1B),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+
+                      const SizedBox(height: 24),
+                    ],
                   ),
+                ),
+              ),
 
-                  // Main Reflection Content Body
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              // Bottom Bar: 02 / 03 | Progress Bars | Swipe ->
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  children: [
+                    // Card number e.g. "02 / 03"
+                    Text(
+                      '02 / 0$totalCards',
+                      style: AppTextStyles.getFontForLocale(
+                        locale,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF18392C),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Progress indicators
+                    Expanded(
+                      child: Row(
+                        children: List.generate(totalCards, (index) {
+                          final isActive = index == 1;
+                          return Expanded(
+                            child: Container(
+                              height: 4,
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? const Color(0xFFEF6523)
+                                    : const Color(0xFFF9D6C4),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // Swipe button
+                    GestureDetector(
+                      onTap: onNextCard,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(height: 12),
-
-                          // Reflection Body Text Paragraphs
                           Text(
-                            reflectionText,
+                            l10n.swipe,
                             style: AppTextStyles.getFontForLocale(
                               locale,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
-                              color: const Color(0xFF232323),
-                              height: 1.6,
-                              decoration: TextDecoration.none,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF18392C),
                             ),
                           ),
-
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Bottom Action Bar: Save | Set Wallpaper | Share
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                      vertical: 10,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3E7D3),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0xFFE7D8BD),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // 1. Save button
-                          InkWell(
-                            onTap: onToggleSave,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isSaved
-                                      ? Icons.bookmark_rounded
-                                      : Icons.bookmark_outline_rounded,
-                                  size: 20,
-                                  color: const Color(0xFF1B1B1B),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isSaved ? l10n.savedAction : l10n.save,
-                                  style: AppTextStyles.getFontForLocale(
-                                    locale,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1B1B1B),
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          Container(
-                            width: 1,
-                            height: 20,
-                            color: const Color(0xFFDFD1B8),
-                          ),
-
-                          // 2. Set Wallpaper button
-                          InkWell(
-                            onTap: () {
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                    content: Text(l10n.wallpaperSet),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                            },
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.crop_original_rounded,
-                                  size: 20,
-                                  color: Color(0xFF1B1B1B),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  l10n.setWallpaper,
-                                  style: AppTextStyles.getFontForLocale(
-                                    locale,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1B1B1B),
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          Container(
-                            width: 1,
-                            height: 20,
-                            color: const Color(0xFFDFD1B8),
-                          ),
-
-                          // 3. Share button
-                          InkWell(
-                            onTap: onShare,
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.share_outlined,
-                                  size: 20,
-                                  color: Color(0xFF1B1B1B),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  l10n.share,
-                                  style: AppTextStyles.getFontForLocale(
-                                    locale,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF1B1B1B),
-                                    decoration: TextDecoration.none,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                            color: Color(0xFF18392C),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -264,38 +211,4 @@ class ReadingReflectionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ReflectionTopArtPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final blobPaint = Paint()
-      ..color = const Color(0xFFEAA277).withValues(alpha: 0.85)
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(size.width * 0.3, 0)
-      ..cubicTo(
-        size.width * 0.1,
-        size.height * 0.3,
-        size.width * 0.4,
-        size.height * 0.9,
-        size.width,
-        size.height * 0.7,
-      )
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(path, blobPaint);
-
-    final lotusPaint = Paint()
-      ..color = const Color(0xFFFAF7F2).withValues(alpha: 0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    final center = Offset(size.width * 0.75, size.height * 0.45);
-    canvas.drawCircle(center, 12, lotusPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../theme/app_typography.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../providers/locale_provider.dart';
 import '../../../../providers/saved_provider.dart';
 import 'widgets/saved_content_card.dart';
 
@@ -23,7 +25,7 @@ class SavedScreen extends StatelessWidget {
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF5ED),
+      backgroundColor: const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Stack(
           children: [
@@ -56,22 +58,16 @@ class SavedScreen extends StatelessWidget {
                         children: [
                           Text(
                             context.l10n.saved,
-                            style: AppTextStyles.getFont(
-                              context,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1B1B1B),
-                              height: 1.05,
-                              isSerif: true,
+                            style: AppTypography.pageTitle(
+                              context.watch<LocaleProvider>().languageCode,
+                              color: const Color(0xFF18392C),
                             ),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             context.l10n.savedWisdom,
-                            style: AppTextStyles.getFont(
-                              context,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w400,
+                            style: AppTypography.compact(
+                              context.watch<LocaleProvider>().languageCode,
                               color: const Color(0xFF555555),
                             ),
                           ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../theme/app_typography.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/sanskrit_verse_text.dart';
 import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
@@ -17,6 +19,9 @@ class ReadingWisdomCard extends StatelessWidget {
     required this.onToggleSave,
     required this.isPlayingAudio,
     required this.onToggleAudio,
+    required this.onBack,
+    required this.onNextCard,
+    this.totalCards = 3,
   });
 
   final SacredBookModel book;
@@ -27,6 +32,9 @@ class ReadingWisdomCard extends StatelessWidget {
   final VoidCallback onToggleSave;
   final bool isPlayingAudio;
   final VoidCallback onToggleAudio;
+  final VoidCallback onBack;
+  final VoidCallback onNextCard;
+  final int totalCards;
 
   @override
   Widget build(BuildContext context) {
@@ -35,258 +43,147 @@ class ReadingWisdomCard extends StatelessWidget {
     final locale = Locale(languageCode);
     final l10n = AppLocalizations.of(context);
 
-    final quoteText = verse.getQuoteText(languageCode);
     final translationText = verse.getLocalizedTranslation(languageCode);
     final bookTitle = book.getLocalizedTitle(languageCode);
+    final chapterWord = l10n.chapter;
     final verseRef = '$bookTitle ${chapter.chapterNumber}.${verse.verseNumber}';
+    final topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE88B52),
-      body: Material(
-        color: Colors.transparent,
-        child: Stack(
-          children: [
-            // Background Warm Orange Fill & Custom Artwork Painter
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFE88B52),
-                      Color(0xFFE27B42),
+      backgroundColor: const Color(0xFFFAF7F2),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 8),
+
+              // Top Header Row (Back Arrow + Book/Chapter Subtitle + Bookmark Icon)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: onBack,
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 20,
+                          color: Color(0xFF18392C),
+                        ),
+                        splashRadius: 22,
+                      ),
                     ],
+                  ),
+                  IconButton(
+                    onPressed: onToggleSave,
+                    tooltip: isSaved ? l10n.savedAction : l10n.save,
+                    icon: Icon(
+                      isSaved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_outline_rounded,
+                      color: const Color(0xFF18392C),
+                      size: 26,
+                    ),
+                    splashRadius: 22,
+                  ),
+                ],
+              ),
+
+              // Subtitle under Header: e.g. "Bhagavad Gita · Chapter 3"
+              Padding(
+                padding: const EdgeInsets.only(left: 12, bottom: 12),
+                child: Text(
+                  topSubtitle,
+                  style: AppTextStyles.getFontForLocale(
+                    locale,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF18392C),
+                    isSerif: true,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),
-            ),
 
-            // Background Custom Painter for Sun, Star, Leaves & Hill Art
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _WisdomBackgroundPainter(),
-              ),
-            ),
+              // Main Scrollable Scripture + Translation Body
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
 
-            // Main Foreground Content
-            SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
+                      // SANSKRIT Section Header Label
+                      Text(
+                        l10n.sanskrit,
+                        style: AppTypography.sectionLabel(
+                          languageCode,
+                          color: const Color(0xFF736B5E),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
 
-                    // Top Header Row (WISDOM + Save Icon)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // Sanskrit Verse Text
+                      SanskritVerseText(
+                        sanskrit: verse.sanskrit,
+                        textAlign: TextAlign.left,
+                        color: const Color(0xFF18392C),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Verse Reference (e.g. Bhagavad Gita 3.25)
+                      Text(
+                        verseRef,
+                        style: AppTypography.verseReference(
+                          languageCode,
+                          color: const Color(0xFF18392C),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                      const Divider(
+                        color: Color(0xFFE8E2DA),
+                        height: 1,
+                        thickness: 1,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // TRANSLATION Section Header Label
+                      Text(
+                        l10n.translation,
+                        style: AppTypography.sectionLabel(
+                          languageCode,
+                          color: const Color(0xFF736B5E),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Translation Body Text
+                      Text(
+                        translationText,
+                        style: AppTypography.scriptureTranslation(
+                          languageCode,
+                          color: const Color(0xFF18392C),
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Audio Player Button ("Listen to Sanskrit")
+                      GestureDetector(
+                        onTap: onToggleAudio,
+                        child: Row(
                           children: [
-                            Text(
-                              l10n.wisdom,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF2A1808),
-                                letterSpacing: 1.2,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
                             Container(
-                              width: 22,
-                              height: 2,
-                              color: const Color(0xFF2A1808),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          onPressed: onToggleSave,
-                          tooltip: isSaved ? l10n.savedAction : l10n.save,
-                          icon: Icon(
-                            isSaved
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_outline_rounded,
-                            color: const Color(0xFF2A1808),
-                            size: 26,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Main Scrollable Wisdom Body Content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Quotation mark
-                            Text(
-                              '“',
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 54,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1B1B1B),
-                                height: 0.8,
-                                isSerif: true,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Main Quote / Heading
-                            Text(
-                              quoteText,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: width >= 600 ? 36 : 30,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1B1B1B),
-                                height: 1.25,
-                                isSerif: true,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                            const Divider(
-                              color: Color(0x3B1B1B1B),
-                              height: 1,
-                              thickness: 1,
-                            ),
-                            const SizedBox(height: 16),
-
-                            // SANSKRIT Section
-                            Text(
-                              l10n.sanskrit,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF2A1808),
-                                letterSpacing: 1.0,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              verse.sanskrit,
-                              style: AppTextStyles.getFontForLocale(
-                                const Locale('hi'),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF1B1B1B),
-                                height: 1.45,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            // Scripture Reference Pill (e.g. Bhagavad Gita 2.48)
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.filter_vintage_outlined,
-                                  size: 18,
-                                  color: Color(0xFF2A1808),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    verseRef,
-                                    style: AppTextStyles.getFontForLocale(
-                                      locale,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF1B1B1B),
-                                      isSerif: true,
-                                      decoration: TextDecoration.none,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-                            const Divider(
-                              color: Color(0x3B1B1B1B),
-                              height: 1,
-                              thickness: 1,
-                            ),
-                            const SizedBox(height: 16),
-
-                            // TRANSLATION Section
-                            Text(
-                              l10n.translation,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF2A1808),
-                                letterSpacing: 1.0,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              translationText,
-                              style: AppTextStyles.getFontForLocale(
-                                locale,
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF1B1B1B),
-                                height: 1.45,
-                                decoration: TextDecoration.none,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Audio Player Pill at bottom
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF79E53).withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: const Color(0xFFFBB374),
-                          width: 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: onToggleAudio,
-                            child: Container(
-                              width: 36,
-                              height: 36,
+                              width: 48,
+                              height: 48,
                               decoration: const BoxDecoration(
-                                color: Color(0xFF1F2E1E),
+                                color: Color(0xFFEF6523),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -294,151 +191,101 @@ class ReadingWisdomCard extends StatelessWidget {
                                     ? Icons.pause_rounded
                                     : Icons.play_arrow_rounded,
                                 color: Colors.white,
-                                size: 22,
+                                size: 28,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            l10n.listenToAudio,
-                            style: AppTextStyles.getFontForLocale(
-                              locale,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1B1B1B),
-                              decoration: TextDecoration.none,
+                            const SizedBox(width: 14),
+                            Text(
+                              l10n.listenToSanskrit,
+                              style: AppTextStyles.getFontForLocale(
+                                locale,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF18392C),
+                                decoration: TextDecoration.none,
+                              ),
                             ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: List.generate(4, (index) {
-                              final heights = [10.0, 16.0, 12.0, 18.0];
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                width: 3,
-                                height: isPlayingAudio ? heights[index] : 10,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1F2E1E),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Bar: 01 / 03 | Progress Bars | Swipe ->
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Row(
+                  children: [
+                    // Card number e.g. "01 / 03"
+                    Text(
+                      '01 / 0$totalCards',
+                      style: AppTextStyles.getFontForLocale(
+                        locale,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF18392C),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Progress indicators
+                    Expanded(
+                      child: Row(
+                        children: List.generate(totalCards, (index) {
+                          final isActive = index == 0;
+                          return Expanded(
+                            child: Container(
+                              height: 4,
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? const Color(0xFFEF6523)
+                                    : const Color(0xFFF9D6C4),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(width: 16),
 
-                    // Swipe up indicator
-                    Center(
-                      child: Column(
+                    // Swipe button
+                    GestureDetector(
+                      onTap: onNextCard,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.keyboard_arrow_up_rounded,
-                            size: 20,
-                            color: Color(0xFF2A1808),
-                          ),
                           Text(
-                            l10n.swipeUpForMore,
+                            l10n.swipe,
                             style: AppTextStyles.getFontForLocale(
                               locale,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF2A1808),
-                              decoration: TextDecoration.none,
+                              color: const Color(0xFF18392C),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                            color: Color(0xFF18392C),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-// Background painter for Sun, Star, Leaf & Hill art
-class _WisdomBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // 1. Golden Sun Circle (Upper Right)
-    final sunPaint = Paint()
-      ..color = const Color(0xFFFBC05A).withValues(alpha: 0.85)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(size.width * 0.76, size.height * 0.16),
-      size.width * 0.16,
-      sunPaint,
-    );
-
-    // 2. Star / Sparkle Motif (Middle Right)
-    final starPaint = Paint()
-      ..color = const Color(0xFFF3A756).withValues(alpha: 0.9)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-    final starCenter = Offset(size.width * 0.84, size.height * 0.32);
-    const starRadius = 18.0;
-    for (int i = 0; i < 4; i++) {
-      canvas.drawLine(
-        Offset(
-          starCenter.dx - starRadius * 0.8 * (i % 2 == 0 ? 1 : 0.7) * (i == 1 || i == 3 ? -1 : 1),
-          starCenter.dy,
-        ),
-        Offset(
-          starCenter.dx + starRadius * 0.8 * (i % 2 == 0 ? 1 : 0.7) * (i == 1 || i == 3 ? -1 : 1),
-          starCenter.dy,
-        ),
-        starPaint,
-      );
-    }
-
-    // 3. Dark Green Hill / Arch Shape (Bottom Right)
-    final hillPaint = Paint()
-      ..color = const Color(0xFF2B4D34)
-      ..style = PaintingStyle.fill;
-    final hillPath = Path()
-      ..moveTo(size.width * 0.65, size.height)
-      ..quadraticBezierTo(
-        size.width * 0.82,
-        size.height * 0.92,
-        size.width,
-        size.height * 0.95,
-      )
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(hillPath, hillPaint);
-
-    // 4. Sage Leaf Line-Art (Bottom Left)
-    final leafPaint = Paint()
-      ..color = const Color(0xFF3B4E26).withValues(alpha: 0.85)
-      ..style = PaintingStyle.fill;
-    final leafPath1 = Path()
-      ..moveTo(0, size.height * 0.86)
-      ..quadraticBezierTo(
-        size.width * 0.12,
-        size.height * 0.84,
-        size.width * 0.18,
-        size.height * 0.92,
-      )
-      ..quadraticBezierTo(
-        size.width * 0.08,
-        size.height * 0.96,
-        0,
-        size.height * 0.94,
-      )
-      ..close();
-    canvas.drawPath(leafPath1, leafPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

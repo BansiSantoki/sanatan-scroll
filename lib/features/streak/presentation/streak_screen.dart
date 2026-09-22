@@ -5,6 +5,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/navigation_provider.dart';
 import '../../../../providers/streak_provider.dart';
+import 'reading_history_calendar_screen.dart';
 
 class StreakScreen extends StatelessWidget {
   const StreakScreen({super.key});
@@ -12,7 +13,6 @@ class StreakScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final l10n = context.l10n;
 
     final horizontalPadding = width >= 900
         ? 40.0
@@ -23,7 +23,7 @@ class StreakScreen extends StatelessWidget {
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF5ED),
+      backgroundColor: const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -38,10 +38,10 @@ class StreakScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ============================================================
-                  // 1. HEADER (Your Journey)
+                  // 1. STREAK HEADER
                   // ============================================================
                   Text(
-                    l10n.yourJourney,
+                    'Streak',
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 38,
@@ -53,7 +53,7 @@ class StreakScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    l10n.smallStepsText,
+                    'Keep your spiritual journey going.',
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 14.5,
@@ -62,24 +62,112 @@ class StreakScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 20),
 
                   // ============================================================
-                  // 2. MAIN TRACKER CARD
+                  // 2. READING HISTORY CARD / BUTTON (Navigates to Reading History Calendar Screen)
+                  // ============================================================
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ReadingHistoryCalendarScreen(),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF9F0),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFEAE2D2),
+                            width: 1.0,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEAF0D8),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.calendar_month_rounded,
+                                color: Color(0xFF5A6C38),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Reading History',
+                                    style: AppTextStyles.getFont(
+                                      context,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1B1B1B),
+                                      isSerif: true,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Your journey, day by day.',
+                                    style: AppTextStyles.getFont(
+                                      context,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w400,
+                                      color: const Color(0xFF666666),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 26,
+                              color: Color(0xFF1B1B1B),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ============================================================
+                  // 3. MAIN TRACKER CARD (Preserved)
                   // ============================================================
                   const _MainTrackerCard(),
 
                   const SizedBox(height: 28),
 
                   // ============================================================
-                  // 3. THIS WEEK SECTION
+                  // 4. THIS WEEK SECTION (Preserved)
                   // ============================================================
                   const _ThisWeekSection(),
 
                   const SizedBox(height: 28),
 
                   // ============================================================
-                  // 4. MILESTONES SECTION
+                  // 5. MILESTONES SECTION (Preserved)
                   // ============================================================
                   const _MilestonesSection(),
 
@@ -93,6 +181,7 @@ class StreakScreen extends StatelessWidget {
     );
   }
 }
+
 
 // ============================================================
 // MAIN TRACKER CARD WIDGET
@@ -656,3 +745,4 @@ class _MilestoneCard extends StatelessWidget {
     );
   }
 }
+

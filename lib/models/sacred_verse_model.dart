@@ -1,5 +1,7 @@
 class SacredVerseModel {
   final int verseNumber;
+  final int? kandaNumber;
+  final int? sargaNumber;
 
   final String sanskrit;
   final String english;
@@ -50,6 +52,8 @@ class SacredVerseModel {
 
   const SacredVerseModel({
     required this.verseNumber,
+    this.kandaNumber,
+    this.sargaNumber,
     required this.sanskrit,
     required this.english,
     required this.gujarati,
@@ -88,18 +92,34 @@ class SacredVerseModel {
   });
 
   factory SacredVerseModel.fromMap(Map<String, dynamic> map) {
+    final translationsMap = map['translations'] is Map ? Map<String, dynamic>.from(map['translations']) : null;
+
+    final sanskritText = (map['sanskrit'] ?? map['sanskritText'] ?? map['shloka'] ?? '').toString();
+    final englishText = (map['english'] ?? map['translation_en'] ?? map['english_translation'] ?? translationsMap?['en'] ?? '').toString();
+    final gujaratiText = (map['gujarati'] ?? map['translation_gu'] ?? map['gujarati_translation'] ?? translationsMap?['gu'] ?? '').toString();
+    final hindiText = map['hindi']?.toString() ?? map['translation_hi']?.toString() ?? map['hindi_translation']?.toString() ?? translationsMap?['hi']?.toString();
+
+    final meaningEn = (map['meaningEnglish'] ?? map['explanation_en'] ?? map['explanation'] ?? map['meaning_en'] ?? map['meaning'] ?? '').toString();
+    final meaningGu = (map['meaningGujarati'] ?? map['explanation_gu'] ?? map['meaning_gu'] ?? '').toString();
+    final meaningHi = map['meaningHindi']?.toString() ?? map['explanation_hi']?.toString() ?? map['meaning_hi']?.toString();
+
+    final kanda = map['kanda_number'] != null ? _asInt(map['kanda_number'], fallback: -1) : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: -1) : null);
+    final sarga = map['sarga_number'] != null ? _asInt(map['sarga_number'], fallback: -1) : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: -1) : null);
+
     return SacredVerseModel(
       verseNumber: _asInt(
-        map['verseNumber'],
+        map['verseNumber'] ?? map['verse_number'],
         fallback: 1,
       ),
-      sanskrit: (map['sanskrit'] ?? '').toString(),
-      english: (map['english'] ?? map['translation_en'] ?? '').toString(),
-      gujarati: (map['gujarati'] ?? map['translation_gu'] ?? '').toString(),
-      hindi: map['hindi']?.toString() ?? map['translation_hi']?.toString(),
-      meaningEnglish: (map['meaningEnglish'] ?? map['explanation_en'] ?? '').toString(),
-      meaningGujarati: (map['meaningGujarati'] ?? map['explanation_gu'] ?? '').toString(),
-      meaningHindi: map['meaningHindi']?.toString() ?? map['explanation_hi']?.toString(),
+      kandaNumber: kanda != null && kanda > 0 ? kanda : null,
+      sargaNumber: sarga != null && sarga > 0 ? sarga : null,
+      sanskrit: sanskritText,
+      english: englishText,
+      gujarati: gujaratiText,
+      hindi: hindiText,
+      meaningEnglish: meaningEn,
+      meaningGujarati: meaningGu,
+      meaningHindi: meaningHi,
       transliteration: map['transliteration']?.toString(),
       quote: map['quote']?.toString() ?? map['quote_en']?.toString(),
       quoteHi: map['quote_hi']?.toString(),
@@ -134,6 +154,8 @@ class SacredVerseModel {
   Map<String, dynamic> toMap() {
     return {
       'verseNumber': verseNumber,
+      'kanda_number': kandaNumber,
+      'sarga_number': sargaNumber,
       'sanskrit': sanskrit,
       'english': english,
       'gujarati': gujarati,
@@ -173,23 +195,50 @@ class SacredVerseModel {
   }
 
   String getLocalizedTranslation(String languageCode) {
-    if (languageCode == 'gu' && gujarati.isNotEmpty) {
-      return gujarati;
+    if (languageCode == 'gu') {
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (english.trim().isNotEmpty) return english;
+      return 'અનુવાદ ઉપલબ્ધ નથી.';
     }
-    if (languageCode == 'hi' && hindi != null && hindi!.isNotEmpty) {
-      return hindi!;
+    if (languageCode == 'hi') {
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (english.trim().isNotEmpty) return english;
+      return 'अनुवाद उपलब्ध नहीं है।';
     }
-    return english;
+    if (languageCode == 'sa') {
+      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+      if (gujarati.trim().isNotEmpty) return gujarati;
+      if (english.trim().isNotEmpty) return english;
+      return 'अनुवाद उपलब्ध नहीं है।';
+    }
+    if (english.trim().isNotEmpty) return english;
+    if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
+    if (gujarati.trim().isNotEmpty) return gujarati;
+    return 'Translation not available.';
   }
 
   String getLocalizedMeaning(String languageCode) {
-    if (languageCode == 'gu' && meaningGujarati.isNotEmpty) {
-      return meaningGujarati;
+    if (languageCode == 'gu') {
+      if (meaningGujarati.isNotEmpty) return meaningGujarati;
+      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
+      if (meaningEnglish.isNotEmpty) return meaningEnglish;
     }
-    if (languageCode == 'hi' && meaningHindi != null && meaningHindi!.isNotEmpty) {
-      return meaningHindi!;
+    if (languageCode == 'hi') {
+      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
+      if (meaningEnglish.isNotEmpty) return meaningEnglish;
+      if (meaningGujarati.isNotEmpty) return meaningGujarati;
     }
-    return meaningEnglish;
+    if (languageCode == 'sa') {
+      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
+      if (meaningEnglish.isNotEmpty) return meaningEnglish;
+      if (meaningGujarati.isNotEmpty) return meaningGujarati;
+    }
+    if (meaningEnglish.isNotEmpty) return meaningEnglish;
+    if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
+    if (meaningGujarati.isNotEmpty) return meaningGujarati;
+    return getLocalizedTranslation(languageCode);
   }
 
   String getQuoteText(String languageCode) {

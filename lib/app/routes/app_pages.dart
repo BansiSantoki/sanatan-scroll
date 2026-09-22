@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../features/authentication/presentation/auth_screen.dart';
-import '../../features/explore/presentation/sacred_chapter_list_screen.dart';
-import '../../features/explore/presentation/sacred_text_detail_screen.dart';
-import '../../features/explore/presentation/sacred_text_reader_screen.dart';
-import '../../features/explore/presentation/sacred_texts_screen.dart';
-import '../../features/feed/presentation/daily_reading_screen.dart';
-import '../../features/main_navigation/presentation/main_navigation_screen.dart';
-import '../../features/onboarding/presentation/begin_journey_screen.dart';
-import '../../features/onboarding/presentation/onboarding_screen.dart';
-import '../../features/splash/presentation/splash_screen.dart';
-import '../../features/profile/presentation/settings_screen.dart';
+import 'package:sanatan_scroll/features/authentication/presentation/auth_screen.dart';
+import 'package:sanatan_scroll/features/explore/presentation/sacred_chapter_list_screen.dart';
+import 'package:sanatan_scroll/features/explore/presentation/sacred_text_detail_screen.dart';
+import 'package:sanatan_scroll/features/explore/presentation/sacred_text_reader_screen.dart';
+import 'package:sanatan_scroll/features/explore/presentation/sacred_texts_screen.dart';
+import 'package:sanatan_scroll/features/feed/presentation/daily_reading_screen.dart';
+import 'package:sanatan_scroll/features/main_navigation/presentation/main_navigation_screen.dart';
+import 'package:sanatan_scroll/features/onboarding/presentation/begin_journey_screen.dart';
+import 'package:sanatan_scroll/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:sanatan_scroll/features/splash/presentation/splash_screen.dart';
+import 'package:sanatan_scroll/features/profile/presentation/settings_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {

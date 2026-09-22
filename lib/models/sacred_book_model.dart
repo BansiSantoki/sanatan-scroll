@@ -17,6 +17,7 @@ class SacredBookModel {
   final bool published;
   final bool archived;
   final int totalChapters;
+  final int totalVerses;
   final List<SacredChapterModel> chapters;
 
   const SacredBookModel({
@@ -36,7 +37,8 @@ class SacredBookModel {
     this.published = true,
     this.archived = false,
     required this.totalChapters,
-    required this.chapters,
+    this.totalVerses = 0,
+    this.chapters = const [],
   });
 
   factory SacredBookModel.fromMap(Map<String, dynamic> map) {
@@ -53,8 +55,13 @@ class SacredBookModel {
         : <SacredChapterModel>[];
 
     final inferredTotal = _asInt(
-      map['totalChapters'],
+      map['totalChapters'] ?? map['total_chapters'],
       fallback: chapters.length,
+    );
+
+    final inferredVerses = _asInt(
+      map['totalVerses'] ?? map['total_verses'],
+      fallback: chapters.fold<int>(0, (sum, c) => sum + c.verses.length),
     );
 
     return SacredBookModel(
@@ -71,10 +78,53 @@ class SacredBookModel {
       coverUrl: map['coverUrl']?.toString() ?? map['cover_url']?.toString(),
       description: (map['description'] ?? map['about'] ?? '').toString(),
       order: _asInt(map['order'], fallback: 1),
-      published: map['published'] as bool? ?? true,
-      archived: map['archived'] as bool? ?? false,
+      published: map['published'] as bool? ?? map['is_published'] as bool? ?? (map['status'] == 'published' || map['status'] == null),
+      archived: map['archived'] as bool? ?? (map['status'] == 'archived'),
       totalChapters: inferredTotal > 0 ? inferredTotal : chapters.length,
+      totalVerses: inferredVerses,
       chapters: chapters,
+    );
+  }
+
+  SacredBookModel copyWith({
+    String? id,
+    String? title,
+    String? subtitle,
+    String? titleEn,
+    String? titleGu,
+    String? titleHi,
+    String? subtitleEn,
+    String? subtitleGu,
+    String? subtitleHi,
+    String? iconEmoji,
+    String? coverUrl,
+    String? description,
+    int? order,
+    bool? published,
+    bool? archived,
+    int? totalChapters,
+    int? totalVerses,
+    List<SacredChapterModel>? chapters,
+  }) {
+    return SacredBookModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      titleEn: titleEn ?? this.titleEn,
+      titleGu: titleGu ?? this.titleGu,
+      titleHi: titleHi ?? this.titleHi,
+      subtitleEn: subtitleEn ?? this.subtitleEn,
+      subtitleGu: subtitleGu ?? this.subtitleGu,
+      subtitleHi: subtitleHi ?? this.subtitleHi,
+      iconEmoji: iconEmoji ?? this.iconEmoji,
+      coverUrl: coverUrl ?? this.coverUrl,
+      description: description ?? this.description,
+      order: order ?? this.order,
+      published: published ?? this.published,
+      archived: archived ?? this.archived,
+      totalChapters: totalChapters ?? this.totalChapters,
+      totalVerses: totalVerses ?? this.totalVerses,
+      chapters: chapters ?? this.chapters,
     );
   }
 
@@ -96,11 +146,25 @@ class SacredBookModel {
   }
 
   String getLocalizedTitle(String languageCode) {
-    if (languageCode == 'gu' && titleGu != null && titleGu!.isNotEmpty) {
-      return titleGu!;
+    if (languageCode == 'gu') {
+      if (titleGu != null && titleGu!.isNotEmpty) return titleGu!;
+      if (id == 'bhagavad_gita' || id == 'gita') return 'ભગવદ્ ગીતા';
+      if (id == 'ramayana') return 'રામાયણ';
+      if (id == 'mahabharata') return 'મહાભારત';
+      if (id == 'upanishads') return 'ઉપનિષદો';
     }
-    if (languageCode == 'hi' && titleHi != null && titleHi!.isNotEmpty) {
-      return titleHi!;
+    if (languageCode == 'hi') {
+      if (titleHi != null && titleHi!.isNotEmpty) return titleHi!;
+      if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
+      if (id == 'ramayana') return 'रामायण';
+      if (id == 'mahabharata') return 'महाभारत';
+      if (id == 'upanishads') return 'उपनिषद';
+    }
+    if (languageCode == 'sa') {
+      if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
+      if (id == 'ramayana') return 'रामायणम्';
+      if (id == 'mahabharata') return 'महाभारतम्';
+      if (id == 'upanishads') return 'उपनिषदः';
     }
     if (titleEn != null && titleEn!.isNotEmpty) {
       return titleEn!;
@@ -129,12 +193,21 @@ class SacredBookModel {
   }
 
   SacredChapterModel? getChapter(int chapterNumber) {
-    try {
-      return chapters.firstWhere(
-        (chapter) => chapter.chapterNumber == chapterNumber,
-      );
-    } catch (_) {
-      return null;
+    if (chapters.isEmpty) return null;
+
+    // 1. Exact chapterNumber match
+    for (final chapter in chapters) {
+      if (chapter.chapterNumber == chapterNumber) {
+        return chapter;
+      }
     }
+
+    // 2. 1-indexed positional fallback (if chapterNumber is between 1 and chapters.length)
+    if (chapterNumber >= 1 && chapterNumber <= chapters.length) {
+      return chapters[chapterNumber - 1];
+    }
+
+    // 3. Fallback to first chapter
+    return chapters.first;
   }
 }

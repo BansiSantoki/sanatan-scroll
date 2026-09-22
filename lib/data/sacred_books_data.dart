@@ -49,23 +49,7 @@ class SacredBooksData {
               'This chapter offers a reflective path through $title, connecting timeless wisdom with everyday dharma.',
           descriptionGujarati:
               '$title ના આ અધ્યાયમાં શાશ્વત જ્ઞાનને દૈનિક ધર્મ સાથે જોડતો આધ્યાત્મિક માર્ગ દર્શાવવામાં આવ્યો છે.',
-          verses: List.generate(8, (verseIndex) {
-            final verseNumber = verseIndex + 1;
-
-            return SacredVerseModel(
-              verseNumber: verseNumber,
-              sanskrit:
-                  'अध्याय $chapterNumber श्लोक $verseNumber - धर्मस्य मार्गः',
-              english:
-                  'The teaching of $title reminds us in chapter $chapterNumber, verse $verseNumber to live with truth, compassion, and steady awareness.',
-              gujarati:
-                  '$title ના અધ્યાય $chapterNumber ના શ્લોક $verseNumber માં સત્ય, કરુણા અને સ્થિર જાગૃતિ સાથે જીવવાનો ઉપદેશ છે.',
-              meaningEnglish:
-                  'Spiritual understanding grows through sincere practice, selfless action, and a heart open to the Divine.',
-              meaningGujarati:
-                  'નિષ્ઠાપૂર્વકની સાધના, નિષ્કામ કર્મ અને દિવ્યતા માટે ખુલ્લા હૃદયથી આધ્યાત્મિક સમજ વિકસે છે.',
-            );
-          }),
+          verses: const [],
         );
       }),
     );
@@ -3426,10 +3410,12 @@ static List<SacredVerseModel> _gitaChapter3Verses() {
       sanskrit:
           'सक्ताः कर्मण्यविद्वांसो यथा कुर्वन्ति भारत ।\n' 
           'कुर्याद्विद्वांस्तथासक्तश्चिकीर्षुर्लोकसंग्रहम् ॥३.२५॥',
-      english: 'The ignorant perform actions with attachment. The wise should perform actions without attachment, for the welfare of society.',
-      gujarati: 'હે ભારત! અજ્ઞાની લોકો આસક્તિથી કર્મ કરે છે. તેવી જ રીતે જ્ઞાની મનુષ્યે પણ આસક્તિ વિના લોકકલ્યાણની ભાવનાથી કર્મ કરવું જોઈએ.',
-      meaningEnglish: 'The ignorant perform actions with attachment. The wise should perform actions without attachment, for the welfare of society.',
-      meaningGujarati: 'હે ભારત! અજ્ઞાની લોકો આસક્તિથી કર્મ કરે છે. તેવી જ રીતે જ્ઞાની મનુષ્યે પણ આસક્તિ વિના લોકકલ્યાણની ભાવનાથી કર્મ કરવું જોઈએ.',
+      english: 'Just as ignorant people act with attachment to the results of their actions, a wise person should act without attachment, with the intention of contributing to the welfare of the world.',
+      hindi: 'जैसे अज्ञानी लोग फल की आसक्ति से कर्म करते हैं, वैसे ही ज्ञानी व्यक्ति को आसक्ति रहित होकर लोककल्याण की इच्छा से कर्म करना चाहिए।',
+      gujarati: 'જેમ અજ્ઞાની લોકો ફળ પ્રત્યેની આસક્તિથી કર્મ કરે છે, તેમ જ જ્ઞાની વ્યક્તિએ આસક્તિ રહિત રહીને લોકકલ્યાણની ઇચ્છાથી કર્મ કરવું જોઈએ.',
+      meaningEnglish: 'Just as ignorant people act with attachment to the results of their actions, a wise person should act without attachment, with the intention of contributing to the welfare of the world.',
+      meaningHindi: 'जैसे अज्ञानी लोग फल की आसक्ति से कर्म करते हैं, वैसे ही ज्ञानी व्यक्ति को आसक्ति रहित होकर लोककल्याण की इच्छा से कर्म करना चाहिए।',
+      meaningGujarati: 'જેમ અજ્ઞાની લોકો ફળ પ્રત્યેની આસક્તિથી કર્મ કરે છે, તેમ જ જ્ઞાની વ્યક્તિએ આસક્તિ રહિત રહીને લોકકલ્યાણની ઇચ્છાથી કર્મ કરવું જોઈએ.',
     ),
 
     SacredVerseModel(
@@ -10105,106 +10091,28 @@ SacredVerseModel(
   // =====================================================
 
   static SacredBookModel _buildRamayanaBook() {
-    return SacredBookModel(
+    return const SacredBookModel(
       id: 'ramayana',
       title: 'Ramayana',
-      subtitle: 'The Divine Journey of Lord Rama',
+      subtitle: 'The Epic of Duty',
       iconEmoji: '🏹',
-      totalChapters: 7,
-      chapters: List.generate(7, (index) {
-        final chapterNumber = index + 1;
-        final kandaTitle = _ramayanaKandaTitle(chapterNumber);
-
-        return SacredChapterModel(
-          chapterNumber: chapterNumber,
-          title: kandaTitle,
-          subtitle: 'Ramayana Kanda $chapterNumber',
-          descriptionEnglish:
-              'This section presents the key journey of $kandaTitle with its moral teachings on duty, devotion, courage, and compassion.',
-          descriptionGujarati:
-              '${_ramayanaKandaTitleGujarati(chapterNumber)} માં ધર્મ, ભક્તિ, શૌર્ય અને કરુણાના જીવનમૂલ્યો સાથે શ્રીરામની પવિત્ર યાત્રા વર્ણવાઈ છે.',
-          verses: List.generate(12, (verseIndex) {
-            final verseNumber = verseIndex + 1;
-
-            final storyline = _ramayanaThemes[
-                (chapterNumber + verseIndex) % _ramayanaThemes.length];
-
-            return SacredVerseModel(
-              verseNumber: verseNumber,
-              sanskrit:
-                  'काण्ड $chapterNumber श्लोक $verseNumber - $storyline',
-              english: 
-                  'In $kandaTitle, verse $verseNumber reflects on $storyline and reminds us that dharma must guide every decision.',
-              gujarati:
-                  '$kandaTitle ના શ્લોક $verseNumber માં $storyline નો ઉપદેશ છે અને સમજાવે છે કે દરેક નિર્ણયમાં ધર્મ માર્ગદર્શક હોવો જોઈએ.',
-              meaningEnglish:
-                  'The Ramayana teaches that righteousness, patience, and devotion transform hardship into spiritual strength.',
-              meaningGujarati:
-                  'રામાયણ શીખવે છે કે સત્ય, ધૈર્ય અને ભક્તિથી મુશ્કેલી પણ આધ્યાત્મિક શક્તિમાં પરિવર્તિત થાય છે.',
-            );
-          }),
-        );
-      }),
+      totalChapters: 0,
+      chapters: [],
     );
   }
-  
 
   // =====================================================
   // FIND BOOK
   // =====================================================
 
   static SacredBookModel? findById(String id) {
+    final normalizedId = (id == 'gita') ? 'bhagavad_gita' : id;
     try {
       return all.firstWhere(
-        (book) => book.id == id,
+        (book) => book.id == normalizedId || book.id == id,
       );
     } catch (_) {
       return null;
     }
   }
-
-  // =====================================================
-  // RAMAYANA KANDA TITLES
-  // =====================================================
-
-  static String _ramayanaKandaTitle(int chapterNumber) {
-    const titles = [
-      'Bala Kanda',
-      'Ayodhya Kanda',
-      'Aranya Kanda',
-      'Kishkindha Kanda',
-      'Sundara Kanda',
-      'Yuddha Kanda',
-      'Uttara Kanda',
-    ];
-
-    return titles[chapterNumber - 1];
-  }
-
-  static String _ramayanaKandaTitleGujarati(int chapterNumber) {
-    const titles = [
-      'બાલ કાંડ',
-      'અયોધ્યા કાંડ',
-      'અરણ્ય કાંડ',
-      'કિષ્કિંધા કાંડ',
-      'સુંદર કાંડ',
-      'યુદ્ધ કાંડ',
-      'ઉત્તર કાંડ',
-    ];
-
-    return titles[chapterNumber - 1];
-  }
-
-  static const List<String> _ramayanaThemes = [
-    'Rama\'s obedience',
-    'Sita\'s devotion',
-    'Lakshmana\'s service',
-    'Hanuman\'s courage',
-    'Sugriva alliance',
-    'Search for Sita',
-    'Battle for righteousness',
-    'Return to Ayodhya',
-    'Compassion in leadership',
-    'Victory of dharma',
-  ];
 }

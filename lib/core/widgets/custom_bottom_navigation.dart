@@ -37,14 +37,14 @@ class CustomBottomNavigation extends StatelessWidget {
     final items = AppConstants.bottomNavigationItems;
 
     return Container(
-      color: const Color(0xFFFAF5ED),
+      color: const Color(0xFFFAF7F2),
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: SafeArea(
         top: false,
         child: Container(
           height: 68,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFFDF9),
+            color: const Color(0xFFFAF7F2),
             borderRadius: BorderRadius.circular(34),
             border: Border.all(
               color: const Color(0xFFE8DEC8).withValues(alpha: 0.8),

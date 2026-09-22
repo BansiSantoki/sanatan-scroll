@@ -7,8 +7,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/admin_colors.dart';
 import '../../../providers/admin_auth_provider.dart';
 import '../../../services/bulk_import_service.dart';
+import '../../../services/csv_import_service.dart';
 import '../../../services/ramayana_parser_service.dart';
 import '../../../services/source_fetcher_service.dart';
+import '../../../services/universal_web_file_picker.dart';
 
 class RamayanaImportScreen extends StatefulWidget {
   const RamayanaImportScreen({super.key});
@@ -18,7 +20,7 @@ class RamayanaImportScreen extends StatefulWidget {
 }
 
 class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
-  final RamayanaParserService _parserService = RamayanaParserService();
+  final CsvImportService _csvImportService = CsvImportService();
   final SourceFetcherService _sourceFetcherService = SourceFetcherService();
   final BulkImportService _bulkImportService = BulkImportService();
 
@@ -49,6 +51,9 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   RamayanaImportExecutionResult? _executionResult;
   String? _errorMessage;
 
+  bool _isVerifyingFirestore = false;
+  Map<String, dynamic>? _verificationReport;
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +82,6 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
           seenIds.add(id);
         }
 
-        // Add standard defaults if missing
         for (final b in [
           {'id': 'ramayana', 'name': 'Ramayana', 'icon': '🏹'},
           {'id': 'mahabharata', 'name': 'Mahabharata', 'icon': '⚔️'},
@@ -123,14 +127,9 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv', 'xlsx', 'xls'],
-        withData: true,
-      );
+      final file = await UniversalWebFilePicker.pickCsvFile();
 
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
+      if (file != null) {
         setState(() {
           _selectedFile = file;
           _sourceUrl = null;
@@ -141,7 +140,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error picking file: $e';
+        _errorMessage = 'Unable to read CSV file. Please verify that the file is a valid UTF-8 CSV: $e';
         _currentStep = 1;
       });
     }
@@ -153,7 +152,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
     });
 
     try {
-      final parseResult = await _parserService.parseFile(
+      final parseResult = await _csvImportService.parseFile(
         file,
         targetBookId: _selectedBookId,
         targetBookName: _selectedBookName,
@@ -234,6 +233,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         missingTranslationsCount: 0,
         qaStatusCounts: {'Approved': fetchResult.parsedRows.length},
         defaultSourceUrl: url,
+        selectedSheetName: 'Source URL',
       );
 
       setState(() {
@@ -676,14 +676,14 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
               const Icon(Icons.table_chart_outlined, color: AdminColors.primaryDark, size: 24),
               const SizedBox(width: 10),
               Text(
-                'WORKFLOW A: Master Sheet Upload',
+                'WORKFLOW A: CSV Master Sheet Upload',
                 style: GoogleFonts.cinzel(fontSize: 15, fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Upload $_selectedBookName Master Sheet containing Shloks, Chapters/Sections, and translations in CSV or XLSX format.',
+            'Upload $_selectedBookName Master Sheet containing Shloks, Chapters/Sections, and translations in CSV format.',
             style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey[700]),
           ),
           const SizedBox(height: 20),
@@ -703,12 +703,12 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                   const Icon(Icons.upload_file, size: 48, color: AdminColors.saffron),
                   const SizedBox(height: 12),
                   Text(
-                    'Click to Upload CSV or XLSX File for $_selectedBookName',
+                    'Click to Upload CSV File for $_selectedBookName',
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AdminColors.primaryDark),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Supports: .csv, .xlsx, .xls',
+                    'Supports: .csv',
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -1100,7 +1100,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                         ),
                     ],
                   ),
-                  trailing: Text(row.qaStatus, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
+                  trailing: Text(row.qaStatus ?? 'Approved', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600)),
                 );
               },
             ),
@@ -1204,6 +1204,60 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
     );
   }
 
+  Future<void> _verifyFirestoreDocs() async {
+    setState(() {
+      _isVerifyingFirestore = true;
+      _verificationReport = null;
+    });
+
+    try {
+      final bookRef = FirebaseFirestore.instance.collection('sacred_books').doc(_selectedBookId);
+      final bookDoc = await bookRef.get();
+
+      if (!bookDoc.exists) {
+        setState(() {
+          _isVerifyingFirestore = false;
+          _verificationReport = {
+            'bookExists': false,
+            'bookPath': 'sacred_books/$_selectedBookId',
+            'chapterCount': 0,
+            'verseCount': 0,
+            'published': false,
+          };
+        });
+        return;
+      }
+
+      final bookData = bookDoc.data() ?? {};
+      final chaptersSnap = await bookRef.collection('chapters').get();
+      int totalVerses = 0;
+
+      for (final chapDoc in chaptersSnap.docs) {
+        final vSnap = await chapDoc.reference.collection('verses').get();
+        totalVerses += vSnap.docs.length;
+      }
+
+      setState(() {
+        _isVerifyingFirestore = false;
+        _verificationReport = {
+          'bookExists': true,
+          'bookPath': 'sacred_books/$_selectedBookId',
+          'bookTitle': bookData['title'] ?? _selectedBookName,
+          'chapterCount': chaptersSnap.docs.length,
+          'verseCount': totalVerses,
+          'published': bookData['published'] ?? false,
+        };
+      });
+    } catch (e) {
+      setState(() {
+        _isVerifyingFirestore = false;
+        _verificationReport = {
+          'error': 'Verification failed: $e',
+        };
+      });
+    }
+  }
+
   // ============================================================
   // STEP 5: RESULT REPORT
   // ============================================================
@@ -1257,16 +1311,67 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _resetImport,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Import Another Sacred Book Sheet'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AdminColors.primaryDark,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                ),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _resetImport,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Import Another Sacred Book Sheet'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AdminColors.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  OutlinedButton.icon(
+                    onPressed: _isVerifyingFirestore ? null : _verifyFirestoreDocs,
+                    icon: _isVerifyingFirestore
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.verified_outlined, color: AdminColors.saffron),
+                    label: Text(
+                      _isVerifyingFirestore ? 'Verifying Firestore...' : 'Verify Firestore',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      side: const BorderSide(color: AdminColors.saffron, width: 1.5),
+                    ),
+                  ),
+                ],
               ),
+              if (_verificationReport != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[300]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.cloud_done, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Firestore Verification Result', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_verificationReport!['error'] != null)
+                        Text(_verificationReport!['error'], style: GoogleFonts.inter(color: Colors.red, fontSize: 12.5))
+                      else ...[
+                        Text('• Book Path: ${_verificationReport!['bookPath']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        Text('• Book Status: ${_verificationReport!['published'] == true ? "PUBLISHED ✅" : "DRAFT ⚠️"}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        Text('• Chapters Created/Verified: ${_verificationReport!['chapterCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        Text('• Verses Created/Verified: ${_verificationReport!['verseCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

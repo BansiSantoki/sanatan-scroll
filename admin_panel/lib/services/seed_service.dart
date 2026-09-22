@@ -40,6 +40,9 @@ class SeedService {
     try {
       final booksSnapshot = await _firestore.collection('sacred_books').get();
 
+      // Always clean up legacy static Ramayana chapter documents ('1'..'7') if present
+      await cleanupOldStaticRamayanaDocs();
+
       // If books already exist in Firestore and force is false, skip migration
       if (!force && booksSnapshot.docs.isNotEmpty) {
         return booksSnapshot.docs.length;
@@ -220,6 +223,38 @@ class SeedService {
       return totalBooks;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// Deletes the old static 7 Ramayana chapter documents ('1'..'7') and their subcollections
+  /// from Firestore sacred_books/ramayana/chapters/ if present.
+  Future<void> cleanupOldStaticRamayanaDocs() async {
+    try {
+      final ramayanaRef = _firestore.collection('sacred_books').doc('ramayana');
+      final chaptersRef = ramayanaRef.collection('chapters');
+
+      const staticIds = ['1', '2', '3', '4', '5', '6', '7'];
+      for (final docId in staticIds) {
+        final chapDocRef = chaptersRef.doc(docId);
+        final chapSnap = await chapDocRef.get();
+        if (chapSnap.exists) {
+          final versesSnap = await chapDocRef.collection('verses').get();
+          final batch = _firestore.batch();
+          for (final vDoc in versesSnap.docs) {
+            batch.delete(vDoc.reference);
+          }
+          batch.delete(chapDocRef);
+          await batch.commit();
+        }
+      }
+
+      await _logsService.logAction(
+        action: 'Cleaned Up Legacy Ramayana Data',
+        target: 'Firestore sacred_books/ramayana/chapters',
+        details: 'Purged old static chapter documents (1..7)',
+      );
+    } catch (e) {
+      print('Error during legacy Ramayana cleanup: $e');
     }
   }
 

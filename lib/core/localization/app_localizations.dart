@@ -70,6 +70,9 @@ class AppLocalizations {
       'tryThis': 'TRY THIS',
       'carryThisWithYou': 'CARRY THIS WITH YOU',
       'listenToAudio': 'Listen to Audio',
+      'listenToSanskrit': 'Listen to Sanskrit',
+      'swipe': 'Swipe',
+      'nextVerse': 'Next verse',
       'swipeUpForMore': 'Swipe up for more',
       'save': 'Save',
       'savedAction': 'Saved',
@@ -199,6 +202,9 @@ class AppLocalizations {
       'tryThis': 'આ અજમાવો',
       'carryThisWithYou': 'આ તમારી સાથે રાખો',
       'listenToAudio': 'ઓડિયો સાંભળો',
+      'listenToSanskrit': 'સંસ્કૃત સાંભળો',
+      'swipe': 'સ્વાઇપ',
+      'nextVerse': 'આગળનો શ્લોક',
       'swipeUpForMore': 'વધુ માટે ઉપર સ્વાઇપ કરો',
       'save': 'સાચવો',
       'savedAction': 'સાચવ્યું',
@@ -328,6 +334,9 @@ class AppLocalizations {
       'tryThis': 'इसे आजमाएं',
       'carryThisWithYou': 'इसे अपने साथ रखें',
       'listenToAudio': 'ऑडियो सुनें',
+      'listenToSanskrit': 'संस्कृत सुनें',
+      'swipe': 'स्वाइप',
+      'nextVerse': 'अगला श्लोक',
       'swipeUpForMore': 'अधिक के लिए ऊपर स्वाइप करें',
       'save': 'सहेजें',
       'savedAction': 'सहेजा गया',
@@ -480,6 +489,9 @@ class AppLocalizations {
   String get tryThis => translate('tryThis');
   String get carryThisWithYou => translate('carryThisWithYou');
   String get listenToAudio => translate('listenToAudio');
+  String get listenToSanskrit => translate('listenToSanskrit');
+  String get swipe => translate('swipe');
+  String get nextVerse => translate('nextVerse');
   String get swipeUpForMore => translate('swipeUpForMore');
   String get save => translate('save');
   String get savedAction => translate('saved');

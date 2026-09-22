@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:async/async.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/sacred_book_model.dart';
@@ -8,223 +10,452 @@ import 'sacred_books_data.dart';
 class SacredBooksRepository {
   SacredBooksRepository._();
 
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final Map<String, SacredBookModel> _cache = {};
-
-  static void clearCache() {
-    _cache.clear();
-  }
-
-  /// Live Firestore Stream of all published, non-archived Sacred Books
-  static Stream<List<SacredBookModel>> streamAllBooks() {
-    return _firestore
-        .collection('sacred_books')
-        .snapshots()
-        .asyncMap((snapshot) async {
-      if (snapshot.docs.isEmpty) {
-        return SacredBooksData.all;
-      }
-
-      final activeDocs = snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['published'] != false && data['archived'] != true;
-      }).toList();
-
-      activeDocs.sort((a, b) {
-        final orderA = _asInt(a.data()['order'], fallback: 1);
-        final orderB = _asInt(b.data()['order'], fallback: 1);
-        return orderA.compareTo(orderB);
-      });
-
-      final books = <SacredBookModel>[];
-      for (final doc in activeDocs) {
-        final book = await fetchBookById(doc.id, forceRefresh: true);
-        if (book != null) {
-          books.add(book);
-        }
-      }
-
-      return books.isNotEmpty ? books : SacredBooksData.all;
-    });
-  }
-
-  /// Live Stream for a specific Book ID including chapters & verses
-  static Stream<SacredBookModel?> streamBookById(String bookId) {
-    return _firestore
-        .collection('sacred_books')
-        .doc(bookId)
-        .snapshots()
-        .asyncMap((doc) async {
-      if (!doc.exists || doc.data() == null) {
-        return _fallbackBook(bookId);
-      }
-      return fetchBookById(bookId, forceRefresh: true);
-    });
-  }
-
-  /// Fetch all published books once
-  static Future<List<SacredBookModel>> fetchAllBooks({bool forceRefresh = false}) async {
+  static FirebaseFirestore? _firestoreInstance;
+  static FirebaseFirestore? get _firestore {
     try {
-      final snapshot = await _firestore.collection('sacred_books').get();
-
-      if (snapshot.docs.isEmpty) {
-        return SacredBooksData.all;
-      }
-
-      final activeDocs = snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['published'] != false && data['archived'] != true;
-      }).toList();
-
-      activeDocs.sort((a, b) {
-        final orderA = _asInt(a.data()['order'], fallback: 1);
-        final orderB = _asInt(b.data()['order'], fallback: 1);
-        return orderA.compareTo(orderB);
-      });
-
-      final books = <SacredBookModel>[];
-      for (final doc in activeDocs) {
-        final book = await fetchBookById(doc.id, forceRefresh: forceRefresh);
-        if (book != null) {
-          books.add(book);
-        }
-      }
-      return books.isNotEmpty ? books : SacredBooksData.all;
+      return _firestoreInstance ??= FirebaseFirestore.instance;
     } catch (_) {
-      return SacredBooksData.all;
+      return null;
     }
   }
 
-  /// Fetch a single book by ID with chapters and verses from Firestore
+  static final Map<String, SacredBookModel> _booksCache = {};
+  static final Map<String, List<SacredChapterModel>> _chaptersCache = {};
+  static final Map<String, List<SacredVerseModel>> _versesCache = {};
+
+  static void clearCache() {
+    _booksCache.clear();
+    _chaptersCache.clear();
+    _versesCache.clear();
+  }
+
+  // ============================================================
+  // 1. HOME SCREEN: LIGHTWEIGHT BOOK METADATA STREAM (0ms DEEP FETCH)
+  // ============================================================
+
+  /// Live Stream of Book metadata ONLY for Home Screen and Explore cards.
+  /// Does NOT download chapters or verses over the network.
+  static Stream<List<SacredBookModel>> streamAllBooks() {
+    late StreamController<List<SacredBookModel>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? sub;
+
+    controller = StreamController<List<SacredBookModel>>.broadcast(
+      onListen: () {
+        print('[PERF LOG] BOOK_QUERY_START: Subscribing to sacred_books collection metadata...');
+        final stopwatch = Stopwatch()..start();
+
+        // 1. Emit cached books immediately if available for 0ms delay
+        final initialBooks = _getCachedOrFallbackBooks();
+        controller.add(initialBooks);
+
+        final db = _firestore;
+        if (db == null) {
+          stopwatch.stop();
+          print('[PERF LOG] Firestore offline or unit test mode. Emitting fallback books in ${stopwatch.elapsedMilliseconds}ms.');
+          return;
+        }
+
+        // 2. Listen to Firestore sacred_books metadata updates
+        sub = db
+            .collection('sacred_books')
+            .snapshots()
+            .listen(
+          (snapshot) {
+            stopwatch.stop();
+            print('[PERF LOG] BOOK_QUERY_END: Received ${snapshot.docs.length} book documents in ${stopwatch.elapsedMilliseconds}ms.');
+
+            if (snapshot.docs.isEmpty) {
+              controller.add(SacredBooksData.all);
+              return;
+            }
+
+            final List<SacredBookModel> books = [];
+            for (final doc in snapshot.docs) {
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+
+              final isPub = data['published'] as bool? ?? data['is_published'] as bool? ?? (data['status'] == 'published' || data['status'] == null);
+              final isArc = data['archived'] as bool? ?? (data['status'] == 'archived');
+
+              if (isPub && !isArc) {
+                final book = SacredBookModel.fromMap(data);
+                books.add(book);
+                _booksCache[book.id] = book;
+              }
+            }
+
+            books.sort((a, b) => a.order.compareTo(b.order));
+            controller.add(books.isNotEmpty ? books : SacredBooksData.all);
+          },
+          onError: (err) {
+            print('[PERF LOG] BOOK_QUERY_ERROR: $err. Falling back to cached data.');
+            controller.add(_getCachedOrFallbackBooks());
+          },
+        );
+      },
+      onCancel: () {
+        sub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  static List<SacredBookModel> _getCachedOrFallbackBooks() {
+    if (_booksCache.isNotEmpty) {
+      final cached = _booksCache.values.where((b) => b.published && !b.archived).toList();
+      cached.sort((a, b) => a.order.compareTo(b.order));
+      if (cached.isNotEmpty) return cached;
+    }
+    return SacredBooksData.all;
+  }
+
+  // ============================================================
+  // 2. BOOK DETAIL SCREEN: LAZY CHAPTER METADATA STREAM
+  // ============================================================
+
+  /// Stream a single book with lazily loaded chapters (no verses downloaded).
+  static Stream<SacredBookModel?> streamBookById(String bookId) {
+    late StreamController<SacredBookModel?> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? bookSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? chapterSub;
+
+    controller = StreamController<SacredBookModel?>.broadcast(
+      onListen: () {
+        print('[PERF LOG] CHAPTER_QUERY_START: Subscribing to chapters for bookId=$bookId...');
+
+        // Return initial cached version if present
+        final cached = _booksCache[bookId] ?? _fallbackBook(bookId);
+        controller.add(cached);
+
+        final db = _firestore;
+        if (db == null) return;
+
+        final bookRef = db.collection('sacred_books').doc(bookId);
+
+        bookSub = bookRef.snapshots().listen((bookSnap) {
+          if (!bookSnap.exists || bookSnap.data() == null) {
+            final fb = _fallbackBook(bookId);
+            controller.add(fb);
+            return;
+          }
+
+          final bookData = Map<String, dynamic>.from(bookSnap.data()!);
+          bookData['id'] = bookSnap.id;
+          final baseBook = SacredBookModel.fromMap(bookData);
+
+          chapterSub?.cancel();
+          chapterSub = bookRef.collection('chapters').snapshots().listen((chapSnap) {
+            final List<SacredChapterModel> chapters = [];
+
+            if (chapSnap.docs.isNotEmpty) {
+              final activeChapDocs = chapSnap.docs.where((doc) {
+                final d = doc.data();
+                final isPub = d['published'] as bool? ?? d['is_published'] as bool? ?? (d['status'] == 'published' || d['status'] == null);
+                final isArc = d['archived'] as bool? ?? (d['status'] == 'archived');
+                if (!isPub || isArc) return false;
+
+                if (bookId == 'ramayana') {
+                  final docId = doc.id;
+                  const staticIds = {'1', '2', '3', '4', '5', '6', '7'};
+                  if (staticIds.contains(docId)) {
+                    final hasDynamicDocs = chapSnap.docs.any((otherDoc) => !staticIds.contains(otherDoc.id));
+                    if (hasDynamicDocs) {
+                      return false;
+                    }
+                  }
+                }
+
+                return true;
+              }).toList();
+
+              activeChapDocs.sort((a, b) {
+                final numA = _asInt(a.data()['chapterNumber'] ?? a.data()['chapter_number'], fallback: 1);
+                final numB = _asInt(b.data()['chapterNumber'] ?? b.data()['chapter_number'], fallback: 1);
+                return numA.compareTo(numB);
+              });
+
+              for (final cDoc in activeChapDocs) {
+                final cData = Map<String, dynamic>.from(cDoc.data());
+                chapters.add(
+                  SacredChapterModel(
+                    chapterNumber: _asInt(cData['chapterNumber'] ?? cData['chapter_number'], fallback: 1),
+                    title: (cData['title'] ?? '').toString(),
+                    subtitle: (cData['subtitle'] ?? '').toString(),
+                    titleEn: cData['title_en']?.toString(),
+                    titleGu: cData['title_gu']?.toString(),
+                    titleHi: cData['title_hi']?.toString(),
+                    subtitleEn: cData['subtitle_en']?.toString(),
+                    subtitleGu: cData['subtitle_gu']?.toString(),
+                    subtitleHi: cData['subtitle_hi']?.toString(),
+                    descriptionEnglish: (cData['descriptionEnglish'] ?? cData['description_en'] ?? '').toString(),
+                    descriptionGujarati: (cData['descriptionGujarati'] ?? cData['description_gu'] ?? '').toString(),
+                    descriptionHindi: cData['descriptionHindi']?.toString() ?? cData['description_hi']?.toString(),
+                    verses: const [], // Verses are lazy loaded in reader screen!
+                  ),
+                );
+              }
+            }
+
+            final finalChapters = chapters.isNotEmpty
+                ? chapters
+                : (baseBook.chapters.isNotEmpty ? baseBook.chapters : (_fallbackBook(bookId)?.chapters ?? []));
+
+            final completeBook = baseBook.copyWith(
+              chapters: finalChapters,
+              totalChapters: finalChapters.isNotEmpty ? finalChapters.length : baseBook.totalChapters,
+            );
+
+            _booksCache[bookId] = completeBook;
+            controller.add(completeBook);
+          }, onError: (_) {
+            controller.add(_fallbackBook(bookId));
+          });
+        }, onError: (_) {
+          controller.add(_fallbackBook(bookId));
+        });
+      },
+      onCancel: () {
+        bookSub?.cancel();
+        chapterSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  // ============================================================
+  // 3. READER SCREEN: LAZY VERSE QUERY FOR SPECIFIC CHAPTER
+  // ============================================================
+
+  /// Stream a single book with populated verses ONLY for the active chapterNumber.
+  static Stream<SacredBookModel?> streamBookWithChapterVerses({
+    required String bookId,
+    required int chapterNumber,
+  }) {
+    late StreamController<SacredBookModel?> controller;
+    StreamSubscription<SacredBookModel?>? baseBookSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? verseSub;
+
+    controller = StreamController<SacredBookModel?>.broadcast(
+      onListen: () {
+        print('[PERF LOG] VERSE_QUERY_START: Subscribing to verses for bookId=$bookId, chapter=$chapterNumber...');
+
+        baseBookSub = streamBookById(bookId).listen((book) async {
+          if (book == null) {
+            controller.add(_fallbackBook(bookId));
+            return;
+          }
+
+          final targetChapter = book.getChapter(chapterNumber);
+          if (targetChapter == null) {
+            controller.add(book);
+            return;
+          }
+
+          final db = _firestore;
+          if (db == null) {
+            controller.add(book);
+            return;
+          }
+
+          final bookRef = db.collection('sacred_books').doc(bookId);
+          final chaptersSnap = await bookRef.collection('chapters').get();
+
+          final List<DocumentReference<Map<String, dynamic>>> matchedChapRefs = [];
+          for (final doc in chaptersSnap.docs) {
+            if (bookId == 'ramayana') {
+              const staticIds = {'1', '2', '3', '4', '5', '6', '7'};
+              final hasDynamicDocs = chaptersSnap.docs.any((otherDoc) => !staticIds.contains(otherDoc.id));
+              if (hasDynamicDocs && staticIds.contains(doc.id)) {
+                continue;
+              }
+            }
+            final cNum = _asInt(doc.data()['chapterNumber'] ?? doc.data()['chapter_number'], fallback: -1);
+            final kNum = _asInt(doc.data()['kanda_number'], fallback: -1);
+            if (cNum == chapterNumber || kNum == chapterNumber) {
+              matchedChapRefs.add(doc.reference);
+            }
+          }
+
+          if (matchedChapRefs.isEmpty) {
+            matchedChapRefs.add(bookRef.collection('chapters').doc('chapter_$chapterNumber'));
+          }
+
+          verseSub?.cancel();
+
+          if (matchedChapRefs.length == 1) {
+            verseSub = matchedChapRefs.first.collection('verses').snapshots().listen((verseSnap) {
+              final List<SacredVerseModel> verses = [];
+
+              if (verseSnap.docs.isNotEmpty) {
+                final activeVerseDocs = verseSnap.docs.where((v) {
+                  final d = v.data();
+                  final isPub = d['published'] as bool? ?? d['is_published'] as bool? ?? (d['status'] == 'published' || d['status'] == null);
+                  final isArc = d['archived'] as bool? ?? (d['status'] == 'archived');
+                  return isPub && !isArc;
+                }).toList();
+
+                activeVerseDocs.sort((a, b) {
+                  final sargaA = _asInt(a.data()['sarga_number'] ?? a.data()['sargaNumber'], fallback: 1);
+                  final sargaB = _asInt(b.data()['sarga_number'] ?? b.data()['sargaNumber'], fallback: 1);
+                  if (sargaA != sargaB) {
+                    return sargaA.compareTo(sargaB);
+                  }
+                  final numA = _asInt(a.data()['verseNumber'] ?? a.data()['verse_number'], fallback: 1);
+                  final numB = _asInt(b.data()['verseNumber'] ?? b.data()['verse_number'], fallback: 1);
+                  return numA.compareTo(numB);
+                });
+
+                for (final vDoc in activeVerseDocs) {
+                  verses.add(SacredVerseModel.fromMap(vDoc.data()));
+                }
+              }
+
+              _emitUpdatedBook(book, chapterNumber, targetChapter, verses, controller, bookId);
+            }, onError: (_) {
+              controller.add(book);
+            });
+          } else {
+            // Multi-doc chapter group (e.g. multiple Sarga docs for 1 Kanda)
+            final List<Stream<QuerySnapshot<Map<String, dynamic>>>> streams = matchedChapRefs
+                .map((ref) => ref.collection('verses').snapshots())
+                .toList();
+
+            verseSub = StreamGroup.merge(streams).listen((_) async {
+              final List<SacredVerseModel> combinedVerses = [];
+              for (final ref in matchedChapRefs) {
+                final snap = await ref.collection('verses').get();
+                for (final doc in snap.docs) {
+                  final d = doc.data();
+                  final isPub = d['published'] as bool? ?? d['is_published'] as bool? ?? (d['status'] == 'published' || d['status'] == null);
+                  final isArc = d['archived'] as bool? ?? (d['status'] == 'archived');
+                  if (isPub && !isArc) {
+                    combinedVerses.add(SacredVerseModel.fromMap(d));
+                  }
+                }
+              }
+
+              combinedVerses.sort((a, b) {
+                final sargaA = a.sargaNumber ?? 1;
+                final sargaB = b.sargaNumber ?? 1;
+                if (sargaA != sargaB) return sargaA.compareTo(sargaB);
+                return a.verseNumber.compareTo(b.verseNumber);
+              });
+
+              _emitUpdatedBook(book, chapterNumber, targetChapter, combinedVerses, controller, bookId);
+            }, onError: (_) {
+              controller.add(book);
+            });
+          }
+        }, onError: (_) {
+          controller.add(_fallbackBook(bookId));
+        });
+      },
+      onCancel: () {
+        baseBookSub?.cancel();
+        verseSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  static void _emitUpdatedBook(
+    SacredBookModel book,
+    int chapterNumber,
+    SacredChapterModel targetChapter,
+    List<SacredVerseModel> verses,
+    StreamController<SacredBookModel?> controller,
+    String bookId,
+  ) {
+    final finalVerses = verses.isNotEmpty
+        ? verses
+        : targetChapter.verses.isNotEmpty
+            ? targetChapter.verses
+            : (_fallbackBook(bookId)?.getChapter(chapterNumber)?.verses ?? []);
+
+    final updatedChapters = book.chapters.map((ch) {
+      if (ch.chapterNumber == chapterNumber) {
+        return SacredChapterModel(
+          chapterNumber: ch.chapterNumber,
+          title: ch.title,
+          subtitle: ch.subtitle,
+          titleEn: ch.titleEn,
+          titleGu: ch.titleGu,
+          titleHi: ch.titleHi,
+          subtitleEn: ch.subtitleEn,
+          subtitleGu: ch.subtitleGu,
+          subtitleHi: ch.subtitleHi,
+          descriptionEnglish: ch.descriptionEnglish,
+          descriptionGujarati: ch.descriptionGujarati,
+          descriptionHindi: ch.descriptionHindi,
+          verses: finalVerses,
+        );
+      }
+      return ch;
+    }).toList();
+
+    final completeBook = book.copyWith(chapters: updatedChapters);
+    controller.add(completeBook);
+  }
+
+  // ============================================================
+  // 4. ONE-SHOT FETCH HANDLERS & FALLBACKS
+  // ============================================================
+
+  static Future<List<SacredBookModel>> fetchAllBooks({bool forceRefresh = false}) async {
+    if (!forceRefresh && _booksCache.isNotEmpty) {
+      return _getCachedOrFallbackBooks();
+    }
+
+    final db = _firestore;
+    if (db == null) return _getCachedOrFallbackBooks();
+
+    try {
+      final snapshot = await db.collection('sacred_books').get();
+      if (snapshot.docs.isEmpty) {
+        return SacredBooksData.all;
+      }
+
+      final books = <SacredBookModel>[];
+      for (final doc in snapshot.docs) {
+        final data = Map<String, dynamic>.from(doc.data());
+        data['id'] = doc.id;
+
+        final isPub = data['published'] as bool? ?? data['is_published'] as bool? ?? (data['status'] == 'published' || data['status'] == null);
+        final isArc = data['archived'] as bool? ?? (data['status'] == 'archived');
+
+        if (isPub && !isArc) {
+          final book = SacredBookModel.fromMap(data);
+          books.add(book);
+          _booksCache[book.id] = book;
+        }
+      }
+
+      books.sort((a, b) => a.order.compareTo(b.order));
+      return books.isNotEmpty ? books : SacredBooksData.all;
+    } catch (_) {
+      return _getCachedOrFallbackBooks();
+    }
+  }
+
   static Future<SacredBookModel?> fetchBookById(
     String bookId, {
     bool forceRefresh = false,
   }) async {
-    if (!forceRefresh && _cache.containsKey(bookId)) {
-      return _cache[bookId];
+    if (!forceRefresh && _booksCache.containsKey(bookId) && _booksCache[bookId]!.chapters.isNotEmpty) {
+      return _booksCache[bookId];
     }
-
-    try {
-      final bookDoc = await _firestore.collection('sacred_books').doc(bookId).get();
-
-      if (!bookDoc.exists || bookDoc.data() == null) {
-        return _fallbackBook(bookId);
-      }
-
-      final bookData = bookDoc.data()!;
-      if (bookData['published'] == false || bookData['archived'] == true) {
-        return null;
-      }
-
-      final chaptersSnapshot = await _firestore
-          .collection('sacred_books')
-          .doc(bookId)
-          .collection('chapters')
-          .get();
-
-      final chapters = <SacredChapterModel>[];
-      final chapterDocs = chaptersSnapshot.docs
-          .where((doc) => doc.data()['published'] != false && doc.data()['archived'] != true)
-          .toList();
-
-      chapterDocs.sort((a, b) {
-        final numA = _asInt(a.data()['chapterNumber'], fallback: 1);
-        final numB = _asInt(b.data()['chapterNumber'], fallback: 1);
-        return numA.compareTo(numB);
-      });
-
-      for (final chapterDoc in chapterDocs) {
-        final chapterData = chapterDoc.data();
-        final versesSnapshot = await chapterDoc.reference
-            .collection('verses')
-            .get();
-
-        final verseDocs = versesSnapshot.docs
-            .where((v) => v.data()['published'] != false && v.data()['archived'] != true)
-            .toList();
-
-        verseDocs.sort((a, b) {
-          final numA = _asInt(a.data()['verseNumber'], fallback: 1);
-          final numB = _asInt(a.data()['verseNumber'], fallback: 1);
-          return numA.compareTo(numB);
-        });
-
-        final verses = verseDocs
-            .map((v) => SacredVerseModel.fromMap(v.data()))
-            .toList();
-
-        chapters.add(
-          SacredChapterModel(
-            chapterNumber: _asInt(chapterData['chapterNumber'], fallback: 1),
-            title: (chapterData['title'] ?? '').toString(),
-            subtitle: (chapterData['subtitle'] ?? '').toString(),
-            titleEn: chapterData['title_en']?.toString(),
-            titleGu: chapterData['title_gu']?.toString(),
-            titleHi: chapterData['title_hi']?.toString(),
-            subtitleEn: chapterData['subtitle_en']?.toString(),
-            subtitleGu: chapterData['subtitle_gu']?.toString(),
-            subtitleHi: chapterData['subtitle_hi']?.toString(),
-            descriptionEnglish:
-                (chapterData['descriptionEnglish'] ?? chapterData['description_en'] ?? '').toString(),
-            descriptionGujarati:
-                (chapterData['descriptionGujarati'] ?? chapterData['description_gu'] ?? '').toString(),
-            descriptionHindi: chapterData['descriptionHindi']?.toString() ?? chapterData['description_hi']?.toString(),
-            verses: verses,
-          ),
-        );
-      }
-
-      final book = SacredBookModel(
-        id: bookId,
-        title: (bookData['title'] ?? 'Sacred Text').toString(),
-        subtitle: (bookData['subtitle'] ?? '').toString(),
-        titleEn: bookData['title_en']?.toString(),
-        titleGu: bookData['title_gu']?.toString(),
-        titleHi: bookData['title_hi']?.toString(),
-        subtitleEn: bookData['subtitle_en']?.toString(),
-        subtitleGu: bookData['subtitle_gu']?.toString(),
-        subtitleHi: bookData['subtitle_hi']?.toString(),
-        iconEmoji: (bookData['iconEmoji'] ?? '📜').toString(),
-        coverUrl: bookData['coverUrl']?.toString() ?? bookData['cover_url']?.toString(),
-        description: (bookData['description'] ?? bookData['about'] ?? '').toString(),
-        order: _asInt(bookData['order'], fallback: 1),
-        published: bookData['published'] as bool? ?? true,
-        archived: bookData['archived'] as bool? ?? false,
-        totalChapters: _asInt(
-          bookData['totalChapters'],
-          fallback: chapters.isNotEmpty ? chapters.length : 1,
-        ),
-        chapters: chapters,
-      );
-
-      _cache[bookId] = book;
-      return book;
-    } catch (_) {
-      return _fallbackBook(bookId);
-    }
-  }
-
-  static Future<SacredChapterModel?> fetchChapter({
-    required String bookId,
-    required int chapterNumber,
-    bool forceRefresh = false,
-  }) async {
-    try {
-      final book = await fetchBookById(bookId, forceRefresh: forceRefresh);
-      if (book != null) {
-        final chap = book.getChapter(chapterNumber);
-        if (chap != null) return chap;
-      }
-      return _fallbackBook(bookId)?.getChapter(chapterNumber);
-    } catch (_) {
-      return _fallbackBook(bookId)?.getChapter(chapterNumber);
-    }
+    return _fallbackBook(bookId);
   }
 
   static SacredBookModel? _fallbackBook(String bookId) {
-    final fallback = SacredBooksData.findById(bookId);
+    final normalizedId = (bookId == 'gita') ? 'bhagavad_gita' : bookId;
+    final fallback = SacredBooksData.findById(normalizedId);
     if (fallback != null) {
-      _cache[bookId] = fallback;
+      _booksCache[bookId] = fallback;
+      _booksCache[normalizedId] = fallback;
     }
     return fallback;
   }

@@ -11,7 +11,9 @@ service cloud.firestore {
       return isAuthenticated() && 
         (request.auth.token.admin == true || 
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' ||
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin')));
     }
 
     function isOwner(userId) {
@@ -56,12 +58,16 @@ service cloud.firestore {
       }
     }
 
-    // Admin Notifications & Activity Audit Logs
+    // Admin Notifications, Activity Logs & Import History
     match /notifications/{docId} {
       allow read, write: if isAdmin();
     }
 
     match /admin_activity_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /import_history/{docId} {
       allow read, write: if isAdmin();
     }
   }

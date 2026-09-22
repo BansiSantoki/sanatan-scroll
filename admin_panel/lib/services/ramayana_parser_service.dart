@@ -1,79 +1,72 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:csv/csv.dart';
-import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:archive/archive.dart';
 
-String _extractCellStr(dynamic cell) {
-  if (cell == null) return '';
-  try {
-    if (cell is Data) {
-      final val = cell.value;
-      if (val == null) return '';
-      if (val is TextCellValue) {
-        final inner = val.value;
-        final textStr = inner.text ?? '';
-        if (textStr.isNotEmpty) return textStr.trim();
-        final str = inner.toString().trim();
-        final match = RegExp(r'text:\s*([^,\)]+)').firstMatch(str);
-        if (match != null) {
-          final g1 = match.group(1);
-          if (g1 != null) return g1.trim();
-        }
-        return str;
-      }
-      if (val is IntCellValue) return val.value.toString().trim();
-      if (val is DoubleCellValue) return val.value.toString().trim();
-      if (val is BoolCellValue) return val.value.toString().trim();
-      if (val is DateCellValue) return '${val.year}-${val.month}-${val.day}';
-      if (val is DateTimeCellValue) return '${val.year}-${val.month}-${val.day}';
-      if (val is TimeCellValue) return val.toString().trim();
-      try {
-        dynamic d = val;
-        if (d.value != null) {
-          dynamic inner = d.value;
-          if (inner is String) return inner.trim();
-          try {
-            if (inner.text != null) return inner.text.toString().trim();
-          } catch (_) {}
-          return inner.toString().trim();
-        }
-      } catch (_) {}
-      final s = val.toString().trim();
-      final match = RegExp(r'text:\s*([^,\)]+)').firstMatch(s);
-      if (match != null) {
-        final g1 = match.group(1);
-        if (g1 != null) return g1.trim();
-      }
-      return s;
-    }
-    return cell.toString().trim();
-  } catch (_) {
-    return '';
+/// Centralized safe cell accessor with bounds checking
+dynamic getCellSafely(List<dynamic> row, int index) {
+  if (index < 0 || index >= row.length) {
+    return null;
   }
+  return row[index];
 }
 
+String _unescapeHtmlEntities(String input) {
+  if (!input.contains('&#')) return input;
+  return input.replaceAllMapped(RegExp(r'&#(\d+);'), (match) {
+    final code = int.tryParse(match.group(1) ?? '');
+    if (code != null) {
+      return String.fromCharCode(code);
+    }
+    return match.group(0)!;
+  }).replaceAllMapped(RegExp(r'&#x([0-9a-fA-F]+);'), (match) {
+    final code = int.tryParse(match.group(1) ?? '', radix: 16);
+    if (code != null) {
+      return String.fromCharCode(code);
+    }
+    return match.group(0)!;
+  });
+}
+
+/// Safe string converter for Excel cells and dynamic values
 String? safeString(dynamic value) {
   if (value == null) return null;
-  final text = _extractCellStr(value);
+
+  String text = '';
+  if (value is String) {
+    text = value.trim();
+  } else {
+    text = value.toString().trim();
+  }
+
+  if (text.startsWith('\uFEFF')) {
+    text = text.substring(1).trim();
+  }
+
+  if (text.startsWith('TextCellValue(') && text.endsWith(')')) {
+    text = text.substring(14, text.length - 1).trim();
+  }
+
+  if (text.contains('&#')) {
+    text = _unescapeHtmlEntities(text);
+  }
+
   return text.isEmpty ? null : text;
 }
 
+/// Safe integer converter for Excel cells, numbers, and dynamic values
 int? safeInt(dynamic value) {
   if (value == null) return null;
   if (value is int) return value;
-  if (value is double) return value.toInt();
-  if (value is Data) {
-    final val = value.value;
-    if (val == null) return null;
-    if (val is IntCellValue) return val.value;
-    if (val is DoubleCellValue) return val.value.toInt();
-    return safeInt(val.toString());
-  }
+  if (value is num) return value.toInt();
+
   final str = safeString(value);
   if (str == null) return null;
+
   final direct = int.tryParse(str);
   if (direct != null) return direct;
+
   final match = RegExp(r'\d+').firstMatch(str);
   if (match != null) {
     final g0 = match.group(0);
@@ -84,31 +77,211 @@ int? safeInt(dynamic value) {
   return null;
 }
 
+/// Header normalization function
+String normalizeHeader(dynamic value) {
+  if (value == null) return '';
+  String text = value.toString().trim();
+  if (text.startsWith('\uFEFF')) {
+    text = text.substring(1).trim();
+  }
+  return text
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\s\-_]+'), '_');
+}
+
+/// High-performance, production-safe OpenXML / XLSX Spreadsheet Decoder
+class SafeXlsxReader {
+  static Map<String, List<List<dynamic>>> decodeSheets(List<int> bytes) {
+    final Map<String, List<List<dynamic>>> sheetsMap = {};
+
+    try {
+      final archive = ZipDecoder().decodeBytes(bytes);
+
+      // 1. Extract shared strings if xl/sharedStrings.xml exists
+      final List<String> sharedStrings = [];
+      final sharedStringsFile = archive.findFile('xl/sharedStrings.xml');
+      if (sharedStringsFile != null) {
+        final xmlStr = utf8.decode(sharedStringsFile.content as List<int>);
+        final matches = RegExp(r'<t[^>]*>(.*?)</t>', dotAll: true).allMatches(xmlStr);
+        for (final m in matches) {
+          final str = _unescapeXml(m.group(1) ?? '');
+          sharedStrings.add(str);
+        }
+      }
+
+      // 2. Parse workbook.xml to map rId to Sheet Name
+      final Map<String, String> ridToSheetName = {};
+      final workbookFile = archive.findFile('xl/workbook.xml');
+      if (workbookFile != null) {
+        final wbXml = utf8.decode(workbookFile.content as List<int>);
+        final sheetMatches = RegExp(r'<sheet\s+[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"|<sheet\s+[^>]*r:id="([^"]+)"[^>]*name="([^"]+)"').allMatches(wbXml);
+        for (final m in sheetMatches) {
+          final name = m.group(1) ?? m.group(4);
+          final rid = m.group(2) ?? m.group(3);
+          if (name != null && rid != null) {
+            ridToSheetName[rid] = name;
+          }
+        }
+      }
+
+      // 3. Parse workbook.xml.rels to map rId to Target File Path
+      final Map<String, String> ridToTarget = {};
+      final relsFile = archive.findFile('xl/_rels/workbook.xml.rels');
+      if (relsFile != null) {
+        final relsXml = utf8.decode(relsFile.content as List<int>);
+        final relMatches = RegExp(r'<Relationship\s+[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"|<Relationship\s+[^>]*Target="([^"]+)"[^>]*Id="([^"]+)"').allMatches(relsXml);
+        for (final m in relMatches) {
+          final id = m.group(1) ?? m.group(4);
+          final target = m.group(2) ?? m.group(3);
+          if (id != null && target != null) {
+            final cleanTarget = target.startsWith('/') ? target.substring(1) : (target.startsWith('xl/') ? target : 'xl/$target');
+            ridToTarget[id] = cleanTarget;
+          }
+        }
+      }
+
+      // 4. Decode worksheets
+      final sheetFiles = archive.files.where((f) => f.name.startsWith('xl/worksheets/') && f.name.endsWith('.xml')).toList();
+      sheetFiles.sort((a, b) => a.name.compareTo(b.name));
+
+      for (final sheetFile in sheetFiles) {
+        String sheetName = sheetFile.name.replaceAll('xl/worksheets/', '').replaceAll('.xml', '');
+        // Find matching sheet name from relationships if available
+        for (final entry in ridToTarget.entries) {
+          if (entry.value == sheetFile.name || entry.value.endsWith(sheetFile.name)) {
+            final mappedName = ridToSheetName[entry.key];
+            if (mappedName != null && mappedName.isNotEmpty) {
+              sheetName = mappedName;
+              break;
+            }
+          }
+        }
+
+        final xmlStr = utf8.decode(sheetFile.content as List<int>);
+        final rows = _parseWorksheetXml(xmlStr, sharedStrings);
+        sheetsMap[sheetName] = rows;
+      }
+    } catch (e) {
+      print('[SAFE XLSX READER ERROR]: $e');
+    }
+
+    return sheetsMap;
+  }
+
+  static List<List<dynamic>> _parseWorksheetXml(String xmlStr, List<String> sharedStrings) {
+    final List<List<dynamic>> resultRows = [];
+    final rowRegExp = RegExp(r'<row[^>]*>(.*?)</row>', dotAll: true);
+    final rowMatches = rowRegExp.allMatches(xmlStr);
+
+    for (final rowMatch in rowMatches) {
+      final rowContent = rowMatch.group(1) ?? '';
+      final Map<int, dynamic> colMap = {};
+      int maxColIdx = 0;
+
+      final cellRegExp = RegExp(r'<c\s+([^>]*?)>(.*?)</c>|<c\s+([^>]*?)/>', dotAll: true);
+      final cellMatches = cellRegExp.allMatches(rowContent);
+
+      for (final cellMatch in cellMatches) {
+        final attrStr = (cellMatch.group(1) ?? cellMatch.group(3) ?? '');
+        final innerStr = (cellMatch.group(2) ?? '');
+
+        final refMatch = RegExp(r'r="([A-Z]+)(\d+)"').firstMatch(attrStr);
+        int colIdx = -1;
+        if (refMatch != null) {
+          colIdx = _colLetterToNumber(refMatch.group(1)!);
+        } else {
+          colIdx = maxColIdx;
+        }
+
+        if (colIdx > maxColIdx) maxColIdx = colIdx;
+
+        final typeMatch = RegExp(r't="([^"]+)"').firstMatch(attrStr);
+        final type = typeMatch?.group(1);
+
+        dynamic val;
+        if (type == 's') {
+          final vMatch = RegExp(r'<v>(.*?)</v>').firstMatch(innerStr);
+          if (vMatch != null) {
+            final sIdx = int.tryParse(vMatch.group(1) ?? '');
+            if (sIdx != null && sIdx >= 0 && sIdx < sharedStrings.length) {
+              val = sharedStrings[sIdx];
+            }
+          }
+        } else if (type == 'inlineStr') {
+          final tMatch = RegExp(r'<t[^>]*>(.*?)</t>', dotAll: true).firstMatch(innerStr);
+          if (tMatch != null) {
+            val = _unescapeXml(tMatch.group(1) ?? '');
+          }
+        } else if (type == 'b') {
+          final vMatch = RegExp(r'<v>(.*?)</v>').firstMatch(innerStr);
+          val = vMatch?.group(1) == '1';
+        } else {
+          final vMatch = RegExp(r'<v>(.*?)</v>', dotAll: true).firstMatch(innerStr);
+          if (vMatch != null) {
+            val = _unescapeXml(vMatch.group(1) ?? '');
+          } else {
+            final tMatch = RegExp(r'<t[^>]*>(.*?)</t>', dotAll: true).firstMatch(innerStr);
+            if (tMatch != null) {
+              val = _unescapeXml(tMatch.group(1) ?? '');
+            }
+          }
+        }
+
+        colMap[colIdx] = val ?? '';
+      }
+
+      if (colMap.isNotEmpty) {
+        final List<dynamic> rowList = List.generate(maxColIdx + 1, (i) => colMap[i] ?? '');
+        resultRows.add(rowList);
+      }
+    }
+
+    return resultRows;
+  }
+
+  static int _colLetterToNumber(String letter) {
+    int sum = 0;
+    for (int i = 0; i < letter.length; i++) {
+      sum *= 26;
+      sum += (letter.codeUnitAt(i) - 64);
+    }
+    return sum - 1;
+  }
+
+  static String _unescapeXml(String input) {
+    return input
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&amp;', '&');
+  }
+}
+
 class RamayanaParsedRow {
-  final int fileRowNumber; // Original spreadsheet row number (1-indexed)
+  final int fileRowNumber;
   final String rawId;
-  final String verseId; // e.g. RAM-01-001-001 or GIT-01-001
-  final String bookId; // e.g. ramayana, mahabharata, bhagavad_gita
+  final String verseId;
+  final String bookId;
   final String bookName;
-  final int kandaNumber; // Primary chapter (Kanda / Parva / Chapter)
-  final int sargaNumber; // Sub-unit (Sarga / Section / Adhyaya)
+  final int kandaNumber;
+  final int sargaNumber;
   final int verseNumber;
   final String sanskrit;
-  final String english;
-  final String hindi;
-  final String gujarati;
-  final String explanation;
-  final String sourceUrl;
-  final String sourceName;
-  final String qaStatus; // Draft, Review, Approved, Rejected
-  final String notes;
+  final String? english;
+  final String? hindi;
+  final String? gujarati;
+  final String? explanation;
+  final String? sourceUrl;
+  final String? sourceName;
+  final String? qaStatus;
+  final String? notes;
 
   String action; // 'new', 'update', 'skip', 'error'
   List<String> validationErrors;
   List<String> affectedColumns;
   bool isDuplicateInFile;
 
-  // Generic aliases
   int get chapterNumber => kandaNumber;
   int get sectionNumber => sargaNumber;
 
@@ -122,14 +295,14 @@ class RamayanaParsedRow {
     required this.sargaNumber,
     required this.verseNumber,
     required this.sanskrit,
-    required this.english,
-    required this.hindi,
-    required this.gujarati,
-    required this.explanation,
-    required this.sourceUrl,
-    required this.sourceName,
-    required this.qaStatus,
-    required this.notes,
+    this.english,
+    this.hindi,
+    this.gujarati,
+    this.explanation,
+    this.sourceUrl,
+    this.sourceName,
+    this.qaStatus,
+    this.notes,
     this.action = 'new',
     List<String>? validationErrors,
     List<String>? affectedColumns,
@@ -145,7 +318,7 @@ class RamayanaParseResult {
   final int totalRawRowsInFile;
   final int metadataRowsSkipped;
   final int scriptureRowsDetected;
-  final int headerRowNumber; // 1-indexed
+  final int headerRowNumber;
   final Map<String, String> detectedColumnMappings;
   final List<int> detectedKandas;
   final int detectedSargasCount;
@@ -159,6 +332,7 @@ class RamayanaParseResult {
   final int missingTranslationsCount;
   final Map<String, int> qaStatusCounts;
   final String defaultSourceUrl;
+  final String selectedSheetName;
 
   const RamayanaParseResult({
     required this.rows,
@@ -179,30 +353,23 @@ class RamayanaParseResult {
     required this.missingTranslationsCount,
     required this.qaStatusCounts,
     required this.defaultSourceUrl,
+    required this.selectedSheetName,
   });
 }
 
 class RamayanaParserService {
-  /// Universal RegExp pattern for IDs like RAM-01-001-001, MAH-01-001-001, GIT-01-001, UPN-01-001
   static final RegExp _idRegex = RegExp(r'^([A-Za-z0-9]+)-(\d+)-(\d+)(?:-(\d+))?$');
 
-  static final List<String> _instructionKeywords = [
-    'instructions',
-    'instruction',
-    'purport',
-    'rules',
-    'rule',
-    'notes',
-    'note:',
-    'notes:',
+  static final List<String> _ignoredSheetKeywords = [
     'readme',
+    'instruction',
+    'instructions',
+    'doc',
+    'documentation',
+    'notes',
     'metadata',
-    'specification',
-    'guideline',
-    'guidelines',
   ];
 
-  /// Parse uploaded PlatformFile (CSV or XLSX) for any Sacred Book
   Future<RamayanaParseResult> parseFile(
     PlatformFile file, {
     String? targetBookId,
@@ -221,78 +388,119 @@ class RamayanaParserService {
         : _resolveBookName(activeBookId);
 
     final String defaultBookCode = _resolveBookCode(activeBookId);
-
     final String extension = (file.extension ?? (file.name.contains('.') ? file.name.split('.').last : '')).toLowerCase();
-    List<List<dynamic>> rawRows = [];
+
+    Map<String, List<List<dynamic>>> sheetsMap = {};
 
     if (extension == 'csv') {
       final csvString = utf8.decode(bytes).replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-      rawRows = const CsvToListConverter(eol: '\n').convert(csvString);
+      final csvRows = const CsvToListConverter(eol: '\n').convert(csvString);
+      sheetsMap['Sheet1'] = csvRows;
     } else if (extension == 'xlsx' || extension == 'xls') {
-      final excel = Excel.decodeBytes(bytes);
-      for (final table in excel.tables.keys) {
-        final sheet = excel.tables[table];
-        if (sheet == null || sheet.rows.isEmpty) continue;
-
-        final sheetRows = sheet.rows.map((row) => row.map((cell) => _extractCellStr(cell)).toList()).toList();
-        final hIdx = _findContentHeaderRowIndex(sheetRows);
-        if (hIdx != -1) {
-          rawRows = sheetRows;
-          break; // Found worksheet with valid content table!
-        }
-      }
-
-      // Fallback if no content table header was found in any sheet: use first non-empty sheet
-      if (rawRows.isEmpty && excel.tables.isNotEmpty) {
-        for (final table in excel.tables.keys) {
-          final sheet = excel.tables[table];
-          if (sheet != null && sheet.rows.isNotEmpty) {
-            rawRows = sheet.rows.map((row) => row.map((cell) => _extractCellStr(cell)).toList()).toList();
-            break;
-          }
-        }
-      }
+      sheetsMap = SafeXlsxReader.decodeSheets(bytes);
     } else {
       throw Exception("Unsupported file format: .$extension. Please upload CSV or XLSX.");
     }
 
+    if (sheetsMap.isEmpty) {
+      throw Exception("File is empty or contains no readable sheets.");
+    }
+
+    // Sheet Selection Logic: Prefer content sheet (e.g. "Ramayana Content"), avoid README/documentation
+    String selectedSheetName = '';
+    List<List<dynamic>> rawRows = [];
+    int headerRowIdx = -1;
+
+    // 1. First search for sheets with content headers
+    for (final entry in sheetsMap.entries) {
+      final sheetNameLower = entry.key.toLowerCase().trim();
+
+      // Skip explicit documentation sheets
+      if (_ignoredSheetKeywords.any((kw) => sheetNameLower == kw || sheetNameLower.startsWith(kw))) {
+        continue;
+      }
+
+      final hIdx = _findContentHeaderRowIndex(entry.value);
+      if (hIdx != -1) {
+        selectedSheetName = entry.key;
+        rawRows = entry.value;
+        headerRowIdx = hIdx;
+        break;
+      }
+    }
+
+    // 2. Fallback: Check any sheet if no content header found yet
     if (rawRows.isEmpty) {
-      throw Exception("File is empty or contains no readable rows.");
+      for (final entry in sheetsMap.entries) {
+        final hIdx = _findContentHeaderRowIndex(entry.value);
+        if (hIdx != -1) {
+          selectedSheetName = entry.key;
+          rawRows = entry.value;
+          headerRowIdx = hIdx;
+          break;
+        }
+      }
     }
 
-    // Locate the content table header row
-    final headerRowIdx = _findContentHeaderRowIndex(rawRows);
-
-    if (headerRowIdx == -1) {
-      throw Exception("No valid sacred book content table was detected in this file. Please upload a CSV/XLSX file containing Chapter, Verse, and Sanskrit columns.");
+    if (rawRows.isEmpty || headerRowIdx == -1) {
+      throw Exception("Could not detect usable import headers in any sheet of this file.");
     }
 
-    // Extract locked source URL from pre-header metadata rows if present
+    print('[IMPORT DEBUG] File: ${file.name}, Extension: $extension, Size: ${file.size} bytes');
+    print('[IMPORT DEBUG] Sheets in workbook: ${sheetsMap.keys.toList()}');
+    print('[IMPORT DEBUG] Selected Sheet: $selectedSheetName');
+    print('[IMPORT DEBUG] Header Row Index: ${headerRowIdx + 1}');
+
     String defaultSourceUrl = _extractMetadataSourceUrl(rawRows.sublist(0, headerRowIdx + 1));
     if (defaultSourceUrl.isEmpty) {
       defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
     }
 
     final metadataRowsSkipped = headerRowIdx;
-    final headerRowCells = rawRows[headerRowIdx].map((e) => _extractCellStr(e)).toList();
-    final headerRowLower = headerRowCells.map((e) => e.toLowerCase()).toList();
+    final headerRowCells = rawRows[headerRowIdx].map((e) => safeString(e) ?? '').toList();
+    final normalizedHeaders = headerRowCells.map((e) => normalizeHeader(e)).toList();
 
-    // Flexible Column mapping with normalization and expanded aliases
-    final idIdx = _findHeaderIdx(headerRowLower, ['id', 'verse_id', 'canonical_id', 'shlok_id', 'shloka_id', 'example_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
-    final bookIdIdx = _findHeaderIdx(headerRowLower, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book']);
-    final bookNameIdx = _findHeaderIdx(headerRowLower, ['book_name', 'bookname', 'book_title', 'title']);
-    final kandaIdx = _findHeaderIdx(headerRowLower, ['kanda_number', 'kandanumber', 'kanda number', 'kanda', 'kand', 'kanda_no', 'kanda #', 'kandam', 'parva', 'parva_number', 'parva number', 'parva_no', 'chapter_number', 'chapternumber', 'chapter number', 'chapter', 'chapter_no', 'chapter #']);
-    final sargaIdx = _findHeaderIdx(headerRowLower, ['sarga_number', 'sarganumber', 'sarga number', 'sarga', 'sarg', 'sarga_no', 'sarga #', 'section_number', 'sectionnumber', 'section number', 'section', 'section_no', 'section #', 'adhyaya', 'adhyaya_number', 'adhyaya number', 'subchapter']);
-    final verseIdx = _findHeaderIdx(headerRowLower, ['verse_number', 'versenumber', 'verse number', 'shlok_number', 'shloka_number', 'shlok number', 'shloka number', 'verse', 'shlok', 'shloka', 'verse_no', 'verse #']);
-    final sanskritIdx = _findHeaderIdx(headerRowLower, ['sanskrit_shloka', 'sanskrit shloka', 'sanskrit_text', 'sanskrit text', 'sanskrit', 'shloka_text', 'sloka', 'sloka_text', 'original_sanskrit', 'passage', 'verse_text']);
-    final englishIdx = _findHeaderIdx(headerRowLower, ['english_translation', 'english translation', 'english_meaning', 'english meaning', 'english', 'translation_en', 'en', 'eng']);
-    final hindiIdx = _findHeaderIdx(headerRowLower, ['hindi_translation', 'hindi translation', 'hindi_meaning', 'hindi meaning', 'hindi', 'translation_hi', 'hi', 'hin']);
-    final gujaratiIdx = _findHeaderIdx(headerRowLower, ['gujarati_translation', 'gujarati translation', 'gujarati_meaning', 'gujarati meaning', 'gujarati', 'translation_gu', 'gu', 'guj']);
-    final explanationIdx = _findHeaderIdx(headerRowLower, ['explanation', 'meaning', 'purport', 'notes_explanation', 'commentary']);
-    final sourceUrlIdx = _findHeaderIdx(headerRowLower, ['source_url', 'sourceurl', 'source', 'url', 'source_link', 'link', 'locked_source']);
-    final sourceNameIdx = _findHeaderIdx(headerRowLower, ['source_name', 'sourcename', 'source_title']);
-    final qaStatusIdx = _findHeaderIdx(headerRowLower, ['qa_status', 'qastatus', 'qa', 'status', 'review_status', 'state']);
-    final notesIdx = _findHeaderIdx(headerRowLower, ['notes', 'comment', 'remarks', 'note']);
+    print('[IMPORT DEBUG] Detected headers: $headerRowCells');
+    print('[IMPORT DEBUG] Normalized headers: $normalizedHeaders');
+
+    // Flexible Column Mapping using normalized header names & aliases
+    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'verse_id', 'canonical_id', 'shlok_id', 'shloka_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
+    final bookIdIdx = _findHeaderIdx(normalizedHeaders, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book']);
+    final bookNameIdx = _findHeaderIdx(normalizedHeaders, ['book_name', 'bookname', 'book_title', 'title']);
+    final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_number', 'kanda', 'kand', 'kanda_no', 'kandam', 'parva', 'parva_number', 'chapter_number', 'chapternumber', 'chapter']);
+    final sargaIdx = _findHeaderIdx(normalizedHeaders, ['sarga_number', 'sarganumber', 'sarga', 'sarg', 'sarga_no', 'section_number', 'sectionnumber', 'section', 'adhyaya']);
+    final verseIdx = _findHeaderIdx(normalizedHeaders, ['verse_number', 'versenumber', 'verse', 'shlok_number', 'shloka_number', 'shlok', 'shloka', 'verse_no']);
+    final sanskritIdx = _findHeaderIdx(normalizedHeaders, ['sanskrit', 'sanskrit_shloka', 'sanskrit_text', 'shloka_text', 'sloka', 'original_sanskrit', 'passage']);
+    int englishIdx = _findHeaderIdx(normalizedHeaders, [
+      'english', 'english_translation', 'english_meaning', 'translation_en', 'en', 'eng',
+      'english_shloka_meaning', 'english_shlok_meaning', 'translation_english', 'meaning_english',
+      'english_text', 'valmiki_ramayana_english', 'valmiki_english', 'english_summary', 'eng_meaning',
+      'eng_translation'
+    ]);
+    int hindiIdx = _findHeaderIdx(normalizedHeaders, [
+      'hindi', 'hindi_translation', 'hindi_meaning', 'translation_hi', 'hi', 'hin',
+      'hindi_shloka_meaning', 'hindi_shlok_meaning', 'translation_hindi', 'meaning_hindi',
+      'hindi_text', 'hin_meaning', 'hin_translation'
+    ]);
+    int gujaratiIdx = _findHeaderIdx(normalizedHeaders, [
+      'gujarati', 'gujarati_translation', 'gujarati_meaning', 'translation_gu', 'gu', 'guj',
+      'gujarati_shloka_meaning', 'gujarati_shlok_meaning', 'translation_gujarati', 'meaning_gujarati',
+      'gujarati_text', 'guj_meaning', 'guj_translation'
+    ]);
+
+    // Fallback: If no explicit english/hindi/gujarati header found, check for generic 'translation' or 'meaning' column
+    if (englishIdx == -1 && hindiIdx == -1 && gujaratiIdx == -1) {
+      final genericIdx = _findHeaderIdx(normalizedHeaders, ['translation', 'meaning', 'shloka_meaning', 'shlok_meaning', 'summary']);
+      if (genericIdx != -1) {
+        englishIdx = genericIdx;
+      }
+    }
+
+    final explanationIdx = _findHeaderIdx(normalizedHeaders, ['explanation', 'purport', 'commentary']);
+    final sourceUrlIdx = _findHeaderIdx(normalizedHeaders, ['source_url', 'sourceurl', 'source', 'url', 'link']);
+    final sourceNameIdx = _findHeaderIdx(normalizedHeaders, ['source_name', 'sourcename']);
+    final qaStatusIdx = _findHeaderIdx(normalizedHeaders, ['qa_status', 'qastatus', 'qa', 'status', 'review_status']);
+    final notesIdx = _findHeaderIdx(normalizedHeaders, ['notes', 'comment', 'remarks', 'note']);
 
     final detectedMappings = <String, String>{};
     if (idIdx != -1) detectedMappings['ID / Verse ID'] = headerRowCells[idIdx];
@@ -303,6 +511,8 @@ class RamayanaParserService {
     if (englishIdx != -1) detectedMappings['English'] = headerRowCells[englishIdx];
     if (hindiIdx != -1) detectedMappings['Hindi'] = headerRowCells[hindiIdx];
     if (gujaratiIdx != -1) detectedMappings['Gujarati'] = headerRowCells[gujaratiIdx];
+
+    print('[IMPORT DEBUG] Column mapping: $detectedMappings');
 
     final parsedRows = <RamayanaParsedRow>[];
     final seenIdsInFile = <String, int>{};
@@ -320,42 +530,40 @@ class RamayanaParserService {
       'Rejected': 0,
     };
 
-    int skippedInstructionRowsAfterHeader = 0;
+    int skippedRowsAfterHeader = 0;
 
     // Parse Data Rows starting after headerRowIdx
     for (int i = headerRowIdx + 1; i < rawRows.length; i++) {
       final row = rawRows[i];
-      if (row.isEmpty || row.every((c) => _extractCellStr(c).isEmpty)) {
-        continue; // skip blank row safely
-      }
 
-      // Skip instruction or metadata rows that might appear after header
-      if (_isInstructionOrMetadataRow(row)) {
-        skippedInstructionRowsAfterHeader++;
-        continue;
-      }
+      // Safe row cell retrieval
+      dynamic getCell(int idx) => getCellSafely(row, idx);
 
-      String getVal(int idx) => idx != -1 && idx < row.length ? _extractCellStr(row[idx]) : '';
-
-      final rawId = getVal(idIdx);
-      final rawBook = getVal(bookIdIdx);
-      final rawBookNameCol = getVal(bookNameIdx);
-      final rawKanda = getVal(kandaIdx);
-      final rawSarga = getVal(sargaIdx);
-      final rawVerse = getVal(verseIdx);
-      final sanskritText = getVal(sanskritIdx);
-      final englishText = getVal(englishIdx);
-      final hindiText = getVal(hindiIdx);
-      final gujaratiText = getVal(gujaratiIdx);
-      final explanationText = getVal(explanationIdx);
-      final sourceUrlVal = getVal(sourceUrlIdx).isNotEmpty ? getVal(sourceUrlIdx) : defaultSourceUrl;
-      final sourceNameVal = getVal(sourceNameIdx).isNotEmpty ? getVal(sourceNameIdx) : '$activeBookName Source';
-      final rawQaStatus = getVal(qaStatusIdx);
-      final notesText = getVal(notesIdx);
+      final rawId = safeString(getCell(idIdx)) ?? '';
+      final rawBook = safeString(getCell(bookIdIdx)) ?? '';
+      final rawBookNameCol = safeString(getCell(bookNameIdx)) ?? '';
+      final rawKanda = getCell(kandaIdx);
+      final rawSarga = getCell(sargaIdx);
+      final rawVerse = getCell(verseIdx);
+      final sanskritText = safeString(getCell(sanskritIdx)) ?? '';
+      final englishText = safeString(getCell(englishIdx));
+      final hindiText = safeString(getCell(hindiIdx));
+      final gujaratiText = safeString(getCell(gujaratiIdx));
+      final explanationText = safeString(getCell(explanationIdx));
+      final sourceUrlVal = safeString(getCell(sourceUrlIdx)) ?? defaultSourceUrl;
+      final sourceNameVal = safeString(getCell(sourceNameIdx)) ?? '$activeBookName Source';
+      final rawQaStatus = safeString(getCell(qaStatusIdx)) ?? 'Approved';
+      final notesText = safeString(getCell(notesIdx));
 
       final colKanda = safeInt(rawKanda) ?? -1;
       final colSarga = safeInt(rawSarga) ?? -1;
       final colVerse = safeInt(rawVerse) ?? -1;
+
+      // Completely empty row check (handles null and empty string cells safely)
+      if (rawId.isEmpty && sanskritText.isEmpty && colKanda <= 0 && colSarga <= 0 && colVerse <= 0 && (englishText == null || englishText.isEmpty) && (hindiText == null || hindiText.isEmpty) && (gujaratiText == null || gujaratiText.isEmpty)) {
+        skippedRowsAfterHeader++;
+        continue;
+      }
 
       String bookCode = defaultBookCode;
       int parsedKanda = -1;
@@ -374,15 +582,13 @@ class RamayanaParserService {
           if (g1 != null && g2 != null && g3 != null) {
             bookCode = g1.toUpperCase();
             if (g4 != null) {
-              // 4 components: BOOK-KANDA-SARGA-VERSE (e.g. RAM-01-001-001 or MAH-01-001-001)
               parsedKanda = int.tryParse(g2) ?? -1;
               parsedSarga = int.tryParse(g3) ?? -1;
               parsedVerse = int.tryParse(g4) ?? -1;
               idParsedSuccess = (parsedKanda > 0 && parsedSarga > 0 && parsedVerse > 0);
             } else {
-              // 3 components: BOOK-CHAP-VERSE (e.g. GIT-01-001 or UPN-01-001)
               parsedKanda = int.tryParse(g2) ?? -1;
-              parsedSarga = 1; // default section 1
+              parsedSarga = 1;
               parsedVerse = int.tryParse(g3) ?? -1;
               idParsedSuccess = (parsedKanda > 0 && parsedVerse > 0);
             }
@@ -394,18 +600,13 @@ class RamayanaParserService {
       int finalSarga = colSarga > 0 ? colSarga : parsedSarga;
       int finalVerse = colVerse > 0 ? colVerse : parsedVerse;
 
-      // For books that don't use 2-tier sub-sections (e.g. Bhagavad Gita), default sarga to 1 if not explicitly given
       if ((activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads') && finalSarga <= 0) {
         finalSarga = 1;
       }
 
-      // If row has NO scripture content signals, treat as non-content row and skip cleanly!
-      if (finalKanda <= 0 && finalVerse <= 0 && sanskritText.isEmpty && !idParsedSuccess) {
-        skippedInstructionRowsAfterHeader++;
-        continue;
-      }
+      // Print MANDATORY debug info for each row
+      print('[IMPORT DEBUG] row ${i + 1} | id: $rawId | book_id: $rawBook | book_name: $rawBookNameCol | kanda: $finalKanda | sarga: $finalSarga | verse: $finalVerse | sanskrit present: ${sanskritText.isNotEmpty} | english present: ${englishText != null} | hindi present: ${hindiText != null} | gujarati present: ${gujaratiText != null} | source_url present: ${sourceUrlVal.isNotEmpty} | qa_status: $rawQaStatus');
 
-      // QA Status normalization
       String qaStatus = 'Approved';
       final qaLower = rawQaStatus.toLowerCase();
       if (qaLower.contains('draft')) {
@@ -414,7 +615,7 @@ class RamayanaParserService {
         qaStatus = 'Review';
       } else if (qaLower.contains('reject')) {
         qaStatus = 'Rejected';
-      } else if (qaLower.contains('approve')) {
+      } else if (qaLower.contains('approve') || qaLower.contains('publish')) {
         qaStatus = 'Approved';
       }
       qaStatusCounts[qaStatus] = (qaStatusCounts[qaStatus] ?? 0) + 1;
@@ -422,21 +623,20 @@ class RamayanaParserService {
       final errors = <String>[];
       final affectedCols = <String>[];
 
-      // CONFLICT RULE: Check if explicit column values conflict with values parsed from ID
       if (idParsedSuccess && colKanda > 0 && parsedKanda != colKanda) {
-        errors.add("Chapter conflict: ID specifies $parsedKanda but column specifies $colKanda");
-        affectedCols.add("Chapter");
+        errors.add("ID Kanda value conflicts with explicit Kanda value (ID: $parsedKanda vs Col: $colKanda)");
+        affectedCols.add("Chapter / Kanda");
       }
       if (idParsedSuccess && colSarga > 0 && parsedSarga > 0 && parsedSarga != colSarga) {
-        errors.add("Section conflict: ID specifies $parsedSarga but column specifies $colSarga");
-        affectedCols.add("Section");
+        errors.add("ID Sarga value conflicts with explicit Sarga value (ID: $parsedSarga vs Col: $colSarga)");
+        affectedCols.add("Section / Sarga");
       }
       if (idParsedSuccess && colVerse > 0 && parsedVerse != colVerse) {
-        errors.add("Verse conflict: ID specifies Verse $parsedVerse but column specifies Verse $colVerse");
+        errors.add("ID Verse value conflicts with explicit Verse value (ID: $parsedVerse vs Col: $colVerse)");
         affectedCols.add("Verse");
       }
 
-      // Check required scripture fields for content rows
+      // Check required fields
       if (finalKanda <= 0) {
         final term = _resolveChapterTerm(activeBookId);
         errors.add("Missing or invalid $term number");
@@ -447,8 +647,8 @@ class RamayanaParserService {
       }
 
       if (finalSarga <= 0 && activeBookId == 'ramayana') {
-        errors.add("Missing or invalid Sarga/Chapter number");
-        affectedCols.add("Sarga / Chapter");
+        errors.add("Missing or invalid Sarga number");
+        affectedCols.add("Sarga");
         missingChapterInfoCount++;
       }
 
@@ -458,23 +658,29 @@ class RamayanaParserService {
 
       if (finalVerse <= 0) {
         errors.add("Missing or invalid Verse number");
-        affectedCols.add("Verse / Shlok");
+        affectedCols.add("Verse");
         missingVerseNumCount++;
       }
 
-      if (sanskritText.isEmpty) {
-        errors.add("Missing Sanskrit shloka text");
-        affectedCols.add("Sanskrit");
+      final bool hasSanskrit = sanskritText.isNotEmpty;
+      final bool hasEnglish = englishText != null && englishText.trim().isNotEmpty;
+      final bool hasHindi = hindiText != null && hindiText.trim().isNotEmpty;
+      final bool hasGujarati = gujaratiText != null && gujaratiText.trim().isNotEmpty;
+      final bool hasExplanation = explanationText != null && explanationText.trim().isNotEmpty;
+
+      if (!hasSanskrit) {
         missingSanskritCount++;
       }
 
-      if (englishText.isEmpty && hindiText.isEmpty && gujaratiText.isEmpty) {
-        errors.add("Missing required translations (English, Hindi, or Gujarati)");
-        affectedCols.add("Translations");
+      if (!hasEnglish && !hasHindi && !hasGujarati) {
         missingTranslationsCount++;
+        if (!hasSanskrit) {
+          errors.add("Missing required content: must provide Sanskrit shloka text or translation");
+          affectedCols.add("Content");
+        }
       }
 
-      // Canonical verse ID generation - e.g. RAM-01-001-001 or GIT-01-001
+      // Canonical verse ID generation
       String canonicalVerseId;
       if (finalKanda > 0 && finalVerse > 0) {
         final kandaPad = finalKanda.toString().padLeft(2, '0');
@@ -488,7 +694,6 @@ class RamayanaParserService {
       } else if (rawId.isNotEmpty && _idRegex.hasMatch(rawId)) {
         canonicalVerseId = rawId.toUpperCase();
       } else {
-        // Use exact row number identifier for invalid rows
         canonicalVerseId = 'Row ${i + 1}';
       }
 
@@ -497,8 +702,8 @@ class RamayanaParserService {
           seenIdsInFile.containsKey(canonicalVerseId);
 
       if (isDup) {
-        errors.add("Duplicate verse ID in sheet: $canonicalVerseId (first seen at row ${seenIdsInFile[canonicalVerseId]})");
-        affectedCols.add("ID / Verse ID");
+        errors.add("Duplicate canonical ID in sheet: $canonicalVerseId (first seen at row ${seenIdsInFile[canonicalVerseId]})");
+        affectedCols.add("ID");
       } else if (canonicalVerseId.contains('-')) {
         seenIdsInFile[canonicalVerseId] = i + 1;
       }
@@ -510,7 +715,7 @@ class RamayanaParserService {
               : activeBookName;
 
       final parsedRow = RamayanaParsedRow(
-        fileRowNumber: i + 1, // 1-indexed actual row in file
+        fileRowNumber: i + 1,
         rawId: rawId,
         verseId: canonicalVerseId,
         bookId: activeBookId,
@@ -537,7 +742,7 @@ class RamayanaParserService {
     }
 
     if (parsedRows.isEmpty) {
-      throw Exception("No valid content table was detected in this file. Please upload a valid CSV/XLSX file containing scripture verses.");
+      throw Exception("No valid content rows were detected in sheet '$selectedSheetName'.");
     }
 
     final validCount = parsedRows.where((r) => r.isValid).length;
@@ -548,7 +753,7 @@ class RamayanaParserService {
     return RamayanaParseResult(
       rows: parsedRows,
       totalRawRowsInFile: rawRows.length,
-      metadataRowsSkipped: metadataRowsSkipped + skippedInstructionRowsAfterHeader,
+      metadataRowsSkipped: metadataRowsSkipped + skippedRowsAfterHeader,
       scriptureRowsDetected: parsedRows.length,
       headerRowNumber: headerRowIdx + 1,
       detectedColumnMappings: detectedMappings,
@@ -564,6 +769,7 @@ class RamayanaParserService {
       missingTranslationsCount: missingTranslationsCount,
       qaStatusCounts: qaStatusCounts,
       defaultSourceUrl: defaultSourceUrl,
+      selectedSheetName: selectedSheetName,
     );
   }
 
@@ -609,17 +815,12 @@ class RamayanaParserService {
     }
   }
 
-  /// Locate the content table header row in raw rows
   int _findContentHeaderRowIndex(List<List<dynamic>> rawRows) {
     for (int r = 0; r < rawRows.length && r < 100; r++) {
       final row = rawRows[r];
       if (row.isEmpty) continue;
 
-      if (_isInstructionOrMetadataRow(row)) {
-        continue;
-      }
-
-      final rowStr = row.map((e) => _extractCellStr(e)).toList();
+      final rowStr = row.map((e) => normalizeHeader(e)).toList();
       if (_isContentHeaderRow(rowStr)) {
         return r;
       }
@@ -627,72 +828,30 @@ class RamayanaParserService {
     return -1;
   }
 
-  bool _isInstructionOrMetadataRow(List<dynamic> row) {
-    if (row.isEmpty) return true;
-    final firstCell = _extractCellStr(row.first).toLowerCase();
-    if (firstCell.isEmpty) return false;
-
-    // Check if first cell starts with or equals an instruction keyword
-    for (final kw in _instructionKeywords) {
-      if (firstCell == kw || firstCell.startsWith('$kw:') || firstCell.startsWith('$kw ') || firstCell.startsWith('$kw,')) {
-        return true;
-      }
-    }
-
-    // Check if cell contains clear instruction title phrases
-    if (firstCell.contains('locked source') ||
-        firstCell.contains('translation method') ||
-        firstCell.contains('id format') ||
-        firstCell.contains('current scope') ||
-        firstCell.contains('sanskrit rule') ||
-        firstCell.contains('row rule') ||
-        firstCell.contains('purpose')) {
-      return true;
-    }
-
-    return false;
-  }
-
   bool _isContentHeaderRow(List<String> rowCells) {
     if (rowCells.isEmpty) return false;
-
-    for (final cell in rowCells) {
-      if (cell.trim().length > 30) return false;
-      final lower = cell.trim().toLowerCase();
-      if (lower.contains('rule') ||
-          lower.contains('guideline') ||
-          lower.contains('instruction') ||
-          lower.contains('workflow') ||
-          lower.contains('scope') ||
-          lower.contains('purpose') ||
-          lower.contains('method') ||
-          lower.contains('format')) {
-        return false;
-      }
-    }
 
     int matches = 0;
     bool hasKandaOrSargaOrVerse = false;
     bool hasSanskritOrTranslationOrId = false;
 
-    for (final cell in rowCells) {
-      final c = cell.trim().toLowerCase();
-      if (c == 'id' || c == 'verse_id' || c == 'canonical_id' || c == 'shlok_id' || c == 'code' || c == 'passage_id' || c == 'ram_id' || c == 'mah_id' || c == 'git_id' || c == 'upn_id') {
+    for (final c in rowCells) {
+      if (c == 'id' || c == 'verse_id' || c == 'canonical_id' || c == 'shlok_id' || c == 'code' || c == 'ram_id') {
         matches++;
         hasSanskritOrTranslationOrId = true;
-      } else if (c == 'kanda' || c == 'kand' || c == 'kanda_number' || c == 'kandanumber' || c == 'kanda number' || c == 'parva' || c == 'parva_number' || c == 'chapter' || c == 'chapter_number' || c == 'chapternumber' || c == 'chapter number') {
+      } else if (c == 'kanda' || c == 'kand' || c == 'kanda_number' || c == 'parva' || c == 'parva_number' || c == 'chapter' || c == 'chapter_number') {
         matches++;
         hasKandaOrSargaOrVerse = true;
-      } else if (c == 'sarga' || c == 'sarg' || c == 'sarga_number' || c == 'sarganumber' || c == 'sarga number' || c == 'section' || c == 'section_number' || c == 'adhyaya') {
+      } else if (c == 'sarga' || c == 'sarg' || c == 'sarga_number' || c == 'section' || c == 'section_number' || c == 'adhyaya') {
         matches++;
         hasKandaOrSargaOrVerse = true;
-      } else if (c == 'verse' || c == 'shlok' || c == 'shloka' || c == 'verse_number' || c == 'versenumber' || c == 'verse number' || c == 'shlok_number' || c == 'shloka_number' || c == 'shlok number' || c == 'shloka number' || c == 'verse_no') {
+      } else if (c == 'verse' || c == 'shlok' || c == 'shloka' || c == 'verse_number' || c == 'shloka_number') {
         matches++;
         hasKandaOrSargaOrVerse = true;
-      } else if (c == 'sanskrit' || c == 'sanskrit_shloka' || c == 'sanskrit shloka' || c == 'sanskrit_text' || c == 'sanskrit text' || c == 'shloka_text' || c == 'sloka' || c == 'sloka_text' || c == 'passage' || c == 'verse_text') {
+      } else if (c == 'sanskrit' || c == 'sanskrit_shloka' || c == 'sanskrit_text' || c == 'shloka_text' || c == 'sloka') {
         matches++;
         hasSanskritOrTranslationOrId = true;
-      } else if (c == 'english' || c == 'hindi' || c == 'gujarati' || c == 'translation' || c == 'english_translation' || c == 'english translation' || c == 'english_meaning' || c == 'english meaning' || c == 'hindi_translation' || c == 'hindi translation' || c == 'hindi_meaning' || c == 'hindi meaning' || c == 'gujarati_translation' || c == 'gujarati translation' || c == 'gujarati_meaning' || c == 'gujarati meaning') {
+      } else if (c == 'english' || c == 'hindi' || c == 'gujarati' || c == 'translation' || c == 'english_translation' || c == 'hindi_translation' || c == 'gujarati_translation') {
         matches++;
         hasSanskritOrTranslationOrId = true;
       } else if (c == 'source_url' || c == 'source' || c == 'url' || c == 'qa_status' || c == 'status' || c == 'notes' || c == 'explanation') {
@@ -706,7 +865,7 @@ class RamayanaParserService {
   String _extractMetadataSourceUrl(List<List<dynamic>> rows) {
     for (final row in rows) {
       for (final cell in row) {
-        final cellStr = _extractCellStr(cell);
+        final cellStr = safeString(cell) ?? '';
         if (cellStr.contains('http://') || cellStr.contains('https://')) {
           final match = RegExp(r'https?://[^\s,]+').firstMatch(cellStr);
           if (match != null) {
@@ -723,16 +882,17 @@ class RamayanaParserService {
 
   int _findHeaderIdx(List<String> headers, List<String> candidates) {
     for (final candidate in candidates) {
+      final normCand = normalizeHeader(candidate);
       for (int i = 0; i < headers.length; i++) {
-        final h = headers[i].trim().toLowerCase();
-        if (h == candidate || h == '${candidate}_id' || h == '${candidate}_name' || h == '${candidate}_number') return i;
+        final h = headers[i];
+        if (h == normCand || h == '${normCand}_id' || h == '${normCand}_name' || h == '${normCand}_number') return i;
       }
     }
     for (final candidate in candidates) {
-      if (candidate.length <= 2) continue; // skip short candidates for substring matching
+      final normCand = normalizeHeader(candidate);
+      if (normCand.length <= 2) continue;
       for (int i = 0; i < headers.length; i++) {
-        final h = headers[i].trim().toLowerCase();
-        if (h.contains(candidate)) return i;
+        if (headers[i].contains(normCand)) return i;
       }
     }
     return -1;

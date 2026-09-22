@@ -29,7 +29,7 @@ class ExploreProvider extends ChangeNotifier {
               : book.subtitle,
           category: _inferCategory(book.id),
           chapters: book.totalChapters,
-          verses: book.chapters.fold<int>(0, (sum, c) => sum + c.verses.length),
+          verses: book.totalVerses > 0 ? book.totalVerses : book.chapters.fold<int>(0, (sum, c) => sum + c.verses.length),
           pages: book.totalChapters * 20,
           gradientIndex: index % 6,
           isFeatured: index == 0,

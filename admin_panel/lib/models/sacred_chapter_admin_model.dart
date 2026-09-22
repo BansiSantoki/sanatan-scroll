@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp, FieldValue;
 
 class SacredChapterAdminModel {
+  final String? id;
   final int chapterNumber;
   final int? kandaNumber;
   final int? sargaNumber;
@@ -26,6 +27,7 @@ class SacredChapterAdminModel {
   final DateTime? updatedAt;
 
   const SacredChapterAdminModel({
+    this.id,
     required this.chapterNumber,
     this.kandaNumber,
     this.sargaNumber,
@@ -59,7 +61,8 @@ class SacredChapterAdminModel {
     }
 
     return SacredChapterAdminModel(
-      chapterNumber: _asInt(map['chapterNumber'], fallback: 1),
+      id: map['id']?.toString() ?? map['chapter_id']?.toString() ?? map['chapterId']?.toString(),
+      chapterNumber: _asInt(map['chapterNumber'] ?? map['chapter_number'], fallback: 1),
       kandaNumber: map['kanda_number'] != null ? _asInt(map['kanda_number'], fallback: 1) : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: 1) : null),
       sargaNumber: map['sarga_number'] != null ? _asInt(map['sarga_number'], fallback: 1) : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: 1) : null),
       title: (map['title'] ?? map['title_en'] ?? '').toString(),

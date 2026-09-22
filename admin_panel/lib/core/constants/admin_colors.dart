@@ -11,8 +11,8 @@ class AdminColors {
 
   // Background warm cream / off-white palette
   static const Color bgCream = Color(0xFFFAF7F2);
-  static const Color bgSurface = Color(0xFFFFFFFF);
-  static const Color bgCard = Color(0xFFFFFFFF);
+  static const Color bgSurface = Color(0xFFFAF7F2);
+  static const Color bgCard = Color(0xFFFAF7F2);
   static const Color bgSubtle = Color(0xFFF3EFE6);
   static const Color bgDarkCard = Color(0xFF1A261F);
 

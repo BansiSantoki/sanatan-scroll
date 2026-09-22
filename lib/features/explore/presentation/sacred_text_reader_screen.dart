@@ -152,12 +152,14 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     final localeProvider = context.watch<LocaleProvider>();
     final langCode = localeProvider.languageCode;
     final l10n = AppLocalizations.of(context);
-    final savedProvider = context.watch<SavedProvider>();
     final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
     final cardsPerVerse = isBhagavadGita ? 3 : 2;
 
     return StreamBuilder<SacredBookModel?>(
-      stream: SacredBooksRepository.streamBookById(widget.textId),
+      stream: SacredBooksRepository.streamBookWithChapterVerses(
+        bookId: widget.textId,
+        chapterNumber: currentChapter,
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -203,14 +205,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           );
         }
 
-        final totalPages = chapter.verses.length * cardsPerVerse;
-
         return PageView.builder(
           controller: _pageController,
           scrollDirection: Axis.vertical,
-          itemCount: totalPages,
-          onPageChanged: (pageIndex) {
-            final verseIndex = pageIndex ~/ cardsPerVerse;
+          itemCount: chapter.verses.length,
+          onPageChanged: (verseIndex) {
             _saveProgress(currentChapter, verseIndex + 1);
 
             if (verseIndex == chapter.verses.length - 1) {
@@ -222,90 +221,172 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                   );
             }
           },
-          itemBuilder: (context, pageIndex) {
-            final verseIndex = pageIndex ~/ cardsPerVerse;
-            final cardTypeIndex = pageIndex % cardsPerVerse;
+          itemBuilder: (context, verseIndex) {
             final verse = chapter.verses[verseIndex];
 
-            final savedItem = SavedItemModel(
-              id: '${book.id}_c${chapter.chapterNumber}_v${verse.verseNumber}',
-              type: SavedItemType.verse,
-              title: '${book.getLocalizedTitle(langCode)} ${chapter.chapterNumber}.${verse.verseNumber}',
-              content: verse.getQuoteText(langCode),
-              source: book.getLocalizedTitle(langCode),
-              savedAt: DateTime.now(),
-            );
-
-            final isSaved = savedProvider.isSaved(savedItem.id);
-
-            void toggleSave() {
-              savedProvider.toggleItem(savedItem);
+            void handleNextVerse() {
+              if (verseIndex < chapter.verses.length - 1) {
+                _pageController.animateToPage(
+                  verseIndex + 1,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutCubic,
+                );
+              }
             }
 
-            // Card 1: Orange Wisdom Card
-            if (cardTypeIndex == 0) {
-              final fullAudioContent = _buildFullPageAudioContent(
-                book: book,
-                chapter: chapter,
-                verse: verse,
-                langCode: langCode,
-              );
-
-              return ReadingWisdomCard(
-                book: book,
-                chapter: chapter,
-                verse: verse,
-                languageCode: langCode,
-                isSaved: isSaved,
-                onToggleSave: toggleSave,
-                isPlayingAudio: _isSpeaking,
-                onToggleAudio: () => _toggleAudio(
-                  fullAudioContent,
-                  langCode,
-                ),
-              );
+            void handleBack() {
+              Navigator.of(context).maybePop();
             }
 
-            // Card 2: Off-White Context Card
-            if (cardTypeIndex == 1) {
-              return ReadingContextCard(
-                book: book,
-                chapter: chapter,
-                verse: verse,
-                languageCode: langCode,
-                isSaved: isSaved,
-                onToggleSave: toggleSave,
-                onBack: () => Navigator.of(context).maybePop(),
-                isBhagavadGita: isBhagavadGita,
-                onTapReflection: () {
-                  if (isBhagavadGita) {
-                    _pageController.animateToPage(
-                      pageIndex + 1,
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                    );
-                  }
-                },
-              );
-            }
-
-            // Card 3: Off-White Reflection Card (Bhagavad Gita only)
-            return ReadingReflectionCard(
+            final fullAudioContent = _buildFullPageAudioContent(
               book: book,
               chapter: chapter,
               verse: verse,
-              languageCode: langCode,
-              isSaved: isSaved,
-              onToggleSave: toggleSave,
-              onBack: () => Navigator.of(context).maybePop(),
-              onShare: () => _shareVerse(
+              langCode: langCode,
+            );
+
+            return _VerseView(
+              key: ValueKey('${book.id}_c${chapter.chapterNumber}_v${verse.verseNumber}'),
+              book: book,
+              chapter: chapter,
+              verse: verse,
+              langCode: langCode,
+              isBhagavadGita: isBhagavadGita,
+              cardsPerVerse: cardsPerVerse,
+              isSpeaking: _isSpeaking,
+              onToggleAudio: () => _toggleAudio(fullAudioContent, langCode),
+              onShareVerse: () => _shareVerse(
                 book: book,
                 chapter: chapter,
                 verse: verse,
                 langCode: langCode,
               ),
+              onBack: handleBack,
+              onNextVerse: handleNextVerse,
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _VerseView extends StatefulWidget {
+  const _VerseView({
+    super.key,
+    required this.book,
+    required this.chapter,
+    required this.verse,
+    required this.langCode,
+    required this.isBhagavadGita,
+    required this.cardsPerVerse,
+    required this.isSpeaking,
+    required this.onToggleAudio,
+    required this.onShareVerse,
+    required this.onBack,
+    required this.onNextVerse,
+  });
+
+  final SacredBookModel book;
+  final SacredChapterModel chapter;
+  final SacredVerseModel verse;
+  final String langCode;
+  final bool isBhagavadGita;
+  final int cardsPerVerse;
+  final bool isSpeaking;
+  final VoidCallback onToggleAudio;
+  final VoidCallback onShareVerse;
+  final VoidCallback onBack;
+  final VoidCallback onNextVerse;
+
+  @override
+  State<_VerseView> createState() => _VerseViewState();
+}
+
+class _VerseViewState extends State<_VerseView> {
+  late final PageController _horizontalController;
+
+  @override
+  void initState() {
+    super.initState();
+    _horizontalController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  void _goToNextCard() {
+    if (_horizontalController.hasClients) {
+      _horizontalController.nextPage(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final savedProvider = context.watch<SavedProvider>();
+    final savedItem = SavedItemModel(
+      id: '${widget.book.id}_c${widget.chapter.chapterNumber}_v${widget.verse.verseNumber}',
+      type: SavedItemType.verse,
+      title: '${widget.book.getLocalizedTitle(widget.langCode)} ${widget.chapter.chapterNumber}.${widget.verse.verseNumber}',
+      content: widget.verse.getQuoteText(widget.langCode),
+      source: widget.book.getLocalizedTitle(widget.langCode),
+      savedAt: DateTime.now(),
+    );
+    final isSaved = savedProvider.isSaved(savedItem.id);
+    void toggleSave() => savedProvider.toggleItem(savedItem);
+
+    return PageView.builder(
+      controller: _horizontalController,
+      scrollDirection: Axis.horizontal,
+      itemCount: widget.cardsPerVerse,
+      itemBuilder: (context, cardIndex) {
+        if (cardIndex == 0) {
+          return ReadingWisdomCard(
+            book: widget.book,
+            chapter: widget.chapter,
+            verse: widget.verse,
+            languageCode: widget.langCode,
+            isSaved: isSaved,
+            onToggleSave: toggleSave,
+            isPlayingAudio: widget.isSpeaking,
+            onToggleAudio: widget.onToggleAudio,
+            onBack: widget.onBack,
+            onNextCard: _goToNextCard,
+            totalCards: widget.cardsPerVerse,
+          );
+        }
+
+        if (cardIndex == 1 && widget.isBhagavadGita) {
+          return ReadingReflectionCard(
+            book: widget.book,
+            chapter: widget.chapter,
+            verse: widget.verse,
+            languageCode: widget.langCode,
+            isSaved: isSaved,
+            onToggleSave: toggleSave,
+            onShare: widget.onShareVerse,
+            onBack: widget.onBack,
+            onNextCard: _goToNextCard,
+            totalCards: widget.cardsPerVerse,
+          );
+        }
+
+        return ReadingContextCard(
+          book: widget.book,
+          chapter: widget.chapter,
+          verse: widget.verse,
+          languageCode: widget.langCode,
+          isSaved: isSaved,
+          onToggleSave: toggleSave,
+          onBack: widget.onBack,
+          onNextVerse: widget.onNextVerse,
+          totalCards: widget.cardsPerVerse,
         );
       },
     );

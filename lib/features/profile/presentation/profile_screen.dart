@@ -2,10 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../theme/app_typography.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../providers/locale_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -174,26 +176,22 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     final l10n = context.l10n;
+    final langCode = context.watch<LocaleProvider>().languageCode;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           l10n.myProfile,
-          style: AppTextStyles.getFont(
-            context,
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF1B1B1B),
-            height: 1.05,
+          style: AppTypography.pageTitle(
+            langCode,
+            color: const Color(0xFF18392C),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           l10n.yourAccountYourJourney,
-          style: AppTextStyles.getFont(
-            context,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
+          style: AppTypography.compact(
+            langCode,
             color: const Color(0xFF555555),
           ),
         ),

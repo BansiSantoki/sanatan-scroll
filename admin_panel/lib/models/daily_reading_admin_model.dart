@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp, FieldValue
 
 class DailyReadingAdminModel {
   final String id;
-  final String dateString; // YYYY-MM-DD
+  final String dateString;
   final String bookId;
   final int chapterNumber;
   final int verseNumber;

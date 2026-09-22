@@ -26,7 +26,7 @@ class MockSacredTexts {
       description:
           'The Ramayana is an ancient Sanskrit epic that narrates the life of Lord Rama, his unwavering commitment to dharma, his exile, the battle against Ravana, and his return to Ayodhya. It is a timeless guide to righteous living, ideal leadership, loyalty, love and devotion.',
       category: 'Dharma',
-      chapters: 7,
+      chapters: 0,
       verses: 24000,
       pages: 500,
       gradientIndex: 1,
