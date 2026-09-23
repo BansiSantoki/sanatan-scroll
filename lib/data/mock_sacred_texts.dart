@@ -207,7 +207,7 @@ class MockSacredTexts {
       subtitle: 'Glory of Lord Shiva',
       description:
           'One of the eighteen major Puranas dedicated to Lord Shiva, containing stories, hymns, and philosophical teachings.',
-      category: 'Bhakti',
+      category: 'Bhakti',-
       chapters: 7,
       verses: 24000,
       pages: 600,

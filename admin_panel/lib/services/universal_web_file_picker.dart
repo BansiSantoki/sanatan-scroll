@@ -6,12 +6,12 @@ import 'package:universal_html/html.dart' as html;
 
 /// Production Universal Web File Picker for Chrome, Edge, Firefox, and Safari
 class UniversalWebFilePicker {
-  static Future<PlatformFile?> pickCsvFile() async {
+  static Future<PlatformFile?> pickImportFile() async {
     if (kIsWeb) {
       try {
         final completer = Completer<PlatformFile?>();
         final uploadInput = html.FileUploadInputElement();
-        uploadInput.accept = '.xlsx,.xls,.csv,.txt,text/csv,text/plain,application/vnd.ms-excel,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        uploadInput.accept = '.xlsx,.xls,.csv';
         uploadInput.multiple = false;
         uploadInput.click();
 
@@ -67,7 +67,7 @@ class UniversalWebFilePicker {
     // Standard Fallback for non-web or fallback environments
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['xlsx', 'xls', 'csv', 'txt'],
+      allowedExtensions: ['csv', 'xlsx', 'xls'],
       withData: true,
     );
 

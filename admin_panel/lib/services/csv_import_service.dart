@@ -132,13 +132,20 @@ class SacredBookImportConfig {
 /// Flexible CSV Header Mapper
 class CsvHeaderMapper {
   static const Map<String, List<String>> _aliases = {
-    'id': ['id', 'canonical_id', 'canonical_reference', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'passage_id', 'ram_id', 'mah_id', 'git_id', 'upn_id'],
+    'id': [
+      'id', 'passage_id', 'passageid', 'verse_id', 'shlok_id', 'shloka_id', 'code',
+      'ram_id', 'mah_id', 'git_id', 'upn_id'
+    ],
+    'canonical_reference': [
+      'canonical_reference', 'canonical_ref', 'canonical_id', 'reference',
+      'verse_reference', 'ref'
+    ],
     'book_id': ['book_id', 'book', 'book_code', 'sacred_book'],
     'book_name': ['book_name', 'title', 'book_title', 'bookname'],
     'kanda_number': ['kanda_number', 'kanda', 'kand', 'kanda_no', 'kanda_name', 'parva', 'parva_number', 'chapter_number', 'chapter'],
     'sarga_number': ['sarga_number', 'sarga', 'sarg', 'sarga_no', 'sarga_num', 'section_number', 'section', 'adhyaya'],
     'verse_number': ['verse_number', 'verse', 'shloka', 'shloka_number', 'shlok', 'shlok_number', 'shlok_no', 'shloka_no', 'verse_no'],
-    'sanskrit': ['sanskrit', 'sanskrit_text', 'sanskrit_shloka', 'shloka_text', 'sloka', 'original_sanskrit', 'passage'],
+    'sanskrit': ['sanskrit', 'sanskrit_text', 'sanskrit_shloka', 'shloka_text', 'sloka', 'original_sanskrit', 'sanskrit_passage'],
     'english': [
       'english', 'english_meaning', 'english_translation', 'translation_en', 'en', 'eng',
       'english_shloka_meaning', 'english_shlok_meaning', 'translation_english', 'meaning_english',
@@ -207,7 +214,7 @@ class CsvHeaderMapper {
 
 /// CSV Importer Service for Sacred Books
 class CsvImportService {
-  static final RegExp _idRegex = RegExp(r'^([A-Za-z0-9]+)-(\d+)-(\d+)(?:-(\d+))?$');
+  static final RegExp _idRegex = RegExp(r'^([A-Za-z0-9]+)-(\d+)-(\d+)(?:-(\d+))?(?:-\d+)*$');
 
   Future<RamayanaParseResult> parseFile(
     PlatformFile file, {
@@ -216,12 +223,16 @@ class CsvImportService {
   }) async {
     final Uint8List? bytes = file.bytes;
     if (bytes == null || bytes.isEmpty) {
-      throw Exception("CSV file is empty or could not be read.");
+      throw Exception("File is empty or could not be read.");
     }
 
     final ext = (file.extension ?? (file.name.contains('.') ? file.name.split('.').last : '')).toLowerCase();
+    if (ext == 'xlsx' || ext == 'xls') {
+      return RamayanaParserService().parseFile(file, targetBookId: targetBookId, targetBookName: targetBookName);
+    }
+
     if (ext != 'csv') {
-      throw Exception("CSV file is required. Please upload a .csv file.");
+      throw Exception("Unsupported file type. Please upload a .csv or .xlsx file.");
     }
 
     // UTF-8 decoding with fallback for malformed bytes to preserve Devanagari, Gujarati, Special Unicode
@@ -278,6 +289,7 @@ class CsvImportService {
     print('[CSV IMPORT] Detected columns: $columnMapping');
 
     int idIdx = columnMapping['id'] ?? -1;
+    int canonicalRefIdx = columnMapping['canonical_reference'] ?? columnMapping['reference'] ?? -1;
     int bookIdIdx = columnMapping['book_id'] ?? -1;
     int bookNameIdx = columnMapping['book_name'] ?? -1;
     int kandaIdx = columnMapping['kanda_number'] ?? -1;
@@ -293,8 +305,18 @@ class CsvImportService {
     int qaStatusIdx = columnMapping['qa_status'] ?? -1;
     int notesIdx = columnMapping['notes'] ?? -1;
 
+    final bool hasStructureOrSanskrit = (kandaIdx != -1 || sargaIdx != -1 || verseIdx != -1 || sanskritIdx != -1);
+    final bool hasIdOrRef = (idIdx != -1 || canonicalRefIdx != -1);
+    final bool hasAnyTranslation = (englishIdx != -1 || hindiIdx != -1 || gujaratiIdx != -1);
+
+    final String fileImportMode = (!hasStructureOrSanskrit && hasIdOrRef && hasAnyTranslation)
+        ? 'translation_update'
+        : 'full_master';
+
     final detectedMappings = <String, String>{};
+    detectedMappings['Import Mode'] = fileImportMode == 'translation_update' ? 'Translation Update Mode' : 'Full Master Mode';
     if (idIdx != -1) detectedMappings['ID / Verse ID'] = headerRowCells[idIdx];
+    if (canonicalRefIdx != -1) detectedMappings['Canonical Reference'] = headerRowCells[canonicalRefIdx];
     if (kandaIdx != -1) detectedMappings['${config.primaryChapterTerm} / Kanda'] = headerRowCells[kandaIdx];
     if (sargaIdx != -1) detectedMappings['${config.secondarySectionTerm} / Sarga'] = headerRowCells[sargaIdx];
     if (verseIdx != -1) detectedMappings['Verse / Shlok'] = headerRowCells[verseIdx];
@@ -302,6 +324,8 @@ class CsvImportService {
     if (englishIdx != -1) detectedMappings['English'] = headerRowCells[englishIdx];
     if (hindiIdx != -1) detectedMappings['Hindi'] = headerRowCells[hindiIdx];
     if (gujaratiIdx != -1) detectedMappings['Gujarati'] = headerRowCells[gujaratiIdx];
+
+    print('[CSV IMPORT] Import Mode: $fileImportMode');
 
     final parsedRows = <RamayanaParsedRow>[];
     final seenIdsInFile = <String, int>{};
@@ -325,6 +349,7 @@ class CsvImportService {
       final row = rawRows[i];
 
       final rawId = getCsvCell(row, idIdx) ?? '';
+      final canonicalRefStr = getCsvCell(row, canonicalRefIdx) ?? '';
       final rawBook = getCsvCell(row, bookIdIdx) ?? '';
       final rawBookNameCol = getCsvCell(row, bookNameIdx) ?? '';
       final rawKanda = getCsvCell(row, kandaIdx);
@@ -345,12 +370,12 @@ class CsvImportService {
       final colVerse = parseOptionalInt(rawVerse) ?? -1;
 
       // Skip completely empty CSV rows
-      if (rawId.isEmpty && sanskritText.isEmpty && colKanda <= 0 && colSarga <= 0 && colVerse <= 0 && englishText == null && hindiText == null && gujaratiText == null) {
+      if (rawId.isEmpty && canonicalRefStr.isEmpty && sanskritText.isEmpty && colKanda <= 0 && colSarga <= 0 && colVerse <= 0 && englishText == null && hindiText == null && gujaratiText == null) {
         skippedRowsAfterHeader++;
         continue;
       }
 
-      print('[CSV IMPORT] Current row: ${i + 1} | Current field: id=$rawId, kanda=$colKanda, sarga=$colSarga, verse=$colVerse, sanskrit=${sanskritText.isNotEmpty}, english=${englishText != null}, hindi=${hindiText != null}, gujarati=${gujaratiText != null}');
+      print('[CSV IMPORT] Current row: ${i + 1} | mode: $fileImportMode | id: $rawId | ref: $canonicalRefStr | kanda=$colKanda, sarga=$colSarga, verse=$colVerse');
 
       String bookCode = config.defaultBookCode;
       int parsedKanda = -1;
@@ -383,6 +408,20 @@ class CsvImportService {
         }
       }
 
+      // Fallback: Parse canonicalRef (e.g. "1.2.15" or "1.15") if Kanda/Sarga/Verse not set
+      if (parsedKanda <= 0 && canonicalRefStr.isNotEmpty) {
+        final parts = canonicalRefStr.split(RegExp(r'[\.\-\/\:]')).map((s) => int.tryParse(s.trim()) ?? -1).where((n) => n > 0).toList();
+        if (parts.length >= 3) {
+          parsedKanda = parts[0];
+          parsedSarga = parts[1];
+          parsedVerse = parts[2];
+        } else if (parts.length == 2) {
+          parsedKanda = parts[0];
+          parsedSarga = 1;
+          parsedVerse = parts[1];
+        }
+      }
+
       int finalKanda = colKanda > 0 ? colKanda : parsedKanda;
       int finalSarga = colSarga > 0 ? colSarga : parsedSarga;
       int finalVerse = colVerse > 0 ? colVerse : parsedVerse;
@@ -407,57 +446,74 @@ class CsvImportService {
       final errors = <String>[];
       final affectedCols = <String>[];
 
-      if (idParsedSuccess && colKanda > 0 && parsedKanda != colKanda) {
-        errors.add("ID ${config.primaryChapterTerm} value conflicts with explicit ${config.primaryChapterTerm} value (ID: $parsedKanda vs Col: $colKanda)");
-        affectedCols.add(config.primaryChapterTerm);
-      }
-      if (idParsedSuccess && colSarga > 0 && parsedSarga > 0 && parsedSarga != colSarga) {
-        errors.add("ID ${config.secondarySectionTerm} value conflicts with explicit ${config.secondarySectionTerm} value (ID: $parsedSarga vs Col: $colSarga)");
-        affectedCols.add(config.secondarySectionTerm);
-      }
-      if (idParsedSuccess && colVerse > 0 && parsedVerse != colVerse) {
-        errors.add("ID Verse value conflicts with explicit Verse value (ID: $parsedVerse vs Col: $colVerse)");
-        affectedCols.add("Verse");
-      }
+      final bool hasSanskrit = sanskritText.isNotEmpty;
+      final bool hasEnglish = englishText != null && englishText.trim().isNotEmpty;
+      final bool hasHindi = hindiText != null && hindiText.trim().isNotEmpty;
+      final bool hasGujarati = gujaratiText != null && gujaratiText.trim().isNotEmpty;
 
-      // Structural requirements check
-      if (finalKanda <= 0) {
-        errors.add("Missing or invalid ${config.primaryChapterTerm} number");
-        affectedCols.add(config.primaryChapterTerm);
-        missingChapterInfoCount++;
-      } else {
-        detectedKandasSet.add(finalKanda);
-      }
-
-      if (finalSarga <= 0 && config.requiresSecondarySection) {
-        errors.add("Missing or invalid ${config.secondarySectionTerm} number");
-        affectedCols.add(config.secondarySectionTerm);
-        missingChapterInfoCount++;
-      }
-
-      if (finalKanda > 0 && finalSarga > 0) {
-        detectedSargasSet.add('K${finalKanda}_S$finalSarga');
-      }
-
-      if (finalVerse <= 0) {
-        errors.add("Missing or invalid Verse number");
-        affectedCols.add("Verse");
-        missingVerseNumCount++;
-      }
-
-      if (sanskritText.isEmpty) {
-        errors.add("Missing Sanskrit shloka text");
-        affectedCols.add("Sanskrit");
-        missingSanskritCount++;
-      }
-
-      if ((englishText == null || englishText.trim().isEmpty) &&
-          (hindiText == null || hindiText.trim().isEmpty) &&
-          (gujaratiText == null || gujaratiText.trim().isEmpty)) {
-        missingTranslationsCount++;
-        if (sanskritText.isEmpty) {
-          errors.add("Missing required translations (English, Hindi, or Gujarati)");
+      if (fileImportMode == 'translation_update') {
+        if (rawId.isEmpty && canonicalRefStr.isEmpty && (finalKanda <= 0 || finalVerse <= 0)) {
+          errors.add("Missing required verse identifier (passage_id or canonical_reference)");
+          affectedCols.add("Verse Reference");
+        }
+        if (!hasEnglish && !hasHindi && !hasGujarati) {
+          errors.add("Must provide at least one non-empty translation (English, Hindi, or Gujarati)");
           affectedCols.add("Translations");
+          missingTranslationsCount++;
+        }
+        if (finalKanda > 0) detectedKandasSet.add(finalKanda);
+        if (finalKanda > 0 && finalSarga > 0) detectedSargasSet.add('K${finalKanda}_S$finalSarga');
+      } else {
+        if (idParsedSuccess && colKanda > 0 && parsedKanda != colKanda) {
+          errors.add("ID ${config.primaryChapterTerm} value conflicts with explicit ${config.primaryChapterTerm} value (ID: $parsedKanda vs Col: $colKanda)");
+          affectedCols.add(config.primaryChapterTerm);
+        }
+        if (idParsedSuccess && colSarga > 0 && parsedSarga > 0 && parsedSarga != colSarga) {
+          errors.add("ID ${config.secondarySectionTerm} value conflicts with explicit ${config.secondarySectionTerm} value (ID: $parsedSarga vs Col: $colSarga)");
+          affectedCols.add(config.secondarySectionTerm);
+        }
+        if (idParsedSuccess && colVerse > 0 && parsedVerse != colVerse) {
+          errors.add("ID Verse value conflicts with explicit Verse value (ID: $parsedVerse vs Col: $colVerse)");
+          affectedCols.add("Verse");
+        }
+
+        // Structural requirements check
+        if (finalKanda <= 0) {
+          errors.add("Missing or invalid ${config.primaryChapterTerm} number");
+          affectedCols.add(config.primaryChapterTerm);
+          missingChapterInfoCount++;
+        } else {
+          detectedKandasSet.add(finalKanda);
+        }
+
+        if (finalSarga <= 0 && config.requiresSecondarySection) {
+          errors.add("Missing or invalid ${config.secondarySectionTerm} number");
+          affectedCols.add(config.secondarySectionTerm);
+          missingChapterInfoCount++;
+        }
+
+        if (finalKanda > 0 && finalSarga > 0) {
+          detectedSargasSet.add('K${finalKanda}_S$finalSarga');
+        }
+
+        if (finalVerse <= 0) {
+          errors.add("Missing or invalid Verse number");
+          affectedCols.add("Verse");
+          missingVerseNumCount++;
+        }
+
+        if (sanskritText.isEmpty) {
+          errors.add("Missing Sanskrit shloka text");
+          affectedCols.add("Sanskrit");
+          missingSanskritCount++;
+        }
+
+        if (!hasEnglish && !hasHindi && !hasGujarati) {
+          missingTranslationsCount++;
+          if (sanskritText.isEmpty) {
+            errors.add("Missing required translations (English, Hindi, or Gujarati)");
+            affectedCols.add("Translations");
+          }
         }
       }
 
@@ -471,8 +527,10 @@ class CsvImportService {
           final sargaPad = (finalSarga > 0 ? finalSarga : 1).toString().padLeft(3, '0');
           canonicalVerseId = '$bookCode-$kandaPad-$sargaPad-$versePad';
         }
-      } else if (rawId.isNotEmpty && _idRegex.hasMatch(rawId)) {
+      } else if (rawId.isNotEmpty) {
         canonicalVerseId = rawId.toUpperCase();
+      } else if (canonicalRefStr.isNotEmpty) {
+        canonicalVerseId = canonicalRefStr;
       } else {
         canonicalVerseId = 'Row ${i + 1}';
       }
@@ -512,6 +570,8 @@ class CsvImportService {
         sourceName: sourceNameVal,
         qaStatus: qaStatus,
         notes: notesText,
+        importMode: fileImportMode,
+        canonicalRef: canonicalRefStr,
         action: errors.isNotEmpty ? 'error' : 'new',
         validationErrors: errors,
         affectedColumns: affectedCols,
@@ -550,6 +610,7 @@ class CsvImportService {
       qaStatusCounts: qaStatusCounts,
       defaultSourceUrl: config.defaultSourceUrl,
       selectedSheetName: 'CSV Data',
+      importMode: fileImportMode,
     );
   }
 
@@ -561,22 +622,22 @@ class CsvImportService {
     bool hasSanskritOrTranslationOrId = false;
 
     for (final c in rowCells) {
-      if (c == 'id' || c == 'verse_id' || c == 'canonical_id' || c == 'shlok_id' || c == 'code' || c == 'ram_id') {
+      if (c == 'id' || c == 'passage_id' || c == 'passageid' || c == 'verse_id' || c == 'canonical_id' || c == 'canonical_reference' || c == 'reference' || c == 'ref' || c == 'verse_reference' || c == 'shlok_id' || c == 'code' || c == 'ram_id' || c == 'mah_id' || c == 'git_id' || c == 'upn_id') {
         matches++;
         hasSanskritOrTranslationOrId = true;
-      } else if (c == 'kanda' || c == 'kand' || c == 'kanda_number' || c == 'parva' || c == 'parva_number' || c == 'chapter' || c == 'chapter_number') {
+      } else if (c == 'kanda' || c == 'kand' || c == 'kanda_number' || c == 'kanda_name' || c == 'kanda_no' || c == 'parva' || c == 'parva_number' || c == 'chapter' || c == 'chapter_number') {
         matches++;
         hasKandaOrSargaOrVerse = true;
-      } else if (c == 'sarga' || c == 'sarg' || c == 'sarga_number' || c == 'section' || c == 'section_number' || c == 'adhyaya') {
+      } else if (c == 'sarga' || c == 'sarg' || c == 'sarga_number' || c == 'sarga_no' || c == 'section' || c == 'section_number' || c == 'adhyaya') {
         matches++;
         hasKandaOrSargaOrVerse = true;
-      } else if (c == 'verse' || c == 'shlok' || c == 'shloka' || c == 'verse_number' || c == 'shloka_number') {
+      } else if (c == 'verse' || c == 'shlok' || c == 'shloka' || c == 'verse_number' || c == 'shloka_number' || c == 'verse_no') {
         matches++;
         hasKandaOrSargaOrVerse = true;
       } else if (c == 'sanskrit' || c == 'sanskrit_shloka' || c == 'sanskrit_text' || c == 'shloka_text' || c == 'sloka') {
         matches++;
         hasSanskritOrTranslationOrId = true;
-      } else if (c == 'english' || c == 'hindi' || c == 'gujarati' || c == 'translation' || c == 'english_translation' || c == 'hindi_translation' || c == 'gujarati_translation') {
+      } else if (c == 'english' || c == 'hindi' || c == 'gujarati' || c == 'translation' || c == 'english_translation' || c == 'hindi_translation' || c == 'gujarati_translation' || c == 'english_meaning' || c == 'hindi_meaning' || c == 'gujarati_meaning' || c == 'translation_en' || c == 'translation_hi' || c == 'translation_gu' || c == 'en' || c == 'hi' || c == 'gu' || c == 'eng' || c == 'hin' || c == 'guj' || c == 'meaning_english' || c == 'meaning_hindi' || c == 'meaning_gujarati') {
         matches++;
         hasSanskritOrTranslationOrId = true;
       } else if (c == 'source_url' || c == 'source' || c == 'url' || c == 'qa_status' || c == 'status' || c == 'notes' || c == 'explanation') {

@@ -130,7 +130,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final file = await UniversalWebFilePicker.pickCsvFile();
+      final file = await UniversalWebFilePicker.pickImportFile();
 
       if (file != null) {
         setState(() {
@@ -143,7 +143,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Unable to read CSV file. Please verify that the file is a valid UTF-8 CSV: $e';
+        _errorMessage = 'Unable to read Excel or CSV file. Please verify that the file is valid and UTF-8 compatible: $e';
         _currentStep = 1;
       });
     }
@@ -775,14 +775,14 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
               const Icon(Icons.table_chart_outlined, color: AdminColors.primaryDark, size: 24),
               const SizedBox(width: 10),
               Text(
-                'WORKFLOW A: Excel (.xlsx) / CSV Upload',
+                'WORKFLOW A: CSV / EXCEL MASTER SHEET UPLOAD',
                 style: GoogleFonts.cinzel(fontSize: 15, fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Upload $_selectedBookName Master Sheet containing Shloks, Chapters/Sections, and translations in Excel (.xlsx) or CSV format.',
+            'Upload CSV or Excel file for $_selectedBookName using the existing import pipeline.',
             style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey[700]),
           ),
           const SizedBox(height: 20),
@@ -802,12 +802,12 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                   const Icon(Icons.upload_file, size: 48, color: AdminColors.saffron),
                   const SizedBox(height: 12),
                   Text(
-                    'Click to Upload Excel / CSV File for $_selectedBookName',
+                    'Click to Upload CSV or Excel File',
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AdminColors.primaryDark),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Supports: .xlsx, .xls, .csv',
+                    'Supports: .csv, .xlsx',
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -1251,6 +1251,51 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
             'Target Sacred Book: $_selectedBookName ($_selectedBookId)',
             style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: AdminColors.saffron),
           ),
+          const SizedBox(height: 6),
+          if (result.importMode == 'translation_update')
+            Container(
+              margin: const EdgeInsets.only(top: 4, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[300]!),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.translate, color: Colors.blue, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'DETECTED MODE: TRANSLATION UPDATE (Updates English, Hindi & Gujarati for existing Firestore verses using passage_id/reference).',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue[900]),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              margin: const EdgeInsets.only(top: 4, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[300]!),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.table_chart, color: Colors.green, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'DETECTED MODE: FULL MASTER SHEET (Full scripture content import: Sanskrit + Hierarchy + Translations).',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green[900]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 6),
           Text(
             'Detected Columns: ${result.detectedColumnMappings.entries.map((e) => '${e.key} -> "${e.value}"').join(', ')}',

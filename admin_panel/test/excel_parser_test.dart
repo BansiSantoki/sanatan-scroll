@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:admin_panel/services/csv_import_service.dart';
 import 'package:admin_panel/services/ramayana_parser_service.dart';
 import 'package:excel/excel.dart';
 
@@ -78,7 +79,27 @@ void main() {
       expect(row.isValid, true);
     });
 
-    test('2. Bhagavad Gita Excel (.xlsx) parses successfully', () async {
+    test('2. CsvImportService accepts Excel (.xlsx) files through the same importer entry point', () async {
+      final xlsxFile = createXlsxFile(
+        filename: 'Ramayana_Master.xlsx',
+        sheets: {
+          'Ramayana Content': [
+            ['passage_id', 'kanda_name', 'sarga_no', 'shlok_no', 'canonical_reference', 'sanskrit', 'english', 'hindi', 'gujarati'],
+            ['RAM-01-002-015', 'Bala Kanda', 2, 15, '1.2.15', 'मा निषाद...', 'O nishada...', 'हे निषाद...', 'હે નિષાદ...'],
+          ],
+        },
+      );
+
+      final csvImportService = CsvImportService();
+      final result = await csvImportService.parseFile(xlsxFile, targetBookId: 'ramayana', targetBookName: 'Ramayana');
+
+      expect(result.rows.length, 1);
+      expect(result.rows.first.rawId, 'RAM-01-002-015');
+      expect(result.rows.first.english, 'O nishada...');
+      expect(result.rows.first.isValid, true);
+    });
+
+    test('3. Bhagavad Gita Excel (.xlsx) parses successfully', () async {
       final xlsxFile = createXlsxFile(
         filename: 'Gita.xlsx',
         sheets: {
@@ -141,6 +162,34 @@ void main() {
       expect(row.rawId, 'UPN-01-001');
       expect(row.kandaNumber, 1);
       expect(row.verseNumber, 1);
+      expect(row.isValid, true);
+    });
+
+    test('5. Excel (.xlsx) with title rows at top correctly detects header at Row 4', () async {
+      final xlsxFile = createXlsxFile(
+        filename: 'Ramayana_Master_With_Title.xlsx',
+        sheets: {
+          'Ramayana Master': [
+            ['Sanatan Scroll – Ramayana Master Sheet'],
+            ['Complete Sacred Text Metadata'],
+            [],
+            ['passage_id', 'kanda_name', 'sarga_no', 'shlok_no', 'canonical_reference', 'sanskrit', 'english', 'hindi', 'gujarati'],
+            ['RAM-01-002-015', 'Bala Kanda', 2, 15, '1.2.15', 'मा निषाद...', 'O nishada...', 'हे निषाद...', 'હે નિષાદ...'],
+          ],
+        },
+      );
+
+      final result = await parserService.parseFile(xlsxFile, targetBookId: 'ramayana', targetBookName: 'Ramayana');
+
+      expect(result.headerRowNumber, 4);
+      expect(result.selectedSheetName, 'Ramayana Master');
+      expect(result.rows.length, 1);
+      final row = result.rows.first;
+      expect(row.rawId, 'RAM-01-002-015');
+      expect(row.kandaNumber, 1);
+      expect(row.sargaNumber, 2);
+      expect(row.verseNumber, 15);
+      expect(row.sanskrit, 'मा निषाद...');
       expect(row.isValid, true);
     });
   });

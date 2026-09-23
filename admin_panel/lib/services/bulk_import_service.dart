@@ -324,17 +324,23 @@ class BulkImportService {
     required String mode, // 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
     String? targetBookId,
   }) async {
+    final bool hasTranslationModeRows = rows.any((r) => r.importMode == 'translation_update');
+
     // 1. Instantly assign memory actions based on row validity and target mode
     for (final row in rows) {
       if (!row.isValid) {
         row.action = 'error';
         continue;
       }
-      row.action = (mode == 'update_existing') ? 'skip' : 'new';
+      if (row.importMode == 'translation_update') {
+        row.action = 'update';
+      } else {
+        row.action = (mode == 'update_existing') ? 'skip' : 'new';
+      }
     }
 
-    // 2. Only fetch existing document IDs if selected mode strictly requires checking Firestore existence
-    if (mode == 'create_only' || mode == 'skip_duplicates' || mode == 'update_existing') {
+    // 2. Query Firestore if required by selected mode or translation_update mode
+    if (hasTranslationModeRows || mode == 'create_only' || mode == 'skip_duplicates' || mode == 'update_existing') {
       final Map<String, List<RamayanaParsedRow>> chapterGroups = {};
       for (final row in rows) {
         if (!row.isValid) continue;
@@ -371,27 +377,52 @@ class BulkImportService {
                 .collection('verses')
                 .get();
 
-            final existingDocIds = snap.docs.map((d) => d.id).toSet();
+            final existingDocs = snap.docs;
+            final existingDocIds = existingDocs.map((d) => d.id).toSet();
+            final existingPassageIds = existingDocs
+                .map((d) => (d.data()['passage_id'] ?? d.data()['verse_id'] ?? '').toString())
+                .where((s) => s.isNotEmpty)
+                .toSet();
 
             for (final row in chapterRows) {
-              final exists = existingDocIds.contains(row.verseId);
-              if (exists) {
-                if (mode == 'create_only' || mode == 'skip_duplicates') {
-                  row.action = 'skip';
-                } else {
+              final bool exists = existingDocIds.contains(row.verseId) ||
+                  (row.rawId.isNotEmpty && (existingDocIds.contains(row.rawId) || existingPassageIds.contains(row.rawId)));
+
+              if (row.importMode == 'translation_update') {
+                if (exists) {
                   row.action = 'update';
+                } else {
+                  row.action = 'error';
+                  final identifier = row.rawId.isNotEmpty ? row.rawId : (row.canonicalRef.isNotEmpty ? row.canonicalRef : row.verseId);
+                  if (!row.validationErrors.any((e) => e.contains('Verse not found'))) {
+                    row.validationErrors.add("Verse not found in database ($identifier)");
+                  }
                 }
               } else {
-                if (mode == 'update_existing') {
-                  row.action = 'skip';
+                if (exists) {
+                  if (mode == 'create_only' || mode == 'skip_duplicates') {
+                    row.action = 'skip';
+                  } else {
+                    row.action = 'update';
+                  }
                 } else {
-                  row.action = 'new';
+                  if (mode == 'update_existing') {
+                    row.action = 'skip';
+                  } else {
+                    row.action = 'new';
+                  }
                 }
               }
             }
           } catch (_) {
             for (final row in chapterRows) {
-              row.action = mode == 'update_existing' ? 'skip' : 'new';
+              if (row.importMode == 'translation_update') {
+                row.action = 'error';
+                final identifier = row.rawId.isNotEmpty ? row.rawId : (row.canonicalRef.isNotEmpty ? row.canonicalRef : row.verseId);
+                row.validationErrors.add("Verse not found in database ($identifier)");
+              } else {
+                row.action = mode == 'update_existing' ? 'skip' : 'new';
+              }
             }
           }
         }));
@@ -540,41 +571,66 @@ class BulkImportService {
       for (final row in groupRows) {
         final verseRef = chapterRef.collection('verses').doc(row.verseId);
 
-        final verseMap = <String, dynamic>{
-          'verse_id': row.verseId,
-          'verseNumber': row.verseNumber,
-          'kanda_number': row.kandaNumber,
-          'sarga_number': row.sargaNumber,
-          'sanskrit': row.sanskrit,
-          'sanskritText': row.sanskrit,
-          'english': row.english,
-          'hindi': row.hindi,
-          'gujarati': row.gujarati,
-          'translations': {
-            'en': row.english,
-            'hi': row.hindi,
-            'gu': row.gujarati,
-          },
-          'meaningEnglish': row.explanation,
-          'meaningGujarati': row.explanation,
-          'meaningHindi': row.explanation,
-          'explanation': row.explanation,
-          'source_url': row.sourceUrl,
-          'source_name': row.sourceName,
-          'qa_status': row.qaStatus,
-          'notes': row.notes,
-          'published': true,
-          'archived': false,
-          'updatedAt': FieldValue.serverTimestamp(),
-        };
-
-        batch.set(verseRef, verseMap, SetOptions(merge: true));
-        opCount++;
-
-        if (row.action == 'update') {
-          versesUpdated++;
+        if (row.importMode == 'translation_update') {
+          // Translation Update Mode: ONLY update non-empty provided translation fields!
+          final Map<String, dynamic> updateMap = {};
+          if (row.english != null && row.english!.trim().isNotEmpty) {
+            updateMap['english'] = row.english;
+            updateMap['translations.en'] = row.english;
+          }
+          if (row.hindi != null && row.hindi!.trim().isNotEmpty) {
+            updateMap['hindi'] = row.hindi;
+            updateMap['translations.hi'] = row.hindi;
+          }
+          if (row.gujarati != null && row.gujarati!.trim().isNotEmpty) {
+            updateMap['gujarati'] = row.gujarati;
+            updateMap['translations.gu'] = row.gujarati;
+          }
+          if (updateMap.isNotEmpty) {
+            updateMap['updatedAt'] = FieldValue.serverTimestamp();
+            batch.set(verseRef, updateMap, SetOptions(merge: true));
+            opCount++;
+            versesUpdated++;
+          }
         } else {
-          versesCreated++;
+          // Full Master Mode: Writes full verse schema
+          final verseMap = <String, dynamic>{
+            'verse_id': row.verseId,
+            'passage_id': row.rawId.isNotEmpty ? row.rawId : row.verseId,
+            'verseNumber': row.verseNumber,
+            'kanda_number': row.kandaNumber,
+            'sarga_number': row.sargaNumber,
+            'sanskrit': row.sanskrit,
+            'sanskritText': row.sanskrit,
+            'english': row.english,
+            'hindi': row.hindi,
+            'gujarati': row.gujarati,
+            'translations': {
+              'en': row.english,
+              'hi': row.hindi,
+              'gu': row.gujarati,
+            },
+            'meaningEnglish': row.explanation,
+            'meaningGujarati': row.explanation,
+            'meaningHindi': row.explanation,
+            'explanation': row.explanation,
+            'source_url': row.sourceUrl,
+            'source_name': row.sourceName,
+            'qa_status': row.qaStatus,
+            'notes': row.notes,
+            'published': true,
+            'archived': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          };
+
+          batch.set(verseRef, verseMap, SetOptions(merge: true));
+          opCount++;
+
+          if (row.action == 'update') {
+            versesUpdated++;
+          } else {
+            versesCreated++;
+          }
         }
 
         processedRowsCount++;

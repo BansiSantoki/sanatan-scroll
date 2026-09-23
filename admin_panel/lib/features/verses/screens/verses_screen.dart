@@ -12,6 +12,7 @@ import '../../../providers/books_provider.dart';
 import '../../../providers/chapters_provider.dart';
 import '../../../providers/verses_provider.dart';
 import '../../../providers/admin_navigation_provider.dart';
+import '../../../services/universal_web_file_picker.dart';
 import '../../import/widgets/import_preview_dialog.dart';
 import '../widgets/verse_editor_dialog.dart';
 
@@ -19,14 +20,9 @@ class VersesScreen extends StatelessWidget {
   const VersesScreen({super.key});
 
   Future<void> _handleBulkImport(BuildContext context, String currentBookId) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['csv', 'xlsx', 'xls'],
-      withData: true,
-    );
+    final file = await UniversalWebFilePicker.pickImportFile();
 
-    if (result != null && result.files.isNotEmpty && context.mounted) {
-      final file = result.files.first;
+    if (file != null && context.mounted) {
       final importResult = await showDialog(
         context: context,
         builder: (_) => ImportPreviewDialog(file: file),
