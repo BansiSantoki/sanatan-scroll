@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:async/async.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/sacred_book_model.dart';
 import '../models/sacred_chapter_model.dart';
@@ -41,7 +42,7 @@ class SacredBooksRepository {
 
     controller = StreamController<List<SacredBookModel>>.broadcast(
       onListen: () {
-        print('[PERF LOG] BOOK_QUERY_START: Subscribing to sacred_books collection metadata...');
+        debugPrint('[PERF LOG] BOOK_QUERY_START: Subscribing to sacred_books collection metadata...');
         final stopwatch = Stopwatch()..start();
 
         // 1. Emit cached books immediately if available for 0ms delay
@@ -51,7 +52,7 @@ class SacredBooksRepository {
         final db = _firestore;
         if (db == null) {
           stopwatch.stop();
-          print('[PERF LOG] Firestore offline or unit test mode. Emitting fallback books in ${stopwatch.elapsedMilliseconds}ms.');
+          debugPrint('[PERF LOG] Firestore offline or unit test mode. Emitting fallback books in ${stopwatch.elapsedMilliseconds}ms.');
           return;
         }
 
@@ -62,7 +63,7 @@ class SacredBooksRepository {
             .listen(
           (snapshot) {
             stopwatch.stop();
-            print('[PERF LOG] BOOK_QUERY_END: Received ${snapshot.docs.length} book documents in ${stopwatch.elapsedMilliseconds}ms.');
+            debugPrint('[PERF LOG] BOOK_QUERY_END: Received ${snapshot.docs.length} book documents in ${stopwatch.elapsedMilliseconds}ms.');
 
             if (snapshot.docs.isEmpty) {
               controller.add(SacredBooksData.all);
@@ -88,7 +89,7 @@ class SacredBooksRepository {
             controller.add(books.isNotEmpty ? books : SacredBooksData.all);
           },
           onError: (err) {
-            print('[PERF LOG] BOOK_QUERY_ERROR: $err. Falling back to cached data.');
+            debugPrint('[PERF LOG] BOOK_QUERY_ERROR: $err. Falling back to cached data.');
             controller.add(_getCachedOrFallbackBooks());
           },
         );
@@ -122,7 +123,7 @@ class SacredBooksRepository {
 
     controller = StreamController<SacredBookModel?>.broadcast(
       onListen: () {
-        print('[PERF LOG] CHAPTER_QUERY_START: Subscribing to chapters for bookId=$bookId...');
+        debugPrint('[PERF LOG] CHAPTER_QUERY_START: Subscribing to chapters for bookId=$bookId...');
 
         // Return initial cached version if present
         final cached = _booksCache[bookId] ?? _fallbackBook(bookId);
@@ -239,7 +240,7 @@ class SacredBooksRepository {
 
     controller = StreamController<SacredBookModel?>.broadcast(
       onListen: () {
-        print('[PERF LOG] VERSE_QUERY_START: Subscribing to verses for bookId=$bookId, chapter=$chapterNumber...');
+        debugPrint('[PERF LOG] VERSE_QUERY_START: Subscribing to verses for bookId=$bookId, chapter=$chapterNumber...');
 
         baseBookSub = streamBookById(bookId).listen((book) async {
           if (book == null) {

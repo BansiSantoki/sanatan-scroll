@@ -33,6 +33,7 @@ class _ReadingHistoryCalendarScreenState
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final horizontalPadding = width >= 900
         ? 40.0
@@ -43,7 +44,7 @@ class _ReadingHistoryCalendarScreenState
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -62,10 +63,10 @@ class _ReadingHistoryCalendarScreenState
                     children: [
                       IconButton(
                         onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.chevron_left_rounded,
                           size: 32,
-                          color: Color(0xFF1B1B1B),
+                          color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                         ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -82,7 +83,7 @@ class _ReadingHistoryCalendarScreenState
                       context,
                       fontSize: 36,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                       height: 1.05,
                       isSerif: true,
                     ),
@@ -97,7 +98,7 @@ class _ReadingHistoryCalendarScreenState
                       context,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF555555),
+                      color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF555555),
                     ),
                   ),
 
@@ -155,6 +156,8 @@ class StreakSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
         final streak = provider.streak;
@@ -168,15 +171,15 @@ class StreakSummaryCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF9F0),
+            color: isDark ? const Color(0xFF1E241E) : const Color(0xFFFFF9F0),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: const Color(0xFFEAE2D2),
+              color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -195,18 +198,22 @@ class StreakSummaryCard extends StatelessWidget {
                         context,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF666666),
+                        color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF666666),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      '$currentStreak ${currentStreak == 1 ? 'Day' : 'Days'}',
-                      style: AppTextStyles.getFont(
-                        context,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1B1B1B),
-                        isSerif: true,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '$currentStreak ${currentStreak == 1 ? 'Day' : 'Days'}',
+                        style: AppTextStyles.getFont(
+                          context,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                          isSerif: true,
+                        ),
                       ),
                     ),
                   ],
@@ -217,7 +224,7 @@ class StreakSummaryCard extends StatelessWidget {
               Container(
                 width: 1,
                 height: 38,
-                color: const Color(0xFFEAE2D2),
+                color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
               ),
 
               // Column 2: Active Days
@@ -233,18 +240,22 @@ class StreakSummaryCard extends StatelessWidget {
                           context,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF666666),
+                          color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF666666),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        '$activeDays',
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1B1B1B),
-                          isSerif: true,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '$activeDays',
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                            isSerif: true,
+                          ),
                         ),
                       ),
                     ],
@@ -256,7 +267,7 @@ class StreakSummaryCard extends StatelessWidget {
               Container(
                 width: 1,
                 height: 38,
-                color: const Color(0xFFEAE2D2),
+                color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
               ),
 
               // Column 3: Started
@@ -272,18 +283,22 @@ class StreakSummaryCard extends StatelessWidget {
                           context,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF666666),
+                          color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF666666),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        startedText,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1B1B1B),
-                          isSerif: true,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          startedText,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                            isSerif: true,
+                          ),
                         ),
                       ),
                     ],
@@ -324,6 +339,8 @@ class MonthlyCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
         final now = DateTime.now();
@@ -354,17 +371,17 @@ class MonthlyCalendarCard extends StatelessWidget {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF9F0),
+            color: isDark ? const Color(0xFF1E241E) : const Color(0xFFFFF9F0),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: const Color(0xFFEAE2D2),
+              color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -379,10 +396,10 @@ class MonthlyCalendarCard extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: onPreviousMonth,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.chevron_left_rounded,
                       size: 26,
-                      color: Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     ),
                     splashRadius: 20,
                   ),
@@ -392,16 +409,16 @@ class MonthlyCalendarCard extends StatelessWidget {
                       context,
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                       isSerif: true,
                     ),
                   ),
                   IconButton(
                     onPressed: onNextMonth,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.chevron_right_rounded,
                       size: 26,
-                      color: Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     ),
                     splashRadius: 20,
                   ),
@@ -422,7 +439,7 @@ class MonthlyCalendarCard extends StatelessWidget {
                           context,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF666666),
+                          color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF666666),
                         ),
                       ),
                     ),
@@ -439,9 +456,9 @@ class MonthlyCalendarCard extends StatelessWidget {
                 itemCount: totalGridCells,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 7,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 6,
-                  childAspectRatio: 0.95,
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 4,
+                  childAspectRatio: 1.0,
                 ),
                 itemBuilder: (context, index) {
                   int dayNum;
@@ -487,7 +504,7 @@ class MonthlyCalendarCard extends StatelessWidget {
                   context,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF555555),
+                  color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF555555),
                 ),
               ),
             ],
@@ -513,15 +530,17 @@ class _CalendarDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (!isCurrentMonth) {
       return Center(
         child: Text(
           '$dayNumber',
           style: AppTextStyles.getFont(
             context,
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: FontWeight.w400,
-            color: const Color(0xFFCCCCCC),
+            color: isDark ? Colors.white24 : const Color(0xFFCCCCCC),
           ),
         ),
       );
@@ -530,17 +549,20 @@ class _CalendarDayCell extends StatelessWidget {
     if (isCompleted) {
       // Completed reading day: filled dark green circle with white checkmark
       return Center(
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: const BoxDecoration(
-            color: Color(0xFF5D7046), // Muted dark green
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.check_rounded,
-            color: Colors.white,
-            size: 20,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Color(0xFF5D7046), // Muted dark green
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ),
       );
@@ -549,71 +571,79 @@ class _CalendarDayCell extends StatelessWidget {
     if (isToday) {
       // Today indicator: highlighted border circle with a dot underneath
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFC85A32),
-                  width: 1.5,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  '$dayNumber',
+                  style: AppTextStyles.getFont(
+                    context,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                    isSerif: true,
+                  ),
                 ),
               ),
-              child: Text(
-                '$dayNumber',
-                style: AppTextStyles.getFont(
-                  context,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1B1B1B),
-                  isSerif: true,
+              const SizedBox(height: 2),
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+                  shape: BoxShape.circle,
                 ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Container(
-              width: 4,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: Color(0xFFC85A32),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
     // Standard unread day in current month: light outline circle
     return Center(
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: const Color(0xFFE5DEC9),
-            width: 1.2,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isDark ? Colors.white24 : const Color(0xFFE5DEC9),
+              width: 1.2,
+            ),
           ),
-        ),
-        child: Text(
-          '$dayNumber',
-          style: AppTextStyles.getFont(
-            context,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF444444),
-            isSerif: true,
+          child: Text(
+            '$dayNumber',
+            style: AppTextStyles.getFont(
+              context,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+              color: isDark ? const Color(0xFFD0D4D0) : const Color(0xFF444444),
+              isSerif: true,
+            ),
           ),
         ),
       ),
     );
   }
 }
+

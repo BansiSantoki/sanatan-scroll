@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/locale_provider.dart';
+import '../../../../providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -24,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
         ];
 
         return AlertDialog(
-          backgroundColor: const Color(0xFFFFFDF9),
+          backgroundColor: Theme.of(dialogContext).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -32,9 +32,8 @@ class SettingsScreen extends StatelessWidget {
             dialogContext.l10n.selectLanguage,
             style: AppTextStyles.getFont(
               dialogContext,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1B1B1B),
             ),
           ),
           content: Column(
@@ -48,14 +47,15 @@ class SettingsScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                tileColor: isSelected ? const Color(0xFFFDECDA) : Colors.transparent,
+                tileColor: isSelected
+                    ? const Color(0xFFC85A32).withValues(alpha: 0.15)
+                    : Colors.transparent,
                 title: Text(
                   label,
                   style: AppTextStyles.getFont(
                     dialogContext,
                     fontSize: 15,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: const Color(0xFF23180C),
                   ),
                 ),
                 trailing: isSelected
@@ -73,10 +73,91 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  void _showThemeDialog(BuildContext context) {
+    final themeProvider = context.read<ThemeProvider>();
+    final currentMode = themeProvider.themeMode;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = dialogContext.l10n;
+        final options = [
+          {'mode': ThemeMode.light, 'label': l10n.lightMode, 'icon': Icons.light_mode_outlined},
+          {'mode': ThemeMode.dark, 'label': l10n.darkMode, 'icon': Icons.dark_mode_outlined},
+          {'mode': ThemeMode.system, 'label': l10n.systemDefault, 'icon': Icons.settings_brightness_outlined},
+        ];
+
+        return AlertDialog(
+          backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            l10n.selectTheme,
+            style: AppTextStyles.getFont(
+              dialogContext,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.map((opt) {
+              final mode = opt['mode'] as ThemeMode;
+              final label = opt['label'] as String;
+              final icon = opt['icon'] as IconData;
+              final isSelected = currentMode == mode;
+
+              return ListTile(
+                leading: Icon(icon, color: isSelected ? const Color(0xFFC85A32) : null),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                tileColor: isSelected
+                    ? const Color(0xFFC85A32).withValues(alpha: 0.15)
+                    : Colors.transparent,
+                title: Text(
+                  label,
+                  style: AppTextStyles.getFont(
+                    dialogContext,
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check_circle_rounded, color: Color(0xFFC85A32))
+                    : null,
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  themeProvider.setThemeMode(mode);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final localeProvider = context.watch<LocaleProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
+
+    String currentThemeLabel;
+    if (themeProvider.themeMode == ThemeMode.dark) {
+      currentThemeLabel = l10n.darkMode;
+    } else if (themeProvider.themeMode == ThemeMode.system) {
+      currentThemeLabel = l10n.systemDefault;
+    } else {
+      currentThemeLabel = l10n.lightMode;
+    }
+
+    final cardColor = Theme.of(context).cardTheme.color ?? const Color(0xFFFFFDF9);
+    final borderColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white12
+        : const Color(0xFFE8DEC8).withValues(alpha: 0.8);
 
     return Scaffold(
       appBar: AppBar(
@@ -84,8 +165,6 @@ class SettingsScreen extends StatelessWidget {
           l10n.settings,
           style: AppTextStyles.getFont(context, fontSize: 18),
         ),
-        backgroundColor: AppColors.cardBackground,
-        foregroundColor: AppColors.darkText,
         elevation: 0,
       ),
       body: SafeArea(
@@ -103,14 +182,14 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Language Card
               Card(
-                color: const Color(0xFFFFFDF9),
+                color: cardColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: const Color(0xFFE8DEC8).withValues(alpha: 0.8),
-                  ),
+                  side: BorderSide(color: borderColor),
                 ),
                 child: ListTile(
                   leading: const Icon(Icons.language_rounded, color: Color(0xFFC85A32)),
@@ -127,11 +206,60 @@ class SettingsScreen extends StatelessWidget {
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 13,
-                      color: Colors.black54,
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => _showLanguageDialog(context),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Theme Mode Card (Dark / Light Mode)
+              Card(
+                color: cardColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: borderColor),
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    themeProvider.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                    color: const Color(0xFFC85A32),
+                  ),
+                  title: Text(
+                    l10n.themeMode,
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    currentThemeLabel,
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 13,
+                      color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Switch(
+                        value: themeProvider.isDark,
+                        activeThumbColor: const Color(0xFFC85A32),
+                        onChanged: (val) {
+                          themeProvider.setThemeMode(val ? ThemeMode.dark : ThemeMode.light);
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                  onTap: () => _showThemeDialog(context),
                 ),
               ),
             ],

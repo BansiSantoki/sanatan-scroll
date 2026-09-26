@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+ 
 class ReadingPosition {
   const ReadingPosition({
     required this.chapterNumber,
@@ -17,14 +18,54 @@ class ReadingProgressProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, ReadingPosition> _positions = {};
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userDocSubscription;
   String _activeUserId = '';
+  String _lastReadBookId = 'bhagavad_gita';
+
+  String get lastReadBookId => _lastReadBookId;
+
+  ReadingProgressProvider() {
+    _loadLocalLastRead();
+  }
+
+  Future<void> _loadLocalLastRead() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('last_read_book_id');
+      if (saved != null && saved.isNotEmpty) {
+        _lastReadBookId = saved;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
 
   ReadingPosition? positionFor(String bookId) => _positions[bookId];
+
+  Future<void> setLastReadBookId(String bookId) async {
+    if (bookId.isEmpty) return;
+    _lastReadBookId = bookId;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_read_book_id', bookId);
+    } catch (_) {}
+
+    if (_activeUserId.isNotEmpty) {
+      try {
+        await _firestore.collection('users').doc(_activeUserId).set({
+          'lastReadBookId': bookId,
+          'lastReadUpdatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (_) {}
+    }
+  }
 
   void bindUser(String userId) {
     if (_activeUserId == userId) return;
 
     _subscription?.cancel();
+    _userDocSubscription?.cancel();
     _activeUserId = userId;
     _positions.clear();
 
@@ -32,6 +73,21 @@ class ReadingProgressProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    _userDocSubscription = _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .listen((docSnap) {
+      if (docSnap.exists && docSnap.data() != null) {
+        final data = docSnap.data()!;
+        final savedBook = data['lastReadBookId'] as String?;
+        if (savedBook != null && savedBook.isNotEmpty) {
+          _lastReadBookId = savedBook;
+          notifyListeners();
+        }
+      }
+    });
 
     _subscription = _firestore
         .collection('users')
@@ -60,7 +116,13 @@ class ReadingProgressProvider extends ChangeNotifier {
       verseNumber: verseNumber,
     );
     _positions[bookId] = position;
+    _lastReadBookId = bookId;
     notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_read_book_id', bookId);
+    } catch (_) {}
 
     if (_activeUserId.isEmpty) return;
 
@@ -75,6 +137,13 @@ class ReadingProgressProvider extends ChangeNotifier {
       'verseNumber': verseNumber,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    await _firestore.collection('users').doc(_activeUserId).set({
+      'lastReadBookId': bookId,
+      'lastReadChapterNumber': chapterNumber,
+      'lastReadVerseNumber': verseNumber,
+      'lastReadUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   static int _asInt(dynamic value, {required int fallback}) {
@@ -87,6 +156,7 @@ class ReadingProgressProvider extends ChangeNotifier {
   @override
   void dispose() {
     _subscription?.cancel();
+    _userDocSubscription?.cancel();
     super.dispose();
   }
 }

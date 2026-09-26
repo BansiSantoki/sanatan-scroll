@@ -65,12 +65,12 @@ class AppTypography {
   }
 
   /// Responsive Sanskrit Shlok Font Size Calculation:
-  /// Short/normal: 32sp, Medium-long: 30sp, Long: 28sp, Very long: 26sp (minimum). Never below 26sp.
+  /// Target approximately 2 lines for normal shloks on mobile screens.
   static double getShlokFontSize(int textLength) {
-    if (textLength <= 60) return 32.0;
-    if (textLength <= 110) return 30.0;
-    if (textLength <= 170) return 28.0;
-    return 26.0; // Minimum size cap
+    if (textLength <= 60) return 21.0;
+    if (textLength <= 120) return 19.5;
+    if (textLength <= 180) return 18.5;
+    return 17.5;
   }
 
   // ===========================================================================

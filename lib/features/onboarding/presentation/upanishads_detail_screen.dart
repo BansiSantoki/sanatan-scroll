@@ -451,19 +451,21 @@ class _UpanishadsHero extends StatelessWidget {
                       top: 121,
                       right: 15,
 
-                      child: Text(
-                        'Upanishads',
-
-                        maxLines: 1,
-
-                        style:
-                            GoogleFonts.cormorantGaramond(
-                          fontSize: 57,
-                          fontWeight:
-                              FontWeight.w700,
-                          height: 0.95,
-                          color: const Color(
-                            0xFF17200F,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Upanishads',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 57,
+                            fontWeight: FontWeight.w700,
+                            height: 1.05,
+                            color: const Color(
+                              0xFF17200F,
+                            ),
                           ),
                         ),
                       ),

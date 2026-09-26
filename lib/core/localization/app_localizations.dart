@@ -143,6 +143,15 @@ class AppLocalizations {
       'beginYourJourney': 'Begin Your Journey',
       'accountDetails': 'Account Details',
       'appVersion': 'Version 1.0.0',
+      'whatBringsYouToSanatanScroll': 'What brings you to\nSanatan Scroll?',
+      'selectAspirationsSubtitle': 'Select your spiritual aspirations to\npersonalise your daily reading path.',
+      'understandScriptures': 'Understand Hindu Scriptures',
+      'learnAboutRoots': 'Learn About My Roots',
+      'dealWithOverthinking': 'Deal With Overthinking',
+      'buildSpiritualHabit': 'Build a Spiritual Habit',
+      'findGreaterPeace': 'Find Greater Peace',
+      'findPurpose': 'Find Purpose',
+      'continueButton': 'Continue',
       'day': 'Day',
       'days': 'Days',
       'mon': 'Mon',
@@ -152,6 +161,11 @@ class AppLocalizations {
       'fri': 'Fri',
       'sat': 'Sat',
       'sun': 'Sun',
+      'themeMode': 'Theme',
+      'darkMode': 'Dark Mode',
+      'lightMode': 'Light Mode',
+      'systemDefault': 'System Default',
+      'selectTheme': 'Select Theme',
     },
     'gu': {
       'appName': 'સનાતન સ્ક્રોલ',
@@ -275,6 +289,15 @@ class AppLocalizations {
       'beginYourJourney': 'તમારી અંતરંગ યાત્રા શરૂ કરો',
       'accountDetails': 'ખાતાની વિગતો',
       'appVersion': 'આવૃત્તિ 1.0.0',
+      'whatBringsYouToSanatanScroll': 'તમને સનાતન સ્ક્રોલ પર\nશું લાવે છે?',
+      'selectAspirationsSubtitle': 'તમારો દૈનિક પઠન માર્ગ વ્યક્તિગત કરવા\nતમારી આધ્યાત્મિક આકાંક્ષાઓ પસંદ કરો.',
+      'understandScriptures': 'હિન્દુ શાસ્ત્રો સમજો',
+      'learnAboutRoots': 'મારા મૂળ વિશે જાણો',
+      'dealWithOverthinking': 'અતિશય વિચારવાથી મુક્તિ મેળવો',
+      'buildSpiritualHabit': 'આધ્યાત્મિક ટેવ કેળવો',
+      'findGreaterPeace': 'વધુ શાંતિ મેળવો',
+      'findPurpose': 'જીવનનું પ્રયોજન શોધો',
+      'continueButton': 'આગળ વધો',
       'day': 'દિવસ',
       'days': 'દિવસો',
       'mon': 'સોમ',
@@ -284,6 +307,11 @@ class AppLocalizations {
       'fri': 'શુક્ર',
       'sat': 'શનિ',
       'sun': 'રવિ',
+      'themeMode': 'થીમ',
+      'darkMode': 'ડાર્ક મોડ',
+      'lightMode': 'લાઈટ મોડ',
+      'systemDefault': 'સિસ્ટમ ડિફોલ્ટ',
+      'selectTheme': 'થીમ પસંદ કરો',
     },
     'hi': {
       'appName': 'सनातन स्क्रॉल',
@@ -407,6 +435,15 @@ class AppLocalizations {
       'beginYourJourney': 'अपनी यात्रा शुरू करें',
       'accountDetails': 'खाता विवरण',
       'appVersion': 'संस्करण 1.0.0',
+      'whatBringsYouToSanatanScroll': 'आपको सनातन स्क्रॉल पर\nक्या लाता है?',
+      'selectAspirationsSubtitle': 'अपने दैनिक पठन पथ को व्यक्तिगत बनाने के लिए\nअपनी आध्यात्मिक आकांक्षाएं चुनें।',
+      'understandScriptures': 'हिंदू शास्त्रों को समझें',
+      'learnAboutRoots': 'अपनी जड़ों के बारे में जानें',
+      'dealWithOverthinking': 'अति-सोचने से निपटें',
+      'buildSpiritualHabit': 'आध्यात्मिक आदत बनाएं',
+      'findGreaterPeace': 'अधिक शांति प्राप्त करें',
+      'findPurpose': 'जीवन का उद्देश्य खोजें',
+      'continueButton': 'आगे बढ़ें',
       'day': 'दिन',
       'days': 'दिन',
       'mon': 'सोम',
@@ -416,6 +453,11 @@ class AppLocalizations {
       'fri': 'शुक्र',
       'sat': 'शनि',
       'sun': 'रवि',
+      'themeMode': 'थीम',
+      'darkMode': 'डार्क मोड',
+      'lightMode': 'लाइट मोड',
+      'systemDefault': 'सिस्टम डिफ़ॉल्ट',
+      'selectTheme': 'थीम चुनें',
     },
   };
 
@@ -561,6 +603,15 @@ class AppLocalizations {
   String get beginYourJourney => translate('beginYourJourney');
   String get accountDetails => translate('accountDetails');
   String get appVersion => translate('appVersion');
+  String get whatBringsYouToSanatanScroll => translate('whatBringsYouToSanatanScroll');
+  String get selectAspirationsSubtitle => translate('selectAspirationsSubtitle');
+  String get understandScriptures => translate('understandScriptures');
+  String get learnAboutRoots => translate('learnAboutRoots');
+  String get dealWithOverthinking => translate('dealWithOverthinking');
+  String get buildSpiritualHabit => translate('buildSpiritualHabit');
+  String get findGreaterPeace => translate('findGreaterPeace');
+  String get findPurpose => translate('findPurpose');
+  String get continueButton => translate('continueButton');
   String get day => translate('day');
   String get days => translate('days');
   String get mon => translate('mon');
@@ -570,6 +621,11 @@ class AppLocalizations {
   String get fri => translate('fri');
   String get sat => translate('sat');
   String get sun => translate('sun');
+  String get themeMode => translate('themeMode');
+  String get darkMode => translate('darkMode');
+  String get lightMode => translate('lightMode');
+  String get systemDefault => translate('systemDefault');
+  String get selectTheme => translate('selectTheme');
 }
 
 class _AppLocalizationsDelegate

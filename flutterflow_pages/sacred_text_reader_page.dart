@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../lib/core/services/share_service.dart';
 import '../flutterflow_custom_code/custom_widgets/tts_audio_player_widget.dart';
 
 class SacredTextReaderPageWidget extends StatefulWidget {
@@ -54,6 +55,18 @@ class _SacredTextReaderPageWidgetState extends State<SacredTextReaderPageWidget>
               color: const Color(0xFF6B1F2A),
             ),
             onPressed: () => setState(() => _isSaved = !_isSaved),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.share_outlined,
+              color: Color(0xFF6B1F2A),
+            ),
+            onPressed: () {
+              ShareService.share(
+                title: 'Chapter ${widget.initialChapterNumber} — Verse $_currentVerse',
+                text: 'Chapter ${widget.initialChapterNumber} — Verse $_currentVerse\n\n$sanskritText\n\nTranslation:\n$translationText\n\n— Sanatan Scroll',
+              );
+            },
           ),
         ],
         centerTitle: true,

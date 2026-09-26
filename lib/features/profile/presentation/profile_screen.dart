@@ -16,6 +16,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final width = MediaQuery.sizeOf(context).width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final horizontalPadding = width >= 900
         ? 40.0
@@ -26,7 +27,7 @@ class ProfileScreen extends StatelessWidget {
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Consumer<AuthProvider>(
           builder: (context, auth, child) {
@@ -42,127 +43,112 @@ class ProfileScreen extends StatelessWidget {
                 ? auth.userPhotoUrl
                 : firebaseUser?.photoURL;
 
-            return Stack(
-              children: [
-                // Top-Right Sun & Botanical Leaf Decorative Graphic
-                Positioned(
-                  top: -20,
-                  right: -20,
-                  child: CustomPaint(
-                    size: const Size(180, 180),
-                    painter: _HeaderDecorationPainter(),
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: maxContentWidth,
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    left: horizontalPadding,
+                    right: horizontalPadding,
+                    top: 16,
+                    bottom: 24,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header (My Profile & Subtitle)
+                      _buildHeader(context),
+
+                      const SizedBox(height: 20),
+
+                      // Profile Summary Card
+                      _ProfileSummaryCard(
+                        name: name,
+                        email: email,
+                        photoUrl: photoUrl,
+                        onEdit: () => _showProfileEditor(context),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 1. Milestones & Achievements Card
+                      _MenuTileCard(
+                        icon: Icons.emoji_events_outlined,
+                        iconBgColor: isDark ? const Color(0xFF2E3824) : const Color(0xFFE0E5CE),
+                        iconColor: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
+                        cardBgColor: isDark ? const Color(0xFF1F281B) : const Color(0xFFEFF2E4),
+                        title: l10n.milestonesAndAchievements,
+                        subtitle: l10n.milestonesSubtitle,
+                        onTap: () {
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.milestonesAndAchievements),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                        },
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 2. Settings Card
+                      _MenuTileCard(
+                        icon: Icons.settings_outlined,
+                        iconBgColor: isDark ? const Color(0xFF3D2C1E) : const Color(0xFFF7D4B6),
+                        iconColor: isDark ? const Color(0xFFE88B60) : const Color(0xFFD96E28),
+                        cardBgColor: isDark ? const Color(0xFF2A2017) : const Color(0xFFFDECDA),
+                        title: l10n.settings,
+                        subtitle: l10n.settingsSubtitle,
+                        onTap: () => Navigator.of(context).pushNamed(AppRoutes.settings),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 3. Help & Support Card
+                      _MenuTileCard(
+                        icon: Icons.help_outline_rounded,
+                        iconBgColor: isDark ? const Color(0xFF3B331F) : const Color(0xFFF9E7B6),
+                        iconColor: isDark ? const Color(0xFFE8C260) : const Color(0xFFC8932A),
+                        cardBgColor: isDark ? const Color(0xFF292416) : const Color(0xFFFDF4DA),
+                        title: l10n.helpAndSupport,
+                        subtitle: l10n.helpSubtitle,
+                        onTap: () => _showInfoDialog(
+                          context,
+                          l10n.helpAndSupport,
+                          'Need help with Sanatan Scroll? We are here to support your spiritual journey.',
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // 4. Synced Across Devices Card
+                      const _SyncedDevicesCard(),
+
+                      const SizedBox(height: 14),
+
+                      // 5. Sign Out Option
+                      _MenuTileCard(
+                        key: const Key('logout'),
+                        icon: Icons.logout_rounded,
+                        iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
+                        iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                        cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
+                        title: l10n.signOut,
+                        titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                        subtitle: l10n.signOutSubtitle,
+                        onTap: () => _confirmSignOut(context),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-
-                // Main Scrollable Content
-                Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: maxContentWidth,
-                    ),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.only(
-                        left: horizontalPadding,
-                        right: horizontalPadding,
-                        top: 10,
-                        bottom: 24,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header (My Profile & Subtitle)
-                          _buildHeader(context),
-
-                          const SizedBox(height: 20),
-
-                          // Profile Summary Card
-                          _ProfileSummaryCard(
-                            name: name,
-                            email: email,
-                            photoUrl: photoUrl,
-                            onEdit: () => _showProfileEditor(context),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // 1. Milestones & Achievements Card
-                          _MenuTileCard(
-                            icon: Icons.emoji_events_outlined,
-                            iconBgColor: const Color(0xFFE0E5CE),
-                            iconColor: const Color(0xFF495736),
-                            cardBgColor: const Color(0xFFEFF2E4),
-                            title: l10n.milestonesAndAchievements,
-                            subtitle: l10n.milestonesSubtitle,
-                            onTap: () {
-                              ScaffoldMessenger.of(context)
-                                ..hideCurrentSnackBar()
-                                ..showSnackBar(
-                                  SnackBar(
-                                    content: Text(l10n.milestonesAndAchievements),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                            },
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // 2. Settings Card
-                          _MenuTileCard(
-                            icon: Icons.settings_outlined,
-                            iconBgColor: const Color(0xFFF7D4B6),
-                            iconColor: const Color(0xFFD96E28),
-                            cardBgColor: const Color(0xFFFDECDA),
-                            title: l10n.settings,
-                            subtitle: l10n.settingsSubtitle,
-                            onTap: () => Navigator.of(context).pushNamed(AppRoutes.settings),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // 3. Help & Support Card
-                          _MenuTileCard(
-                            icon: Icons.help_outline_rounded,
-                            iconBgColor: const Color(0xFFF9E7B6),
-                            iconColor: const Color(0xFFC8932A),
-                            cardBgColor: const Color(0xFFFDF4DA),
-                            title: l10n.helpAndSupport,
-                            subtitle: l10n.helpSubtitle,
-                            onTap: () => _showInfoDialog(
-                              context,
-                              l10n.helpAndSupport,
-                              'Need help with Sanatan Scroll? We are here to support your spiritual journey.',
-                            ),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          // 4. Synced Across Devices Card
-                          const _SyncedDevicesCard(),
-
-                          const SizedBox(height: 14),
-
-                          // 5. Sign Out Option (ID: logout)
-                          _MenuTileCard(
-                            key: const Key('logout'),
-                            icon: Icons.logout_rounded,
-                            iconBgColor: const Color(0xFFFAD1C7),
-                            iconColor: const Color(0xFFC83A2A),
-                            cardBgColor: const Color(0xFFFDE8E4),
-                            title: l10n.signOut,
-                            titleColor: const Color(0xFFC83A2A),
-                            subtitle: l10n.signOutSubtitle,
-                            onTap: () => _confirmSignOut(context),
-                          ),
-
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),
@@ -177,6 +163,8 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     final l10n = context.l10n;
     final langCode = context.watch<LocaleProvider>().languageCode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -184,7 +172,7 @@ class ProfileScreen extends StatelessWidget {
           l10n.myProfile,
           style: AppTypography.pageTitle(
             langCode,
-            color: const Color(0xFF18392C),
+            color: isDark ? const Color(0xFFE6E8E6) : const Color(0xFF18392C),
           ),
         ),
         const SizedBox(height: 4),
@@ -192,7 +180,7 @@ class ProfileScreen extends StatelessWidget {
           l10n.yourAccountYourJourney,
           style: AppTypography.compact(
             langCode,
-            color: const Color(0xFF555555),
+            color: isDark ? Colors.white60 : const Color(0xFF555555),
           ),
         ),
       ],
@@ -205,6 +193,8 @@ class ProfileScreen extends StatelessWidget {
 
   void _confirmSignOut(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -212,14 +202,13 @@ class ProfileScreen extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          backgroundColor: const Color(0xFFFAF7F2),
+          backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
           title: Text(
             l10n.signOutConfirmTitle,
             style: AppTextStyles.getFont(
               context,
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1B1B1B),
             ),
           ),
           content: Text(
@@ -228,7 +217,6 @@ class ProfileScreen extends StatelessWidget {
               context,
               fontSize: 14,
               height: 1.45,
-              color: const Color(0xFF555555),
             ),
           ),
           actions: [
@@ -272,6 +260,8 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _showProfileEditor(BuildContext context) async {
     final l10n = context.l10n;
     final auth = context.read<AuthProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final nameController = TextEditingController(text: auth.userName);
     final photoController = TextEditingController(text: auth.userPhotoUrl ?? '');
 
@@ -282,7 +272,7 @@ class ProfileScreen extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          backgroundColor: const Color(0xFFFAF7F2),
+          backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
           title: Text(
             l10n.editProfile,
             style: AppTextStyles.getFont(
@@ -349,7 +339,7 @@ class ProfileScreen extends StatelessWidget {
                 }
               },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1B1B1B),
+                backgroundColor: isDark ? const Color(0xFFE88B60) : const Color(0xFF1B1B1B),
               ),
               child: Text(
                 l10n.save,
@@ -367,6 +357,8 @@ class ProfileScreen extends StatelessWidget {
 
   void _showInfoDialog(BuildContext context, String title, String message) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -374,7 +366,7 @@ class ProfileScreen extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          backgroundColor: const Color(0xFFFAF7F2),
+          backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
           title: Text(
             title,
             style: AppTextStyles.getFont(
@@ -425,22 +417,23 @@ class _ProfileSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFFFF7EF),
-            Color(0xFFFDE8D4),
-          ],
+        gradient: LinearGradient(
+          colors: isDark
+              ? const [Color(0xFF2A2219), Color(0xFF221B14)]
+              : const [Color(0xFFFFF7EF), Color(0xFFFDE8D4)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -454,17 +447,17 @@ class _ProfileSummaryCard extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 90,
-                height: 90,
+                width: 85,
+                height: 85,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF3A3026) : Colors.white,
                     width: 3.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -492,7 +485,7 @@ class _ProfileSummaryCard extends StatelessWidget {
                       color: const Color(0xFFE48643),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF221B14) : Colors.white,
                         width: 2,
                       ),
                     ),
@@ -520,9 +513,9 @@ class _ProfileSummaryCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.getFont(
                     context,
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
+                    color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     height: 1.05,
                   ),
                 ),
@@ -534,7 +527,7 @@ class _ProfileSummaryCard extends StatelessWidget {
                   style: AppTextStyles.getFont(
                     context,
                     fontSize: 13,
-                    color: const Color(0xFF555555),
+                    color: isDark ? Colors.white60 : const Color(0xFF555555),
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -545,16 +538,16 @@ class _ProfileSummaryCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE4E8D5),
+                    color: isDark ? const Color(0xFF2E3824) : const Color(0xFFE4E8D5),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle_outline,
                         size: 13,
-                        color: Color(0xFF495736),
+                        color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
                       ),
                       const SizedBox(width: 5),
                       Text(
@@ -563,7 +556,7 @@ class _ProfileSummaryCard extends StatelessWidget {
                           context,
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF495736),
+                          color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
                         ),
                       ),
                     ],
@@ -583,7 +576,7 @@ class _ProfileSummaryCard extends StatelessWidget {
       child: const Center(
         child: Icon(
           Icons.person,
-          size: 48,
+          size: 44,
           color: Colors.white,
         ),
       ),
@@ -619,6 +612,8 @@ class _MenuTileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -660,9 +655,9 @@ class _MenuTileCard extends StatelessWidget {
                         title,
                         style: AppTextStyles.getFont(
                           context,
-                          fontSize: 19,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: titleColor ?? const Color(0xFF1B1B1B),
+                          color: titleColor ?? (isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B)),
                           height: 1.05,
                         ),
                       ),
@@ -672,7 +667,9 @@ class _MenuTileCard extends StatelessWidget {
                         style: AppTextStyles.getFont(
                           context,
                           fontSize: 12.5,
-                          color: titleColor != null ? titleColor!.withValues(alpha: 0.7) : const Color(0xFF555555),
+                          color: titleColor != null
+                              ? titleColor!.withValues(alpha: 0.7)
+                              : (isDark ? Colors.white60 : const Color(0xFF555555)),
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -683,7 +680,7 @@ class _MenuTileCard extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   size: 22,
-                  color: titleColor ?? const Color(0xFF1B1B1B),
+                  color: titleColor ?? (isDark ? Colors.white70 : const Color(0xFF1B1B1B)),
                 ),
               ],
             ),
@@ -703,15 +700,16 @@ class _SyncedDevicesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFEFF2E4),
-            Color(0xFFE5EAD4),
-          ],
+        gradient: LinearGradient(
+          colors: isDark
+              ? const [Color(0xFF1F281B), Color(0xFF192016)]
+              : const [Color(0xFFEFF2E4), Color(0xFFE5EAD4)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -720,40 +718,29 @@ class _SyncedDevicesCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Cloud Illustration Container with Sparkles
+          // Devices Icon Container
           Container(
-            width: 85,
-            height: 85,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7FAF0),
+            width: 75,
+            height: 75,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2B3624) : const Color(0xFFF7FAF0),
               shape: BoxShape.circle,
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Icon(
-                  Icons.cloud_sync_outlined,
-                  size: 40,
-                  color: Color(0xFF495736),
+                Icon(
+                  Icons.devices_rounded,
+                  size: 36,
+                  color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
                 ),
-                // Sparkle 1
                 Positioned(
-                  top: 14,
-                  left: 14,
+                  top: 10,
+                  right: 10,
                   child: Icon(
                     Icons.auto_awesome,
                     size: 10,
-                    color: const Color(0xFF495736).withValues(alpha: 0.5),
-                  ),
-                ),
-                // Sparkle 2
-                Positioned(
-                  bottom: 14,
-                  right: 14,
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 10,
-                    color: const Color(0xFF495736).withValues(alpha: 0.5),
+                    color: (isDark ? const Color(0xFFA5B888) : const Color(0xFF495736)).withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -771,9 +758,9 @@ class _SyncedDevicesCard extends StatelessWidget {
                   context.l10n.syncedAcrossDevices,
                   style: AppTextStyles.getFont(
                     context,
-                    fontSize: 21,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
+                    color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     height: 1.05,
                   ),
                 ),
@@ -782,36 +769,36 @@ class _SyncedDevicesCard extends StatelessWidget {
                   context.l10n.syncedSubtitle,
                   style: AppTextStyles.getFont(
                     context,
-                    fontSize: 12.5,
-                    color: const Color(0xFF4A5538),
+                    fontSize: 12,
+                    color: isDark ? const Color(0xFFA5B888) : const Color(0xFF4A5538),
                     fontWeight: FontWeight.w400,
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 7,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4E5A35),
-                    borderRadius: BorderRadius.circular(18),
+                    color: isDark ? const Color(0xFF38462C) : const Color(0xFF4E5A35),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         Icons.check_circle_outline,
-                        size: 14,
+                        size: 13,
                         color: Colors.white,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         context.l10n.accountConnected,
                         style: AppTextStyles.getFont(
                           context,
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -826,65 +813,4 @@ class _SyncedDevicesCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ============================================================
-// HEADER DECORATION PAINTER (Golden Circular Gradient & Leaves)
-// ============================================================
-
-class _HeaderDecorationPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Golden Sun Circles
-    final sunCenter = Offset(w * 0.75, h * 0.35);
-
-    final sunPaint1 = Paint()
-      ..color = const Color(0xFFFBE4C8).withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill;
-
-    final sunPaint2 = Paint()
-      ..color = const Color(0xFFF7C898).withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(sunCenter, 70, sunPaint1);
-    canvas.drawCircle(sunCenter, 45, sunPaint2);
-
-    // Botanical Leaf Branch Stem
-    final stemPaint = Paint()
-      ..color = const Color(0xFF495736).withValues(alpha: 0.75)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    final stem = Path();
-    stem.moveTo(w * 0.95, h * 0.05);
-    stem.cubicTo(w * 0.75, h * 0.25, w * 0.65, h * 0.55, w * 0.45, h * 0.75);
-    canvas.drawPath(stem, stemPaint);
-
-    // Leaves along stem
-    _drawLeaf(canvas, Offset(w * 0.82, h * 0.20), -0.5, stemPaint);
-    _drawLeaf(canvas, Offset(w * 0.72, h * 0.36), 0.4, stemPaint);
-    _drawLeaf(canvas, Offset(w * 0.58, h * 0.52), -0.6, stemPaint);
-    _drawLeaf(canvas, Offset(w * 0.48, h * 0.68), 0.5, stemPaint);
-  }
-
-  void _drawLeaf(Canvas canvas, Offset tip, double angle, Paint paint) {
-    canvas.save();
-    canvas.translate(tip.dx, tip.dy);
-    canvas.rotate(angle);
-
-    final leaf = Path();
-    leaf.moveTo(0, 0);
-    leaf.quadraticBezierTo(8, -10, 18, -12);
-    leaf.quadraticBezierTo(10, 0, 0, 0);
-    canvas.drawPath(leaf, paint);
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

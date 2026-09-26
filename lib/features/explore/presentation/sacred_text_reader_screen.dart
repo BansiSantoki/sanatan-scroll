@@ -127,15 +127,49 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
-    final chapterWord = AppLocalizations.of(context).chapter;
-    final verseWord = AppLocalizations.of(context).verse;
-    final title = '${book.getLocalizedTitle(langCode)} - $chapterWord ${chapter.chapterNumber}, $verseWord ${verse.verseNumber}';
-    final content = '${verse.getQuoteText(langCode)}\n\n${verse.getLocalizedTranslation(langCode)}';
+    final l10n = AppLocalizations.of(context);
+    final chapterWord = l10n.chapter;
+    final verseWord = l10n.verse;
+    final bookTitle = book.getLocalizedTitle(langCode);
 
-    ShareService.showOptions(
-      context: context,
-      title: title,
-      text: '$title\n\n$content',
+    String topHeader;
+    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
+      final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
+      final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
+      final isBalaKanda = kanda == 1;
+      final kandaName = isBalaKanda ? 'Bala Kanda' : 'Kanda $kanda';
+      topHeader = '$bookTitle · $kandaName (Sarga $sarga) · $verseWord ${verse.verseNumber}';
+    } else {
+      topHeader = '$bookTitle · $chapterWord ${chapter.chapterNumber} · $verseWord ${verse.verseNumber}';
+    }
+
+    final sanskritText = verse.sanskrit.trim();
+    final translationText = verse.getLocalizedTranslation(langCode).trim();
+
+    String translationLabel;
+    if (langCode == 'hi') {
+      translationLabel = 'अनुवाद:';
+    } else if (langCode == 'gu') {
+      translationLabel = 'અનુવાદ:';
+    } else {
+      translationLabel = 'Translation:';
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln(topHeader);
+    buffer.writeln();
+    if (sanskritText.isNotEmpty) {
+      buffer.writeln(sanskritText);
+      buffer.writeln();
+    }
+    buffer.writeln(translationLabel);
+    buffer.writeln(translationText);
+    buffer.writeln();
+    buffer.write('— Sanatan Scroll');
+
+    ShareService.share(
+      title: topHeader,
+      text: buffer.toString(),
     );
   }
 
@@ -161,10 +195,13 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         chapterNumber: currentChapter,
       ),
       builder: (context, snapshot) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final bgColor = isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2);
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xFFFAF7F2),
-            body: Center(
+          return Scaffold(
+            backgroundColor: bgColor,
+            body: const Center(
               child: CircularProgressIndicator(
                 color: Color(0xFFC85A32),
               ),
@@ -175,11 +212,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         final book = snapshot.data;
         if (book == null) {
           return Scaffold(
-            backgroundColor: const Color(0xFFFAF7F2),
+            backgroundColor: bgColor,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              iconTheme: const IconThemeData(color: Color(0xFF1B1B1B)),
+              iconTheme: IconThemeData(color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B)),
             ),
             body: Center(
               child: Text(
@@ -193,11 +230,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         final chapter = book.getChapter(currentChapter);
         if (chapter == null || chapter.verses.isEmpty) {
           return Scaffold(
-            backgroundColor: const Color(0xFFFAF7F2),
+            backgroundColor: bgColor,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
-              iconTheme: const IconThemeData(color: Color(0xFF1B1B1B)),
+              iconTheme: IconThemeData(color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B)),
             ),
             body: Center(
               child: Text(l10n.noVersesAvailable),
@@ -354,6 +391,7 @@ class _VerseViewState extends State<_VerseView> {
             languageCode: widget.langCode,
             isSaved: isSaved,
             onToggleSave: toggleSave,
+            onShare: widget.onShareVerse,
             isPlayingAudio: widget.isSpeaking,
             onToggleAudio: widget.onToggleAudio,
             onBack: widget.onBack,
@@ -384,6 +422,7 @@ class _VerseViewState extends State<_VerseView> {
           languageCode: widget.langCode,
           isSaved: isSaved,
           onToggleSave: toggleSave,
+          onShare: widget.onShareVerse,
           onBack: widget.onBack,
           onNextVerse: widget.onNextVerse,
           totalCards: widget.cardsPerVerse,

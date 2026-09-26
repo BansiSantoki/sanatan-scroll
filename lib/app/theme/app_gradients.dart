@@ -52,6 +52,17 @@ class AppGradients {
     stops: [0.0, 0.52, 1.0],
   );
 
+  static const LinearGradient darkScreenBackground = LinearGradient(
+    colors: [
+      Color(0xFF141714),
+      Color(0xFF191D19),
+      Color(0xFF121412),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    stops: [0.0, 0.52, 1.0],
+  );
+
   static LinearGradient sacredCard(int index) {
     final gradients = [
       [const Color(0xFF4A1018), const Color(0xFF8B2730)],

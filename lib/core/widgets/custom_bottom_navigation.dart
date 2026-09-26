@@ -9,10 +9,12 @@ class CustomBottomNavigation extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.activeColor,
   });
 
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final Color? activeColor;
 
   String _getLocalizedLabel(BuildContext context, int index) {
     final l10n = context.l10n;
@@ -35,24 +37,34 @@ class CustomBottomNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = AppConstants.bottomNavigationItems;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final outerBg = isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2);
+    final pillBg = isDark ? const Color(0xFF1C201C) : const Color(0xFFFAF7F2);
+    final effectiveActiveColor = activeColor ?? (isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32));
+    final selectedBg = isDark 
+        ? effectiveActiveColor.withValues(alpha: 0.25)
+        : effectiveActiveColor.withValues(alpha: 0.12);
+    final borderColor = isDark ? Colors.white12 : const Color(0xFFE8DEC8).withValues(alpha: 0.8);
+    final inactiveColor = isDark ? const Color(0xFFA0A6A0) : const Color(0xFF4A4B46);
 
     return Container(
-      color: const Color(0xFFFAF7F2),
+      color: outerBg,
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: SafeArea(
         top: false,
         child: Container(
           height: 68,
           decoration: BoxDecoration(
-            color: const Color(0xFFFAF7F2),
+            color: pillBg,
             borderRadius: BorderRadius.circular(34),
             border: Border.all(
-              color: const Color(0xFFE8DEC8).withValues(alpha: 0.8),
+              color: borderColor,
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
                 blurRadius: 14,
                 offset: const Offset(0, 4),
               ),
@@ -63,8 +75,6 @@ class CustomBottomNavigation extends StatelessWidget {
             children: List.generate(items.length, (index) {
               final item = items[index];
               final isSelected = currentIndex == index;
-              final activeColor = const Color(0xFFC85A32);
-              final inactiveColor = const Color(0xFF4A4B46);
               final label = _getLocalizedLabel(context, index);
 
               return Expanded(
@@ -73,9 +83,7 @@ class CustomBottomNavigation extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFFDECDA)
-                          : Colors.transparent,
+                      color: isSelected ? selectedBg : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -84,7 +92,7 @@ class CustomBottomNavigation extends StatelessWidget {
                       children: [
                         Icon(
                           isSelected ? item.activeIcon : item.icon,
-                          color: isSelected ? activeColor : inactiveColor,
+                          color: isSelected ? effectiveActiveColor : inactiveColor,
                           size: 22,
                         ),
                         const SizedBox(height: 3),
@@ -99,7 +107,7 @@ class CustomBottomNavigation extends StatelessWidget {
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: isSelected ? activeColor : inactiveColor,
+                              color: isSelected ? effectiveActiveColor : inactiveColor,
                             ),
                           ),
                         ),

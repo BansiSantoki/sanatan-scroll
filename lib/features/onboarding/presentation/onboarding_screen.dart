@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/onboarding_provider.dart';
 
 class OnboardingOption {
@@ -28,64 +29,69 @@ class OnboardingOption {
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
-  static const List<OnboardingOption> _options = [
-    OnboardingOption(
-      title: 'Understand Hindu Scriptures',
-      defaultBgColor: Color(0xFFFBC07E),
-      selectedBgColor: Color(0xFFF9A852),
-      defaultTextColor: Color(0xFF141814),
-      selectedTextColor: Color(0xFF141814),
-      iconData: Icons.auto_awesome_mosaic_outlined,
-    ),
-    OnboardingOption(
-      title: 'Learn About My Roots',
-      defaultBgColor: Color(0xFF858D5C),
-      selectedBgColor: Color(0xFF747C4B),
-      defaultTextColor: Colors.white,
-      selectedTextColor: Colors.white,
-      iconData: Icons.import_contacts_outlined,
-    ),
-    OnboardingOption(
-      title: 'Deal With Overthinking',
-      defaultBgColor: Color(0xFFFDF3E9),
-      selectedBgColor: Color(0xFFFDF3E9),
-      defaultTextColor: Color(0xFF141814),
-      selectedTextColor: Color(0xFF141814),
-      borderColor: Color(0xFFD6CDBF),
-      iconData: Icons.psychology_outlined,
-    ),
-    OnboardingOption(
-      title: 'Build a Spiritual Habit',
-      defaultBgColor: Color(0xFFE0DCB7),
-      selectedBgColor: Color(0xFFD0CBA3),
-      defaultTextColor: Color(0xFF141814),
-      selectedTextColor: Color(0xFF141814),
-      iconData: Icons.eco_outlined,
-    ),
-    OnboardingOption(
-      title: 'Find Greater Peace',
-      defaultBgColor: Color(0xFFFDD3A3),
-      selectedBgColor: Color(0xFFFBBF83),
-      defaultTextColor: Color(0xFF141814),
-      selectedTextColor: Color(0xFF141814),
-      iconData: Icons.filter_vintage_outlined,
-    ),
-    OnboardingOption(
-      title: 'Find Purpose',
-      defaultBgColor: Color(0xFFFDF3E9),
-      selectedBgColor: Color(0xFFFDF3E9),
-      defaultTextColor: Color(0xFF141814),
-      selectedTextColor: Color(0xFF141814),
-      borderColor: Color(0xFFD6CDBF),
-      iconData: Icons.crop_square_rounded,
-    ),
-  ];
+  List<OnboardingOption> _getOptions(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return [
+      OnboardingOption(
+        title: l10n.understandScriptures,
+        defaultBgColor: const Color(0xFFFBC07E),
+        selectedBgColor: const Color(0xFFF9A852),
+        defaultTextColor: const Color(0xFF141814),
+        selectedTextColor: const Color(0xFF141814),
+        iconData: Icons.menu_book_outlined,
+      ),
+      OnboardingOption(
+        title: l10n.learnAboutRoots,
+        defaultBgColor: const Color(0xFF858D5C),
+        selectedBgColor: const Color(0xFF747C4B),
+        defaultTextColor: Colors.white,
+        selectedTextColor: Colors.white,
+        iconData: Icons.home_outlined,
+      ),
+      OnboardingOption(
+        title: l10n.dealWithOverthinking,
+        defaultBgColor: const Color(0xFFFDF3E9),
+        selectedBgColor: const Color(0xFFFDF3E9),
+        defaultTextColor: const Color(0xFF141814),
+        selectedTextColor: const Color(0xFF141814),
+        borderColor: const Color(0xFFD6CDBF),
+        iconData: Icons.psychology_outlined,
+      ),
+      OnboardingOption(
+        title: l10n.buildSpiritualHabit,
+        defaultBgColor: const Color(0xFFE0DCB7),
+        selectedBgColor: const Color(0xFFD0CBA3),
+        defaultTextColor: const Color(0xFF141814),
+        selectedTextColor: const Color(0xFF141814),
+        iconData: Icons.calendar_today_outlined,
+      ),
+      OnboardingOption(
+        title: l10n.findGreaterPeace,
+        defaultBgColor: const Color(0xFFFDD3A3),
+        selectedBgColor: const Color(0xFFFBBF83),
+        defaultTextColor: const Color(0xFF141814),
+        selectedTextColor: const Color(0xFF141814),
+        iconData: Icons.waves,
+      ),
+      OnboardingOption(
+        title: l10n.findPurpose,
+        defaultBgColor: const Color(0xFFFDF3E9),
+        selectedBgColor: const Color(0xFFFDF3E9),
+        defaultTextColor: const Color(0xFF141814),
+        selectedTextColor: const Color(0xFF141814),
+        borderColor: const Color(0xFFD6CDBF),
+        iconData: Icons.explore_outlined,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final screenWidth = size.width;
     final screenHeight = size.height;
+    final l10n = AppLocalizations.of(context);
+    final options = _getOptions(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAF0E4),
@@ -104,28 +110,31 @@ class OnboardingScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 8),
 
-                    // Top Illustration (Sacred Scroll Book with Om & Lotus Leaves)
+                    // Centered Sanatan Scroll Brand Logo (Increased size)
                     Center(
                       child: Image.asset(
-                        'assets/images/onboarding_header_illustration.png',
-                        height: screenHeight < 650 ? 95 : 120,
+                        'assets/images/sanatan_logo.png',
+                        width: screenWidth < 360 ? 70 : 88,
+                        height: screenWidth < 360 ? 70 : 88,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
-                          return const SizedBox(height: 90);
+                          return const SizedBox(height: 80);
                         },
                       ),
                     ),
 
-                    SizedBox(height: screenHeight < 650 ? 14 : 20),
+                    SizedBox(height: screenHeight < 650 ? 14 : 22),
 
                     // Title: "What brings you to\nSanatan Scroll?"
                     Text(
-                      'What brings you to\nSanatan Scroll?',
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: screenWidth < 360 ? 32 : 38,
+                      l10n.whatBringsYouToSanatanScroll,
+                      style: AppTextStyles.getFont(
+                        context,
+                        fontSize: screenWidth < 360 ? 30 : 36,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF141814),
-                        height: 1.1,
+                        height: 1.15,
+                        isSerif: true,
                       ),
                     ),
 
@@ -133,8 +142,9 @@ class OnboardingScreen extends StatelessWidget {
 
                     // Subtitle: "Select your spiritual aspirations..."
                     Text(
-                      'Select your spiritual aspirations to\npersonalise your daily reading path.',
-                      style: GoogleFonts.inter(
+                      l10n.selectAspirationsSubtitle,
+                      style: AppTextStyles.getFont(
+                        context,
                         fontSize: screenWidth < 360 ? 14 : 15.5,
                         fontWeight: FontWeight.w400,
                         color: const Color(0xFF2D352E),
@@ -150,11 +160,11 @@ class OnboardingScreen extends StatelessWidget {
                         return ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _options.length,
+                          itemCount: options.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final option = _options[index];
+                            final option = options[index];
                             final isSelected =
                                 provider.isSelected(option.title);
 
@@ -205,8 +215,9 @@ class OnboardingScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Continue',
-                        style: GoogleFonts.inter(
+                        l10n.continueButton,
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: 16.5,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
@@ -299,7 +310,8 @@ class _OptionCardWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     option.title,
-                    style: GoogleFonts.inter(
+                    style: AppTextStyles.getFont(
+                      context,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: textColor,

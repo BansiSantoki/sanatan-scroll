@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../theme/app_typography.dart';
@@ -10,6 +9,7 @@ import '../../../../core/services/share_service.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../providers/locale_provider.dart';
 import '../../../../providers/navigation_provider.dart';
+import '../../../../providers/reading_progress_provider.dart';
 
 class SacredTextDetailScreen extends StatefulWidget {
   final String bookId;
@@ -27,16 +27,12 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReadingProgressProvider>().setLastReadBookId(widget.bookId);
+      }
+    });
   }
-
-  // ============================================================
-  // COLORS
-  // ============================================================
-
-  static const Color pageBgColor = Color(0xFFFAF7F2);
-  static const Color darkTextColor = Color(0xFF1B1B1B);
-  static const Color cardCreamColor = Color(0xFFFFFDF9);
-  static const Color navBarColor = Color(0xFF1B1C1B);
 
   // ============================================================
   // BOOK INFORMATION
@@ -72,63 +68,76 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
     }
   }
 
-  String? get _extraBadge {
+  String _getLocalizedAbout(BuildContext context) {
+    final langCode = context.watch<LocaleProvider>().languageCode;
     switch (widget.bookId) {
       case 'ramayana':
-        return '24,000 Verses';
-      default:
-        return null;
-    }
-  }
-
-  String get _about {
-    switch (widget.bookId) {
-      case 'ramayana':
+        if (langCode == 'gu') {
+          return 'રામાયણ એ એક પ્રાચીન સંસ્કૃત મહાકાવ્ય છે જે ભગવાન શ્રી રામના જીવન, ધર્મ પ્રત્યેની તેમની અટલ નિષ્ઠા, વનવાસ, રાવણ સામેના યુદ્ધ અને અયોધ્યા પાછા ફરવાની કથા વર્ણવે છે. આ ધર્મનિષ્ઠ જીવન, આદર્શ નેતૃત્વ, વફાદારી, પ્રેમ અને ભક્તિનું સદાબહાર માર્ગદર્શક છે.';
+        } else if (langCode == 'hi') {
+          return 'रामायण एक प्राचीन संस्कृत महाकाव्य है जो भगवान श्री राम के जीवन, धर्म के प्रति उनकी अटूट निष्ठा, वनवास, रावण के विरुद्ध युद्ध और अयोध्या वापसी की कथा का वर्णन करता है। यह धर्मपरायण जीवन, आदर्श नेतृत्व, निष्ठा, प्रेम और भक्ति का शाश्वत मार्गदर्शक है।';
+        }
         return 'The Ramayana is an ancient Sanskrit epic that narrates the life of Lord Rama, his unwavering commitment to dharma, his exile, the battle against Ravana, and his return to Ayodhya. It is a timeless guide to righteous living, ideal leadership, loyalty, love and devotion.';
       case 'upanishads':
+        if (langCode == 'gu') {
+          return 'ઉપનિષદો એ પ્રાચીન હિન્દુ શાસ્ત્રોનો સંગ્રહ છે જે સત્યનું સ્વરૂપ, આત્મા અને પરમ સત્ય (બ્રહ્મ)નું અન્વેષણ કરે છે. તેઓ હિન્દુ ધર્મનો દાર્શનિક આધાર છે, જે ચૈતન્ય, જ્ઞાન અને મોક્ષ વિશે સદાબહાર આંતરદ્રષ્ટિ પ્રદાન કરે છે.';
+        } else if (langCode == 'hi') {
+          return 'उपनिषद प्राचीन हिंदू शास्त्रों का संग्रह हैं जो सत्य के स्वरूप, आत्मा और परम सत्य (ब्रह्म) का अन्वेषण करते हैं। वे हिंदू दर्शन की आधारशिला हैं, जो चेतना, ज्ञान और मोक्ष के बारे में शाश्वत अंतर्दृष्टि प्रदान करते हैं।';
+        }
         return 'The Upanishads are a collection of ancient Hindu scriptures that explore the nature of reality, the self (Atman), and the ultimate truth (Brahman). They are the philosophical foundation of Hinduism, offering timeless insights into consciousness, wisdom, and liberation.';
       case 'mahabharata':
+        if (langCode == 'gu') {
+          return 'મહાભારત વિશ્વના સૌથી લાંબા મહાકાવ્યોમાંનું એક છે, જે ભારત વંશની કથા વર્ણવે છે. તે ધર્મ, રાજનીતિ, નૈતિકતા, અધ્યાત્મ અને માનવ જીવન વિશે જ્ઞાનનો મહાન ખજાનો છે.';
+        } else if (langCode == 'hi') {
+          return 'महाभारत विश्व के सबसे लंबे महाकाव्यों में से एक है, जो भारत वंश की गाथा का वर्णन करता है। यह धर्म, राजनीति, नैतिकता, अध्यात्म और मानव जीवन के ज्ञान का शाश्वत खजाना है।';
+        }
         return 'The Mahabharata is one of the world’s longest epic poems, narrating the story of the Bharata dynasty. It is a timeless treasure trove of wisdom on dharma, politics, morality, spirituality, and the human condition.';
       case 'bhagavad_gita':
       default:
+        if (langCode == 'gu') {
+          return 'ભગવદ્ ગીતા એ ૭૦૦ શ્લોકોનું હિન્દુ શાસ્ત્ર છે જે મહાભારત મહાકાવ્યનો એક ભાગ છે. તે રણભૂમિમાં કુરુક્ષેત્ર ખાતે ભગવાન શ્રીકૃષ્ણ અને અર્જુન વચ્ચેનો સંવાદ છે, જેમાં ધર્મ, ભક્તિ, જ્ઞાન અને નિષ્કામ કરમનો ઉપદેશ આપ્યો છે.';
+        } else if (langCode == 'hi') {
+          return 'भगवद् गीता ७०० श्लोकों का हिंदू शास्त्र है जो महाभारत महाकाव्य का एक भाग है। यह कुरुक्षेत्र के युद्धक्षेत्र में भगवान श्रीकृष्ण और अर्जुन के बीच का संवाद है, जिसमें धर्म, भक्ति, ज्ञान और निष्काम कर्म का उपदेश दिया गया है।';
+        }
         return 'The Bhagavad Gita is a 700-verse Hindu scripture that is part of the epic Mahabharata. It is a conversation between Lord Krishna and Arjuna on the battlefield, covering dharma, devotion, knowledge and selfless action.';
     }
   }
 
-  List<_TeachingChipData> get _teachings {
+  List<_TeachingChipData> _getLocalizedTeachings(BuildContext context) {
+    final langCode = context.watch<LocaleProvider>().languageCode;
     switch (widget.bookId) {
       case 'ramayana':
-        return const [
-          _TeachingChipData('Dharma', icon: Icons.shield_outlined, color: Color(0xFFE4E7CD)),
-          _TeachingChipData('Devotion', icon: Icons.favorite_border_rounded, color: Color(0xFFE4E7CD)),
-          _TeachingChipData('Relationships', icon: Icons.people_outline_rounded, color: Color(0xFFE4E7CD)),
-          _TeachingChipData('Duty & Sacrifice', icon: Icons.spa_outlined, color: Color(0xFFE4E7CD)),
-          _TeachingChipData('Righteous Leadership', icon: Icons.auto_awesome_outlined, color: Color(0xFFE4E7CD)),
+        return [
+          _TeachingChipData(langCode == 'gu' ? 'ધર્મ' : (langCode == 'hi' ? 'धर्म' : 'Dharma'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'ભક્તિ' : (langCode == 'hi' ? 'भक्ति' : 'Devotion'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'સંબંધો' : (langCode == 'hi' ? 'संबंध' : 'Relationships'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'કર્તવ્ય અને ત્યાગ' : (langCode == 'hi' ? 'कर्तव्य एवं त्याग' : 'Duty & Sacrifice'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'આદર્શ નેતૃત્વ' : (langCode == 'hi' ? 'आदर्श नेतृत्व' : 'Righteous Leadership'), color: const Color(0xFFE4E8D5)),
         ];
 
       case 'upanishads':
-        return const [
-          _TeachingChipData('Wisdom of the Self', color: Color(0xFFCCD5B8)),
-          _TeachingChipData('Consciousness', color: Color(0xFFECA780)),
-          _TeachingChipData('Brahman', color: Color(0xFFEBD09C)),
-          _TeachingChipData('Liberation (Moksha)', color: Color(0xFFCCD5B8)),
+        return [
+          _TeachingChipData(langCode == 'gu' ? 'આત્મજ્ઞાન' : (langCode == 'hi' ? 'आत्मज्ञान' : 'Wisdom of the Self'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'ચેતના' : (langCode == 'hi' ? 'चेतना' : 'Consciousness'), color: const Color(0xFFFDECDA)),
+          _TeachingChipData(langCode == 'gu' ? 'બ્રહ્મ' : (langCode == 'hi' ? 'ब्रह्म' : 'Brahman'), color: const Color(0xFFFDF4DA)),
+          _TeachingChipData(langCode == 'gu' ? 'મોક્ષ' : (langCode == 'hi' ? 'मोक्ष' : 'Liberation (Moksha)'), color: const Color(0xFFE4E8D5)),
         ];
 
       case 'mahabharata':
-        return const [
-          _TeachingChipData('Dharma', color: Color(0xFFCCD5B8)),
-          _TeachingChipData('Karma', color: Color(0xFFECA780)),
-          _TeachingChipData('Bhakti', color: Color(0xFFEBD09C)),
-          _TeachingChipData('Life Lessons', color: Color(0xFFCCD5B8)),
+        return [
+          _TeachingChipData(langCode == 'gu' ? 'ધર્મ' : (langCode == 'hi' ? 'धर्म' : 'Dharma'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'કર્મ' : (langCode == 'hi' ? 'कर्म' : 'Karma'), color: const Color(0xFFFDECDA)),
+          _TeachingChipData(langCode == 'gu' ? 'ભક્તિ' : (langCode == 'hi' ? 'भक्ति' : 'Bhakti'), color: const Color(0xFFFDF4DA)),
+          _TeachingChipData(langCode == 'gu' ? 'જીવનનો ઉપદેશ' : (langCode == 'hi' ? 'जीवन का उपदेश' : 'Life Lessons'), color: const Color(0xFFE4E8D5)),
         ];
 
       case 'bhagavad_gita':
       default:
-        return const [
-          _TeachingChipData('Dharma', color: Color(0xFFCBD5AE)),
-          _TeachingChipData('Karma', color: Color(0xFFF2B07C)),
-          _TeachingChipData('Bhakti', color: Color(0xFFF5CF8E)),
-          _TeachingChipData('Selfless Action', color: Color(0xFFCBD5AE)),
+        return [
+          _TeachingChipData(langCode == 'gu' ? 'ધર્મ' : (langCode == 'hi' ? 'धर्म' : 'Dharma'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'કર્મ' : (langCode == 'hi' ? 'कर्म' : 'Karma'), color: const Color(0xFFFDECDA)),
+          _TeachingChipData(langCode == 'gu' ? 'ભક્તિ' : (langCode == 'hi' ? 'भक्ति' : 'Bhakti'), color: const Color(0xFFFDF4DA)),
+          _TeachingChipData(langCode == 'gu' ? 'નિષ્કામ કર્મ' : (langCode == 'hi' ? 'निष्काम कर्म' : 'Selfless Action'), color: const Color(0xFFE4E8D5)),
         ];
     }
   }
@@ -140,84 +149,50 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   Color get _cardBgColor {
     switch (widget.bookId) {
       case 'ramayana':
-        return const Color(0xFFCBD1AE);
+        return const Color(0xFF8A9A78);
       case 'upanishads':
-        return const Color(0xFFA5B288);
+        return const Color(0xFF99A878);
       case 'mahabharata':
-        return const Color(0xFFDFB874);
+        return const Color(0xFFD6A350);
       case 'bhagavad_gita':
       default:
-        return const Color(0xFFE48D53);
+        return const Color(0xFFE47A46);
     }
   }
 
   Color get _cardHeaderTextColor {
     switch (widget.bookId) {
       case 'ramayana':
-        return const Color(0xFF384628);
+        return const Color(0xFF2E3D1E);
       case 'upanishads':
-        return const Color(0xFF283618);
+        return const Color(0xFF243314);
       case 'mahabharata':
-        return const Color(0xFF423314);
+        return const Color(0xFF3D2E14);
       case 'bhagavad_gita':
       default:
-        return const Color(0xFF4A2C18);
+        return const Color(0xFF3D1F14);
     }
   }
 
   Color get _cardTitleColor {
-    switch (widget.bookId) {
-      case 'ramayana':
-        return const Color(0xFF1B2A10);
-      case 'upanishads':
-        return const Color(0xFF15240B);
-      case 'mahabharata':
-        return const Color(0xFF1E1506);
-      case 'bhagavad_gita':
-      default:
-        return const Color(0xFF1F1208);
-    }
+    return const Color(0xFF1B1B1B);
   }
 
   Color get _cardSubtitleColor {
-    switch (widget.bookId) {
-      case 'ramayana':
-        return const Color(0xFF2E3D1E);
-      case 'upanishads':
-        return const Color(0xFF283618);
-      case 'mahabharata':
-        return const Color(0xFF423314);
-      case 'bhagavad_gita':
-      default:
-        return const Color(0xFF3D2515);
-    }
+    return const Color(0xFF2D2D2D);
   }
 
   Color get _buttonColor {
     switch (widget.bookId) {
       case 'ramayana':
-        return const Color(0xFF58623A);
+        return const Color(0xFF495736);
       case 'upanishads':
-        return const Color(0xFFA5B288);
+        return const Color(0xFF5A6C44);
       case 'mahabharata':
-        return const Color(0xFFDCB779);
+        return const Color(0xFFC8932A);
       case 'bhagavad_gita':
       default:
-        return const Color(0xFFE48643);
-    }
-  }
-
-  Color get _buttonTextColor {
-    switch (widget.bookId) {
-      case 'ramayana':
-        return Colors.white;
-      case 'upanishads':
-        return const Color(0xFF1C2812);
-      case 'mahabharata':
-        return const Color(0xFF231A0B);
-      case 'bhagavad_gita':
-      default:
-        return const Color(0xFF1F1208);
+        return const Color(0xFFE47A46);
     }
   }
 
@@ -229,70 +204,24 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
     switch (widget.bookId) {
       case 'ramayana':
         return const [
-          _StatItem(
-            value: '7',
-            label: 'Kandas\n(Books)',
-            icon: Icons.menu_book_outlined,
-          ),
-          _StatItem(
-            value: '24,000',
-            label: 'Verses',
-            icon: Icons.eco_outlined,
-          ),
-          _StatItem(
-            value: '~500',
-            label: 'Pages',
-            icon: Icons.description_outlined,
-          ),
+          _StatItem(value: '7', label: 'Kandas'),
+          _StatItem(value: '24,000', label: 'Verses'),
         ];
-
       case 'upanishads':
         return const [
-          _StatItem(
-            value: '108',
-            label: 'Upanishads',
-          ),
-          _StatItem(
-            value: '2000+',
-            label: 'Teachings',
-          ),
-          _StatItem(
-            value: '500+',
-            label: 'Verses',
-          ),
+          _StatItem(value: '108', label: 'Upanishads'),
+          _StatItem(value: '2,000+', label: 'Teachings'),
         ];
-
       case 'mahabharata':
         return const [
-          _StatItem(
-            value: '18',
-            label: 'Parvas (Books)',
-          ),
-          _StatItem(
-            value: '100,000+',
-            label: 'Verses',
-          ),
-          _StatItem(
-            value: '1',
-            label: 'Great Epic',
-          ),
+          _StatItem(value: '18', label: 'Parvas'),
+          _StatItem(value: '100,000+', label: 'Verses'),
         ];
-
       case 'bhagavad_gita':
       default:
         return const [
-          _StatItem(
-            value: '18',
-            label: 'Chapters',
-          ),
-          _StatItem(
-            value: '700',
-            label: 'Verses',
-          ),
-          _StatItem(
-            value: '350',
-            label: 'Pages',
-          ),
+          _StatItem(value: '18', label: 'Chapters'),
+          _StatItem(value: '700', label: 'Verses'),
         ];
     }
   }
@@ -303,64 +232,54 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: navBarColor,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-      child: Scaffold(
-        backgroundColor: pageBgColor,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              // Top Action Bar
-              _buildTopBar(),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-              // Scrollable Content
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 6),
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Top Action Bar
+            _buildTopBar(isDark),
 
-                      // Hero Card
-                      _buildHeroCard(context),
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
 
-                      // Floating 3-Stat Cards
-                      _buildStatsRow(context),
+                    // Combined Hero Header & Stats Card
+                    _buildHeroCard(context, isDark),
 
-                      const SizedBox(height: 4),
+                    const SizedBox(height: 24),
 
-                      // About this text
-                      _buildAboutSection(context),
+                    // About this text
+                    _buildAboutSection(context, isDark),
 
-                      const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
-                      // Key Teachings
-                      _buildTeachingsSection(context),
+                    // Key Teachings
+                    _buildTeachingsSection(context, isDark),
 
-                      const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                      // Start Reading Button
-                      _buildStartReadingButton(context),
+                    // Start Reading Button
+                    _buildStartReadingButton(context),
 
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
+            ),
 
-              // Bottom Dock Navigation
-              _buildBottomNavigation(),
-            ],
-          ),
+            // Bottom Dock Navigation
+            _buildBottomNavigation(),
+          ],
         ),
       ),
     );
@@ -370,7 +289,9 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // TOP BAR
   // ============================================================
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(bool isDark) {
+    final iconColor = isDark ? const Color(0xFFE6E8E6) : const Color(0xFF1B1B1B);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: Row(
@@ -378,19 +299,19 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         children: [
           IconButton(
             onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back,
               size: 26,
-              color: darkTextColor,
+              color: iconColor,
             ),
             splashRadius: 24,
           ),
           IconButton(
             onPressed: _shareBook,
-            icon: const Icon(
+            icon: Icon(
               Icons.share_outlined,
               size: 24,
-              color: darkTextColor,
+              color: iconColor,
             ),
             splashRadius: 24,
           ),
@@ -400,128 +321,165 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   }
 
   // ============================================================
-  // HERO CARD
+  // HERO CARD WITH EMBEDDED STATS
   // ============================================================
 
-  Widget _buildHeroCard(BuildContext context) {
-    final bool isRamayanaOrUpanishads =
-        widget.bookId == 'ramayana' || widget.bookId == 'upanishads';
+  Widget _buildHeroCard(BuildContext context, bool isDark) {
+    final langCode = context.watch<LocaleProvider>().languageCode;
+    final labelText = langCode == 'gu'
+        ? 'પવિત્ર ગ્રંથ'
+        : (langCode == 'hi' ? 'पवित्र ग्रंथ' : 'SACRED SCRIPTURE');
 
-    return Container(
-      width: double.infinity,
-      height: 360,
-      decoration: BoxDecoration(
-        color: _cardBgColor,
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: Stack(
-          children: [
-            // Top Right Corner Art (Lotus / Leaves)
-            Positioned(
-              top: 16,
-              right: 18,
-              child: widget.bookId == 'ramayana'
-                  ? _buildRamayanaTopLeaves()
-                  : _buildLotusArt(),
-            ),
+    final stats = _stats;
+    final title = _getLocalizedTitle(context);
 
-            // Main Side Illustration Image - BIG size for Ramayana and Upanishads
-            Positioned(
-              left: isRamayanaOrUpanishads ? 10 : null,
-              right: isRamayanaOrUpanishads ? 10 : 14,
-              bottom: isRamayanaOrUpanishads ? 4 : 12,
-              top: isRamayanaOrUpanishads ? 35 : 65,
-              width: isRamayanaOrUpanishads ? null : 210,
-              child: Align(
-                alignment: isRamayanaOrUpanishads
-                    ? Alignment.bottomCenter
-                    : Alignment.bottomRight,
-                child: _buildBookIllustration(),
-              ),
-            ),
-
-            // Text info on top left
-            Positioned(
-              left: 22,
-              top: 24,
-              right: 90,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SACRED SCRIPTURE',
-                    style: AppTextStyles.getFont(
-                      context,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                      color: _cardHeaderTextColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _getLocalizedTitle(context),
-                      style: AppTextStyles.getFont(
-                        context,
-                        fontSize: 38,
-                        fontWeight: FontWeight.w700,
-                        height: 1.05,
-                        color: _cardTitleColor,
-                        isSerif: true,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Colored Top Hero Banner
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 40),
+          decoration: BoxDecoration(
+            color: _cardBgColor,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: Stack(
+              children: [
+                // Text Content
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 115, 55),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        labelText,
+                        style: AppTextStyles.getFont(
+                          context,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                          color: _cardHeaderTextColor,
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _getLocalizedSubtitle(context),
-                    style: AppTextStyles.getFont(
-                      context,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: _cardSubtitleColor,
-                    ),
-                  ),
-                  if (_extraBadge != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _extraBadge!,
-                      style: AppTextStyles.getFont(
-                        context,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: _cardHeaderTextColor,
+                      const SizedBox(height: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                            color: _cardTitleColor,
+                            isSerif: true,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _getLocalizedSubtitle(context),
+                        style: AppTextStyles.getFont(
+                          context,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: _cardSubtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Right Line Art Illustration
+                Positioned(
+                  right: 8,
+                  bottom: 30,
+                  top: 10,
+                  width: 110,
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: _buildBookIllustration(),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
 
-  // ============================================================
-  // LOTUS ART
-  // ============================================================
-
-  Widget _buildLotusArt() {
-    return CustomPaint(
-      size: const Size(60, 48),
-      painter: _LotusPainter(),
-    );
-  }
-
-  Widget _buildRamayanaTopLeaves() {
-    return CustomPaint(
-      size: const Size(75, 60),
-      painter: _RamayanaLeavesPainter(),
+        // Overlapping White/Cream Stats Box Container
+        Positioned(
+          left: 14,
+          right: 14,
+          bottom: 0,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF222722) : const Color(0xFFFFFDF9),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: List.generate(stats.length, (index) {
+                final stat = stats[index];
+                return Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              stat.value,
+                              style: AppTextStyles.getFont(
+                                context,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                                isSerif: true,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              stat.label,
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.getFont(
+                                context,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: isDark ? Colors.white60 : const Color(0xFF555555),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (index < stats.length - 1)
+                        Container(
+                          width: 1,
+                          height: 34,
+                          color: isDark ? Colors.white24 : const Color(0xFFEAE2D2),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -538,17 +496,10 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
       _ => 'assets/images/chariot_lineart.png',
     };
 
-    final bool isRamayanaOrUpanishads =
-        widget.bookId == 'ramayana' || widget.bookId == 'upanishads';
-
     return Image.asset(
       imagePath,
-      width: isRamayanaOrUpanishads ? 310 : null,
-      height: isRamayanaOrUpanishads ? 310 : null,
       fit: BoxFit.contain,
-      alignment: isRamayanaOrUpanishads
-          ? Alignment.bottomCenter
-          : Alignment.bottomRight,
+      alignment: Alignment.bottomRight,
       filterQuality: FilterQuality.high,
       errorBuilder: (context, error, stackTrace) {
         return const SizedBox.shrink();
@@ -557,79 +508,14 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   }
 
   // ============================================================
-  // 3 STATS ROW
-  // ============================================================
-
-  Widget _buildStatsRow(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, -38),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Row(
-          children: _stats.map((stat) {
-            return Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 18,
-                ),
-                decoration: BoxDecoration(
-                  color: cardCreamColor,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        stat.value,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: darkTextColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      stat.label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      style: AppTextStyles.getFont(
-                        context,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF555555),
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================
   // ABOUT SECTION
   // ============================================================
 
-  Widget _buildAboutSection(BuildContext context) {
+  Widget _buildAboutSection(BuildContext context, bool isDark) {
     final langCode = context.watch<LocaleProvider>().languageCode;
+    final headingTitle = langCode == 'gu'
+        ? 'આ ગ્રંથ વિશે'
+        : (langCode == 'hi' ? 'इस ग्रंथ के बारे में' : 'About this text');
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -637,18 +523,18 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'About this text',
+            headingTitle,
             style: AppTypography.sectionHeading(
               langCode,
-              color: const Color(0xFF18392C),
+              color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C),
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            _about,
+            _getLocalizedAbout(context),
             style: AppTypography.body(
               langCode,
-              color: const Color(0xFF18392C),
+              color: isDark ? const Color(0xFFD0D4D0) : const Color(0xFF18392C),
             ),
           ),
         ],
@@ -660,8 +546,12 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // KEY TEACHINGS SECTION
   // ============================================================
 
-  Widget _buildTeachingsSection(BuildContext context) {
+  Widget _buildTeachingsSection(BuildContext context, bool isDark) {
     final langCode = context.watch<LocaleProvider>().languageCode;
+    final teachingsTitle = langCode == 'gu'
+        ? 'મુખ્ય ઉપદેશો'
+        : (langCode == 'hi' ? 'मुख्य उपदेश' : 'Key Teachings');
+    final teachingsList = _getLocalizedTeachings(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -669,47 +559,37 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Key Teachings',
+            teachingsTitle,
             style: AppTypography.sectionHeading(
               langCode,
-              color: const Color(0xFF18392C),
+              color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C),
             ),
           ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: _teachings.map((chip) {
+            children: teachingsList.map((chip) {
+              final chipBg = isDark ? const Color(0xFF2A322A) : chip.color;
+              final textColor = isDark ? const Color(0xFFE6E8E6) : const Color(0xFF1B1B1B);
+
               return Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
+                  horizontal: 16,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: chip.color,
+                  color: chipBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (chip.icon != null) ...[
-                      Icon(
-                        chip.icon,
-                        size: 16,
-                        color: darkTextColor,
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      chip.text,
-                      style: AppTextStyles.getFont(
-                        context,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: darkTextColor,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  chip.text,
+                  style: AppTextStyles.getFont(
+                    context,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                  ),
                 ),
               );
             }).toList(),
@@ -732,7 +612,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         onPressed: _openChapterList,
         style: ElevatedButton.styleFrom(
           backgroundColor: _buttonColor,
-          foregroundColor: _buttonTextColor,
+          foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -747,14 +627,14 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                 context,
                 fontSize: 16.5,
                 fontWeight: FontWeight.w600,
-                color: _buttonTextColor,
+                color: Colors.white,
               ),
             ),
             const SizedBox(width: 10),
-            Icon(
+            const Icon(
               Icons.arrow_forward,
               size: 20,
-              color: _buttonTextColor,
+              color: Colors.white,
             ),
           ],
         ),
@@ -769,6 +649,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   Widget _buildBottomNavigation() {
     return CustomBottomNavigation(
       currentIndex: 3,
+      activeColor: _buttonColor,
       onTap: (index) {
         context.read<NavigationProvider>().setIndex(index);
         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -790,10 +671,11 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   void _shareBook() {
     final title = _getLocalizedTitle(context);
     final subtitle = _getLocalizedSubtitle(context);
+    final aboutText = _getLocalizedAbout(context);
     ShareService.showOptions(
       context: context,
       title: title,
-      text: '$title — $subtitle\n\n$_about\n\nSanatan Scroll',
+      text: '$title — $subtitle\n\n$aboutText\n\nSanatan Scroll',
     );
   }
 }
@@ -805,138 +687,19 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
 class _StatItem {
   final String value;
   final String label;
-  final IconData? icon;
 
   const _StatItem({
     required this.value,
     required this.label,
-    this.icon,
   });
 }
 
 class _TeachingChipData {
   final String text;
-  final IconData? icon;
   final Color color;
 
   const _TeachingChipData(
     this.text, {
-    this.icon,
     required this.color,
   });
-}
-
-
-
-// ============================================================
-// LOTUS PAINTER (Top-right corner icon)
-// ============================================================
-
-class _LotusPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final fillPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill;
-
-    final w = size.width;
-    final h = size.height;
-
-    // Center petal
-    final centerPetal = Path();
-    centerPetal.moveTo(w * 0.5, h * 0.1);
-    centerPetal.cubicTo(w * 0.62, h * 0.35, w * 0.6, h * 0.7, w * 0.5, h * 0.85);
-    centerPetal.cubicTo(w * 0.4, h * 0.7, w * 0.38, h * 0.35, w * 0.5, h * 0.1);
-    canvas.drawPath(centerPetal, fillPaint);
-
-    // Left petal
-    final leftPetal = Path();
-    leftPetal.moveTo(w * 0.28, h * 0.25);
-    leftPetal.cubicTo(w * 0.45, h * 0.35, w * 0.5, h * 0.7, w * 0.45, h * 0.85);
-    leftPetal.cubicTo(w * 0.28, h * 0.75, w * 0.18, h * 0.5, w * 0.28, h * 0.25);
-    canvas.drawPath(leftPetal, fillPaint);
-
-    // Right petal
-    final rightPetal = Path();
-    rightPetal.moveTo(w * 0.72, h * 0.25);
-    rightPetal.cubicTo(w * 0.55, h * 0.35, w * 0.5, h * 0.7, w * 0.55, h * 0.85);
-    rightPetal.cubicTo(w * 0.72, h * 0.75, w * 0.82, h * 0.5, w * 0.72, h * 0.25);
-    canvas.drawPath(rightPetal, fillPaint);
-
-    // Outer Left Petal
-    final outerLeft = Path();
-    outerLeft.moveTo(w * 0.1, h * 0.5);
-    outerLeft.cubicTo(w * 0.28, h * 0.55, w * 0.4, h * 0.78, w * 0.4, h * 0.88);
-    outerLeft.cubicTo(w * 0.2, h * 0.85, w * 0.05, h * 0.72, w * 0.1, h * 0.5);
-    canvas.drawPath(outerLeft, fillPaint);
-
-    // Outer Right Petal
-    final outerRight = Path();
-    outerRight.moveTo(w * 0.9, h * 0.5);
-    outerRight.cubicTo(w * 0.72, h * 0.55, w * 0.6, h * 0.78, w * 0.6, h * 0.88);
-    outerRight.cubicTo(w * 0.8, h * 0.85, w * 0.95, h * 0.72, w * 0.9, h * 0.5);
-    canvas.drawPath(outerRight, fillPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ============================================================
-// RAMAYANA TOP LEAVES PAINTER
-// ============================================================
-
-class _RamayanaLeavesPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final leafPaint = Paint()
-      ..color = const Color(0xFF495736).withValues(alpha: 0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-
-    final sunPaint = Paint()
-      ..color = const Color(0xFFF7F3E2).withValues(alpha: 0.8)
-      ..style = PaintingStyle.fill;
-
-    // Gentle sun circle
-    canvas.drawCircle(Offset(size.width * 0.7, size.height * 0.6), 13, sunPaint);
-
-    // Branch stem
-    final branch = Path();
-    branch.moveTo(size.width * 0.95, size.height * 0.05);
-    branch.cubicTo(
-      size.width * 0.65,
-      size.height * 0.15,
-      size.width * 0.45,
-      size.height * 0.35,
-      size.width * 0.15,
-      size.height * 0.55,
-    );
-    canvas.drawPath(branch, leafPaint);
-
-    // Leaves along the branch
-    _drawLeaf(canvas, Offset(size.width * 0.75, size.height * 0.12), -0.4, leafPaint);
-    _drawLeaf(canvas, Offset(size.width * 0.60, size.height * 0.22), 0.3, leafPaint);
-    _drawLeaf(canvas, Offset(size.width * 0.42, size.height * 0.38), -0.5, leafPaint);
-    _drawLeaf(canvas, Offset(size.width * 0.25, size.height * 0.48), 0.4, leafPaint);
-    _drawLeaf(canvas, Offset(size.width * 0.15, size.height * 0.55), -0.2, leafPaint);
-  }
-
-  void _drawLeaf(Canvas canvas, Offset center, double angle, Paint paint) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(angle);
-
-    final path = Path();
-    path.moveTo(0, 0);
-    path.quadraticBezierTo(8, -10, 18, -12);
-    path.quadraticBezierTo(10, 0, 0, 0);
-    canvas.drawPath(path, paint);
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

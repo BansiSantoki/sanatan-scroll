@@ -9,9 +9,10 @@ import 'app_text_styles.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light => getThemeForLocale(const Locale('en'));
+  static ThemeData get light => getThemeForLocale(const Locale('en'), isDark: false);
+  static ThemeData get dark => getThemeForLocale(const Locale('en'), isDark: true);
 
-  static ThemeData getThemeForLocale(Locale locale) {
+  static ThemeData getThemeForLocale(Locale locale, {bool isDark = false}) {
     final String gujaratiFont = AppTypography.fontNotoSansGujarati;
     final String devanagariFont = AppTypography.fontNotoSansDevanagari;
     final String englishFont = AppTypography.fontDMSans;
@@ -30,72 +31,108 @@ class AppTheme {
       fallbacks = [englishFont, gujaratiFont, devanagariFont];
     }
 
+    final TextTheme baseTextTheme = isDark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
+    final Color textColor = isDark ? const Color(0xFFE6E8E6) : AppColors.darkText;
+
+    final TextTheme localizedTextTheme = baseTextTheme.copyWith(
+      displayLarge: baseTextTheme.displayLarge?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      displayMedium: baseTextTheme.displayMedium?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      displaySmall: baseTextTheme.displaySmall?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      headlineLarge: baseTextTheme.headlineLarge?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      headlineMedium: baseTextTheme.headlineMedium?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      headlineSmall: baseTextTheme.headlineSmall?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      titleLarge: baseTextTheme.titleLarge?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      titleMedium: baseTextTheme.titleMedium?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      titleSmall: baseTextTheme.titleSmall?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      bodyLarge: baseTextTheme.bodyLarge?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      bodyMedium: baseTextTheme.bodyMedium?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      bodySmall: baseTextTheme.bodySmall?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      labelLarge: baseTextTheme.labelLarge?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      labelMedium: baseTextTheme.labelMedium?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+      labelSmall: baseTextTheme.labelSmall?.copyWith(fontFamily: primaryFont, fontFamilyFallback: fallbacks, color: textColor),
+    );
+
+    final cardBg = isDark ? const Color(0xFF222722) : AppColors.cardBackground;
+
     return ThemeData(
       useMaterial3: true,
       fontFamily: primaryFont,
       fontFamilyFallback: fallbacks,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.transparent,
-      colorScheme: ColorScheme.light(
-        primary: AppColors.primaryBurgundy,
-        secondary: AppColors.warmOrange,
-        surface: AppColors.cardBackground,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.white,
-        onSurface: AppColors.darkText,
-      ),
+      textTheme: localizedTextTheme,
+      primaryTextTheme: localizedTextTheme,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      scaffoldBackgroundColor: isDark ? const Color(0xFF141714) : Colors.transparent,
+      colorScheme: isDark
+          ? const ColorScheme.dark(
+              primary: Color(0xFFE88B60),
+              secondary: Color(0xFFE8B36B),
+              surface: Color(0xFF222722),
+              onPrimary: Colors.black,
+              onSecondary: Colors.black,
+              onSurface: Color(0xFFE6E8E6),
+            )
+          : ColorScheme.light(
+              primary: AppColors.primaryBurgundy,
+              secondary: AppColors.warmOrange,
+              surface: AppColors.cardBackground,
+              onPrimary: AppColors.white,
+              onSecondary: AppColors.white,
+              onSurface: AppColors.darkText,
+            ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.darkText,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        titleTextStyle: AppTextStyles.cardTitle,
+        foregroundColor: isDark ? const Color(0xFFE6E8E6) : AppColors.darkText,
+        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        titleTextStyle: AppTextStyles.cardTitle.copyWith(color: isDark ? const Color(0xFFE6E8E6) : AppColors.darkText),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.cardBackground,
+        color: cardBg,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.divider,
+      dividerTheme: DividerThemeData(
+        color: isDark ? Colors.white24 : AppColors.divider,
         thickness: 1,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: AppColors.softBeige,
-        selectedColor: AppColors.primaryBurgundy,
-        labelStyle: AppTextStyles.caption,
+        backgroundColor: isDark ? const Color(0xFF2C322C) : AppColors.softBeige,
+        selectedColor: isDark ? const Color(0xFFE88B60) : AppColors.primaryBurgundy,
+        labelStyle: AppTextStyles.caption.copyWith(color: isDark ? const Color(0xFFE6E8E6) : AppColors.darkText),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.cardBackground,
+        fillColor: cardBg,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: isDark ? Colors.white24 : AppColors.divider),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: isDark ? Colors.white24 : AppColors.divider),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-          borderSide: const BorderSide(color: AppColors.primaryBurgundy),
+          borderSide: BorderSide(color: isDark ? const Color(0xFFE88B60) : AppColors.primaryBurgundy),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.spacing16,
           vertical: AppDimensions.spacing12,
         ),
-        hintStyle: AppTextStyles.body.copyWith(color: AppColors.secondaryText),
+        hintStyle: AppTextStyles.body.copyWith(color: isDark ? Colors.white54 : AppColors.secondaryText),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.cardBackground,
-        selectedItemColor: AppColors.primaryBurgundy,
-        unselectedItemColor: AppColors.mutedBrown,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: isDark ? const Color(0xFF1C201C) : AppColors.cardBackground,
+        selectedItemColor: isDark ? const Color(0xFFE88B60) : AppColors.primaryBurgundy,
+        unselectedItemColor: isDark ? Colors.white54 : AppColors.mutedBrown,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),

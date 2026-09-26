@@ -31,13 +31,15 @@ class SacredChapterListScreen extends StatefulWidget {
 class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return StreamBuilder<SacredBookModel?>(
       stream: SacredBooksRepository.streamBookById(widget.textId),
       builder: (context, snapshot) {
         final book = snapshot.data ?? SacredBooksData.findById(widget.textId);
 
         if (book == null) {
-          return _bookNotFound(context);
+          return _bookNotFound(context, isDark);
         }
 
         final config = _BookUiConfig.fromBookId(book.id);
@@ -59,9 +61,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
             : config.defaultSubtitle;
 
         final countText = '${book.totalChapters} ${config.unitName(book.totalChapters)}';
+        final iconColor = isDark ? const Color(0xFFE6E8E6) : const Color(0xFF1B1B1B);
 
         return Scaffold(
-          backgroundColor: const Color(0xFFFAF7F2),
+          backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
           bottomNavigationBar: CustomBottomNavigation(
             currentIndex: 0,
             onTap: (index) {
@@ -87,10 +90,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.arrow_back,
                               size: 26,
-                              color: Color(0xFF1B1B1B),
+                              color: iconColor,
                             ),
                           ),
                           IconButton(
@@ -102,10 +105,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                                 text: textToShare,
                               );
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.share_outlined,
                               size: 24,
-                              color: Color(0xFF1B1B1B),
+                              color: iconColor,
                             ),
                           ),
                         ],
@@ -122,13 +125,6 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                         decoration: BoxDecoration(
                           color: config.headerBgColor,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: config.headerBgColor.withValues(alpha: 0.25),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -139,7 +135,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                                 right: -10,
                                 bottom: -10,
                                 top: -10,
-                                width: width >= 600 ? 260 : 185,
+                                width: width >= 600 ? 240 : 125,
                                 child: Align(
                                   alignment: Alignment.centerRight,
                                   child: Image.asset(
@@ -156,10 +152,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                               // Text details on left
                               Padding(
                                 padding: EdgeInsets.only(
-                                  left: 22,
-                                  top: 22,
-                                  bottom: 22,
-                                  right: width >= 600 ? 240 : 160,
+                                  left: 20,
+                                  top: 20,
+                                  bottom: 20,
+                                  right: width >= 600 ? 220 : 115,
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,22 +165,28 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                                       'SACRED SCRIPTURE',
                                       style: AppTextStyles.getFont(
                                         context,
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFF2C1810),
-                                        letterSpacing: 1.2,
+                                        letterSpacing: 1.0,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
-                                    Text(
-                                      localizedTitle,
-                                      style: AppTextStyles.getFont(
-                                        context,
-                                        fontSize: 34,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1B1B1B),
-                                        height: 1.05,
-                                        isSerif: true,
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        localizedTitle,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: AppTextStyles.getFont(
+                                          context,
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF1B1B1B),
+                                          height: 1.1,
+                                          isSerif: true,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -194,10 +196,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTextStyles.getFont(
                                         context,
-                                        fontSize: 13.5,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w400,
                                         color: const Color(0xFF333333),
-                                        height: 1.25,
+                                        height: 1.30,
                                       ),
                                     ),
                                     const SizedBox(height: 10),
@@ -228,7 +230,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                         config.sectionTitle,
                         style: AppTypography.sectionHeading(
                           langCode,
-                          color: const Color(0xFF18392C),
+                          color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C),
                         ),
                       ),
                     ),
@@ -257,6 +259,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                             index,
                             config,
                             langCode,
+                            isDark,
                           );
                         },
                       ),
@@ -282,6 +285,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     int index,
     _BookUiConfig config,
     String langCode,
+    bool isDark,
   ) {
     final chapterTitle = _getChapterTitle(book.id, chapter, langCode);
     final chapterSubtitle = _getChapterSubtitle(book.id, chapter, langCode);
@@ -296,7 +300,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
           if (!guestAccess.canOpenChapter(
             isAuthenticated: auth.isAuthenticated,
           )) {
-            _showSignInPrompt(context);
+            _showSignInPrompt(context, isDark);
             return;
           }
 
@@ -313,15 +317,15 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF9F0),
+            color: isDark ? const Color(0xFF222722) : const Color(0xFFFFF9F0),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: const Color(0xFFEAE2D2),
+              color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -331,22 +335,29 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
             children: [
               // Left Chapter Number Badge
               Container(
-                width: 56,
-                height: 56,
+                constraints: const BoxConstraints(
+                  minWidth: 54,
+                  minHeight: 54,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: config.badgeBgColor,
+                  color: isDark ? const Color(0xFF2E3824) : config.badgeBgColor,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Text(
-                  '${chapter.chapterNumber}',
-                  style: AppTextStyles.getFont(
-                    context,
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700,
-                    color: config.badgeTextColor,
-                    height: 1.0,
-                    isSerif: true,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '${chapter.chapterNumber}',
+                    maxLines: 1,
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? const Color(0xFFA5B888) : config.badgeTextColor,
+                      height: 1.1,
+                      isSerif: true,
+                    ),
                   ),
                 ),
               ),
@@ -364,7 +375,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.cardTitle(
                         langCode,
-                        color: const Color(0xFF18392C),
+                        color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -374,7 +385,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.compact(
                         langCode,
-                        color: const Color(0xFF666666),
+                        color: isDark ? Colors.white60 : const Color(0xFF666666),
                       ),
                     ),
                   ],
@@ -384,9 +395,9 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
               const SizedBox(width: 8),
 
               // Right Arrow Chevron
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF7A6B5D),
+                color: isDark ? Colors.white60 : const Color(0xFF7A6B5D),
                 size: 24,
               ),
             ],
@@ -423,7 +434,6 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
       return chapter.subtitle;
     }
 
-    // Default reference subtitles for Gita & Ramayana when raw subtitle is generic
     if (bookId == 'bhagavad_gita') {
       const gitaSubtitles = [
         'The Yoga of Grief',
@@ -454,13 +464,13 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     return chapter.subtitle;
   }
 
-  Widget _bookNotFound(BuildContext context) {
+  Widget _bookNotFound(BuildContext context, bool isDark) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF1B1B1B)),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : const Color(0xFF1B1B1B)),
       ),
       body: Center(
         child: Text(
@@ -475,9 +485,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     );
   }
 
-  void _showSignInPrompt(BuildContext context) {
+  void _showSignInPrompt(BuildContext context, bool isDark) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF222722) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -503,7 +514,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                 style: AppTextStyles.getFont(
                   ctx,
                   fontSize: 14,
-                  color: const Color(0xFF555555),
+                  color: isDark ? Colors.white70 : const Color(0xFF555555),
                 ),
               ),
               const SizedBox(height: 20),
@@ -515,7 +526,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                     Navigator.of(context).pushNamed(AppRoutes.auth);
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF1B1B1B),
+                    backgroundColor: isDark ? const Color(0xFFE88B60) : const Color(0xFF1B1B1B),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: Text(
@@ -560,7 +571,7 @@ class _BookUiConfig {
     switch (bookId) {
       case 'ramayana':
         return _BookUiConfig(
-          headerBgColor: const Color(0xFFCBD1AE), // Muted sage olive (Ref 2)
+          headerBgColor: const Color(0xFF8A9A78),
           badgeBgColor: const Color(0xFFEAEFD8),
           badgeTextColor: const Color(0xFF5A6C38),
           artworkAsset: 'assets/images/trishual.png',
@@ -571,7 +582,7 @@ class _BookUiConfig {
 
       case 'mahabharata':
         return _BookUiConfig(
-          headerBgColor: const Color(0xFFDFB874), // Warm golden amber
+          headerBgColor: const Color(0xFFD6A350),
           badgeBgColor: const Color(0xFFF9EED4),
           badgeTextColor: const Color(0xFF8C6647),
           artworkAsset: 'assets/images/mahabharat_page.png',
@@ -582,7 +593,7 @@ class _BookUiConfig {
 
       case 'upanishads':
         return _BookUiConfig(
-          headerBgColor: const Color(0xFFA5B288), // Soft leaf sage
+          headerBgColor: const Color(0xFF99A878),
           badgeBgColor: const Color(0xFFEAF0D8),
           badgeTextColor: const Color(0xFF5A6C38),
           artworkAsset: 'assets/images/upnishad_page.png',
@@ -594,7 +605,7 @@ class _BookUiConfig {
       case 'bhagavad_gita':
       default:
         return _BookUiConfig(
-          headerBgColor: const Color(0xFFE48D53), // Warm orange (Ref 1)
+          headerBgColor: const Color(0xFFE47A46),
           badgeBgColor: const Color(0xFFFDECDA),
           badgeTextColor: const Color(0xFFC85A32),
           artworkAsset: 'assets/images/chariot_lineart.png',

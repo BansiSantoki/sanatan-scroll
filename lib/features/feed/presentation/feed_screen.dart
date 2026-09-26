@@ -7,10 +7,8 @@ import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/widgets/language_selector_button.dart';
-import '../../../../data/daily_readings_repository.dart';
 import '../../../../data/sacred_books_repository.dart';
 import '../../../../models/sacred_book_model.dart';
-import '../../../../models/wisdom_model.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/navigation_provider.dart';
@@ -51,9 +49,10 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 600 ? 32.0 : 20.0;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -91,6 +90,7 @@ class _HomeHeaderRow extends StatelessWidget {
     final streakProvider = context.watch<StreakProvider>();
     final currentStreak = streakProvider.streak.currentStreak;
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final rawName = auth.userName.trim();
     final String greetingText;
@@ -116,7 +116,7 @@ class _HomeHeaderRow extends StatelessWidget {
                   context,
                   fontSize: greetingFontSize,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF1B1B1B),
+                  color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                   height: 1.15,
                   isSerif: true,
                 ),
@@ -131,7 +131,7 @@ class _HomeHeaderRow extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF7BE78),
+                  color: isDark ? const Color(0xFF2C241B) : const Color(0xFFF7BE78),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -149,7 +149,7 @@ class _HomeHeaderRow extends StatelessWidget {
                         context,
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF23180C),
+                        color: isDark ? const Color(0xFFF7BE78) : const Color(0xFF23180C),
                       ),
                     ),
                   ],
@@ -172,52 +172,134 @@ class _HomeHeaderRow extends StatelessWidget {
 // 2. DAILY WISDOM CARD
 // ============================================================
 
+// ============================================================
+// 2. DYNAMIC LAST READ / DAILY WISDOM CARD
+// ============================================================
+
+class _DailyWisdomBookData {
+  final String bookId;
+  final String title;
+  final String sanskrit;
+  final String quoteEn;
+  final String quoteGu;
+  final String quoteHi;
+  final String imagePath;
+  final Color cardBgColor;
+  final Color blobColor;
+
+  const _DailyWisdomBookData({
+    required this.bookId,
+    required this.title,
+    required this.sanskrit,
+    required this.quoteEn,
+    required this.quoteGu,
+    required this.quoteHi,
+    required this.imagePath,
+    required this.cardBgColor,
+    required this.blobColor,
+  });
+
+  String getLocalizedQuote(String langCode) {
+    if (langCode == 'gu') return quoteGu;
+    if (langCode == 'hi') return quoteHi;
+    return quoteEn;
+  }
+}
+
+_DailyWisdomBookData _getBookWisdomData(String bookId) {
+  switch (bookId) {
+    case 'ramayana':
+      return const _DailyWisdomBookData(
+        bookId: 'ramayana',
+        title: 'Ramayana · Bala Kanda · Sarga 1',
+        sanskrit: 'ततो गृध्रस्य वचनात्सम्पातेर्हनुमान्बली। शतयोजनविस्तीर्णं पुप्लुवे लवणार्णवम्॥',
+        quoteEn: 'Following the words of Sampati, the mighty Hanuman leapt across the vast salt ocean stretching for a hundred yojanas.',
+        quoteGu: 'સંપાતિના વચનોનું પાલન કરી શક્તિશાળી હનુમાનજીએ સો યોજન વિસ્તીર્ણ સમુદ્રને પાર કર્યો.',
+        quoteHi: 'संपाती के वचनों का पालन करते हुए महाबली हनुमान जी ने सौ योजन फैले हुए समुद्र को लांघा।',
+        imagePath: 'assets/images/trishual.png',
+        cardBgColor: Color(0xFFCBD1AE),
+        blobColor: Color(0xFF8A9A65),
+      );
+    case 'upanishads':
+      return const _DailyWisdomBookData(
+        bookId: 'upanishads',
+        title: 'Upanishads · Isha Upanishad',
+        sanskrit: 'ईशा वास्यमिदं सर्वं यत्किञ्च जगत्यां जगत्। तेन त्यक्तेन भुञ्जीथा मा गृधः कस्यस्विद्धनम्॥',
+        quoteEn: 'All this, whatever moves in this moving world, is enveloped by the Supreme. Enjoy through renunciation; do not covet.',
+        quoteGu: 'આ જગતમાં જે કંઈ પણ ગતિશીલ છે તે ઈશ્વરથી વ્યાપ્ત છે. ત્યાગભાવથી ભોગવો, કોઈના ધનની લાલચ ન કરો.',
+        quoteHi: 'इस जगत् में जो कुछ भी गतिमान है, वह सब ईश्वर से व्याप्त है। त्यागपूर्वक उपभोग करो, किसी के धन का लोभ मत करो।',
+        imagePath: 'assets/images/upnishad_page.png',
+        cardBgColor: Color(0xFFA5B288),
+        blobColor: Color(0xFF6B7B4F),
+      );
+    case 'mahabharata':
+      return const _DailyWisdomBookData(
+        bookId: 'mahabharata',
+        title: 'Mahabharata · Adi Parva',
+        sanskrit: 'धर्मे च अर्थे च कामे च मोक्षे च भरतर्षभ। यदिहास्ति तदन्यत्र यन्नेहास्ति न तत्क्वचित्॥',
+        quoteEn: 'What is found here regarding Duty, Wealth, Desire, and Liberation may be found elsewhere; what is not here is nowhere else.',
+        quoteGu: 'ધર્મ, અર્થ, કામ અને મોક્ષ વિશે જે અહીં છે તે જ અન્યત્ર છે; જે અહીં નથી તે ક્યાંય નથી.',
+        quoteHi: 'धर्म, अर्थ, काम और मोक्ष के विषय में जो यहाँ है वही अन्यत्र है; जो यहाँ नहीं है वह कहीं नहीं है।',
+        imagePath: 'assets/images/mahabharat_page.png',
+        cardBgColor: Color(0xFFDFB874),
+        blobColor: Color(0xFFC4984F),
+      );
+    case 'bhagavad_gita':
+    case 'gita':
+    default:
+      return const _DailyWisdomBookData(
+        bookId: 'bhagavad_gita',
+        title: 'Bhagavad Gita 2.47',
+        sanskrit: 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।',
+        quoteEn: 'You have the right to perform your duty, but not to the fruits of your actions.',
+        quoteGu: 'તમને તમારું કર્તવ્ય કરવાનો અધિકાર છે, પરંતુ તેના ફળ પર નહીં.',
+        quoteHi: 'आपको अपने कर्तव्य का पालन करने का अधिकार है, लेकिन उसके फलों पर नहीं।',
+        imagePath: 'assets/images/chariot_lineart.png',
+        cardBgColor: Color(0xFFF7BD77),
+        blobColor: Color(0xFFE48D53),
+      );
+  }
+}
+
 class _DailyWisdomCard extends StatelessWidget {
   const _DailyWisdomCard();
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<WisdomModel>(
-      stream: DailyReadingsRepository.streamDailyWisdom(),
-      builder: (context, snapshot) {
-        final wisdom = snapshot.data;
-        final title = wisdom?.reflection ?? '${context.l10n.bhagavadGita} 2.47';
-        final sanskrit = wisdom?.sanskrit ?? 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।';
-        final quote = wisdom?.getLocalizedQuote(context.l10n.locale.languageCode) ??
-            (context.l10n.locale.languageCode == 'gu'
-                ? 'તમને તમારું કર્તવ્ય કરવાનો અધિકાર છે, પરંતુ તેના ફળ પર નહીં.'
-                : context.l10n.locale.languageCode == 'hi'
-                    ? 'आपको अपने कर्तव्य का पालन करने का अधिकार है, लेकिन उसके फलों पर नहीं।'
-                    : 'You have the right to perform your duty, but not to the fruits of your actions.');
+    final readingProvider = context.watch<ReadingProgressProvider>();
+    final activeBookId = readingProvider.lastReadBookId;
+    final data = _getBookWisdomData(activeBookId);
+    final langCode = context.l10n.locale.languageCode;
+    final quote = data.getLocalizedQuote(langCode);
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final cardHeight = width >= 600 ? 320.0 : 290.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final cardHeight = width >= 600 ? 320.0 : 290.0;
 
-            return SizedBox(
-              width: double.infinity,
-              height: cardHeight,
+        return SizedBox(
+          width: double.infinity,
+          height: cardHeight,
+          child: Container(
+            decoration: BoxDecoration(
+              color: data.cardBgColor,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Background Blob Graphic & Golden Star
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _DailyWisdomBackgroundPainter(),
-                    ),
-                  ),
-
-                  // Enlarged Chariot Line-Art Image inside Green Blob
+                  // Right side Enlarged Line-Art Image for Active Book
                   Positioned(
-                    right: 0,
-                    bottom: 0,
-                    width: width * 0.52,
-                    height: cardHeight * 0.88,
+                    right: 8,
+                    bottom: 8,
+                    top: 8,
+                    width: width * 0.46,
                     child: Image.asset(
-                      'assets/images/chariot_lineart.png',
+                      data.imagePath,
                       fit: BoxFit.contain,
-                      alignment: Alignment.bottomRight,
+                      alignment: Alignment.centerRight,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                     ),
@@ -225,131 +307,75 @@ class _DailyWisdomCard extends StatelessWidget {
 
                   // Left side Text Content
                   Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
+                    left: 20,
+                    top: 16,
+                    bottom: 16,
                     width: width * 0.52,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 4, top: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            context.l10n.dailyWisdom,
-                            style: AppTextStyles.getFont(
-                              context,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF7A7E5A),
-                              letterSpacing: 0.8,
-                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          context.l10n.dailyWisdom,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF525738),
+                            letterSpacing: 0.8,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.getFont(
-                              context,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1B1B1B),
-                              height: 1.05,
-                              isSerif: true,
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          data.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1B1B1B),
+                            height: 1.05,
+                            isSerif: true,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            sanskrit,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.getFontForLocale(
-                              const Locale('hi'),
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF222222),
-                              height: 1.35,
-                            ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          data.sanskrit,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.getFontForLocale(
+                            const Locale('hi'),
+                            fontSize: 15.0,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF222222),
+                            height: 1.35,
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            quote,
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.getFont(
-                              context,
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w400,
-                              color: const Color(0xFF383838),
-                              height: 1.45,
-                            ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          quote,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 13.0,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF383838),
+                            height: 1.4,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
   }
-}
-
-class _DailyWisdomBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    final blobPaint = Paint()
-      ..color = const Color(0xFFB8C296)
-      ..style = PaintingStyle.fill;
-
-    final blob = Path();
-    final bx = w * 0.48;
-
-    blob.moveTo(bx + w * 0.12, 0);
-    blob.cubicTo(w, 0, w, h * 0.20, w, h * 0.45);
-    blob.cubicTo(w, h * 0.85, w * 0.95, h, w * 0.58, h);
-    blob.cubicTo(w * 0.44, h, w * 0.48, h * 0.70, w * 0.50, h * 0.48);
-    blob.cubicTo(w * 0.52, h * 0.25, bx + w * 0.05, 0, bx + w * 0.12, 0);
-    blob.close();
-
-    canvas.drawPath(blob, blobPaint);
-
-    final starPaint = Paint()
-      ..color = const Color(0xFFF8C87A)
-      ..style = PaintingStyle.fill;
-
-    _drawStar(canvas, Offset(w * 0.86, h * 0.18), 22, starPaint);
-  }
-
-  void _drawStar(Canvas canvas, Offset center, double radius, Paint paint) {
-    final path = Path();
-    final innerRadius = radius * 0.42;
-
-    for (int i = 0; i < 16; i++) {
-      final r = (i % 2 == 0) ? radius : innerRadius;
-      final angle = i * (math.pi / 8);
-      final x = center.dx + r * math.cos(angle);
-      final y = center.dy + r * math.sin(angle);
-
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ============================================================
@@ -362,13 +388,15 @@ class _ContinueJourneyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final readingProvider = context.watch<ReadingProgressProvider>();
-    final savedPos = readingProvider.positionFor('bhagavad_gita');
+    final activeBookId = readingProvider.lastReadBookId;
+    final savedPos = readingProvider.positionFor(activeBookId);
+    final bookData = _getBookWisdomData(activeBookId);
     final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF7BD77),
+        color: bookData.cardBgColor,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Material(
@@ -382,14 +410,14 @@ class _ContinueJourneyCard extends StatelessWidget {
               Navigator.of(context).pushNamed(
                 AppRoutes.sacredTextReading,
                 arguments: {
-                  'textId': 'bhagavad_gita',
+                  'textId': activeBookId,
                   'chapterNumber': savedPos.chapterNumber,
                 },
               );
             } else {
               Navigator.of(context).pushNamed(
-                AppRoutes.sacredTextReading,
-                arguments: 'bhagavad_gita',
+                AppRoutes.sacredTextDetail,
+                arguments: activeBookId,
               );
             }
           },
@@ -462,6 +490,7 @@ class _ExploreScripturesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final langCode = l10n.locale.languageCode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,7 +501,7 @@ class _ExploreScripturesSection extends StatelessWidget {
             context,
             fontSize: 11.5,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF7A7E5A),
+            color: isDark ? const Color(0xFFE88B60) : const Color(0xFF7A7E5A),
             letterSpacing: 0.8,
           ),
         ),
@@ -483,7 +512,7 @@ class _ExploreScripturesSection extends StatelessWidget {
             context,
             fontSize: 15,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF1B1B1B),
+            color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
           ),
         ),
         const SizedBox(height: 16),
@@ -554,10 +583,13 @@ class _BookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF222722) : bgColor;
+
     return Container(
       height: 185,
       decoration: BoxDecoration(
-        color: bgColor,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Material(
@@ -566,6 +598,7 @@ class _BookCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () {
+            context.read<ReadingProgressProvider>().setLastReadBookId(bookId);
             context.read<NavigationProvider>().setIndex(3);
             Navigator.of(context).pushNamed(
               AppRoutes.sacredTextDetail,
@@ -584,7 +617,7 @@ class _BookCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   child: CustomPaint(
-                    painter: _getIconPainter(iconType),
+                    painter: _getIconPainter(iconType, isDark),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -598,7 +631,7 @@ class _BookCard extends StatelessWidget {
                       context,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     ),
                   ),
                 ),
@@ -612,7 +645,7 @@ class _BookCard extends StatelessWidget {
                     context,
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
-                    color: const Color(0xFF3B3B3B),
+                    color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF3B3B3B),
                     height: 1.2,
                   ),
                 ),
@@ -624,20 +657,20 @@ class _BookCard extends StatelessWidget {
     );
   }
 
-  CustomPainter _getIconPainter(int type) {
-    const iconColor = Color(0xFF1B1B1B);
+  CustomPainter _getIconPainter(int type, bool isDark) {
+    final iconColor = isDark ? const Color(0xFFE88B60) : const Color(0xFF1B1B1B);
 
     switch (type) {
       case 0:
-        return const _LotusIconPainter(color: iconColor);
+        return _LotusIconPainter(color: iconColor);
       case 1:
-        return const _BowArrowIconPainter(color: iconColor);
+        return _BowArrowIconPainter(color: iconColor);
       case 2:
-        return const _LeavesIconPainter(color: iconColor);
+        return _LeavesIconPainter(color: iconColor);
       case 3:
-        return const _WheelIconPainter(color: iconColor);
+        return _WheelIconPainter(color: iconColor);
       default:
-        return const _LotusIconPainter(color: iconColor);
+        return _LotusIconPainter(color: iconColor);
     }
   }
 }

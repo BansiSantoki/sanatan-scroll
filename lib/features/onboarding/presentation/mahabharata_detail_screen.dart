@@ -507,18 +507,20 @@ class _MahabharataHero extends StatelessWidget {
                       top: 121,
                       right: 25,
 
-                      child: Text(
-                        'Mahabharata',
-
-                        maxLines: 1,
-
-                        style:
-                            GoogleFonts.cormorantGaramond(
-                          fontSize: 57,
-                          fontWeight:
-                              FontWeight.w700,
-                          height: 0.95,
-                          color: textColor,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Mahabharata',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 57,
+                            fontWeight: FontWeight.w700,
+                            height: 1.05,
+                            color: textColor,
+                          ),
                         ),
                       ),
                     ),

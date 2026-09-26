@@ -199,17 +199,20 @@ class GitaDetailScreen extends StatelessWidget {
                   right: 25,
                   top: 102,
 
-                  child: Text(
-                    'Bhagavad Gita',
-
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
-
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 51,
-                      fontWeight: FontWeight.w700,
-                      height: 0.95,
-                      color: black,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Bhagavad Gita',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 51,
+                        fontWeight: FontWeight.w700,
+                        height: 1.05,
+                        color: black,
+                      ),
                     ),
                   ),
                 ),

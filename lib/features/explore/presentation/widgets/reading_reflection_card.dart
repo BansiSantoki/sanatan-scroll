@@ -7,6 +7,8 @@ import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
 
+import 'reader_header.dart';
+
 class ReadingReflectionCard extends StatelessWidget {
   const ReadingReflectionCard({
     super.key,
@@ -55,62 +57,25 @@ class ReadingReflectionCard extends StatelessWidget {
       topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C);
+    final labelTextColor = isDark ? const Color(0xFFA0A6A0) : const Color(0xFF736B5E);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-
-              // Top Header Row (Back Arrow + Book/Chapter Subtitle + Bookmark Icon)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: onBack,
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                          color: Color(0xFF18392C),
-                        ),
-                        splashRadius: 22,
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: onToggleSave,
-                    tooltip: isSaved ? l10n.savedAction : l10n.save,
-                    icon: Icon(
-                      isSaved
-                          ? Icons.bookmark_rounded
-                          : Icons.bookmark_outline_rounded,
-                      color: const Color(0xFF18392C),
-                      size: 26,
-                    ),
-                    splashRadius: 22,
-                  ),
-                ],
-              ),
-
-              // Subtitle under Header: e.g. "Bhagavad Gita · Chapter 3"
-              Padding(
-                padding: const EdgeInsets.only(left: 12, bottom: 12),
-                child: Text(
-                  topSubtitle,
-                  style: AppTextStyles.getFontForLocale(
-                    locale,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF18392C),
-                    isSerif: true,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
+              ReaderHeader(
+                subtitle: topSubtitle,
+                isSaved: isSaved,
+                onBack: onBack,
+                onToggleSave: onToggleSave,
+                onShare: onShare,
+                languageCode: languageCode,
               ),
 
               // Main Reflection Body Content
@@ -128,7 +93,7 @@ class ReadingReflectionCard extends StatelessWidget {
                         l10n.reflection,
                         style: AppTypography.sectionLabel(
                           languageCode,
-                          color: const Color(0xFF736B5E),
+                          color: labelTextColor,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -138,7 +103,7 @@ class ReadingReflectionCard extends StatelessWidget {
                         reflectionText,
                         style: AppTypography.reflectionContext(
                           languageCode,
-                          color: const Color(0xFF18392C),
+                          color: primaryTextColor,
                         ),
                       ),
 
@@ -160,7 +125,7 @@ class ReadingReflectionCard extends StatelessWidget {
                         locale,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF18392C),
+                        color: primaryTextColor,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -177,7 +142,7 @@ class ReadingReflectionCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? const Color(0xFFEF6523)
-                                    : const Color(0xFFF9D6C4),
+                                    : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -200,14 +165,14 @@ class ReadingReflectionCard extends StatelessWidget {
                               locale,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF18392C),
+                              color: primaryTextColor,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.arrow_forward_rounded,
                             size: 18,
-                            color: Color(0xFF18392C),
+                            color: primaryTextColor,
                           ),
                         ],
                       ),

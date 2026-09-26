@@ -34,9 +34,25 @@ class ProfileMenuTile extends StatelessWidget {
         ),
         child: Icon(icon, size: 20, color: AppColors.primaryBurgundy),
       ),
-      title: Text(title, style: AppTextStyles.bodyMedium),
+      title: Text(
+        title,
+        style: AppTextStyles.getFont(
+          context,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.darkText,
+        ),
+      ),
       subtitle: subtitle != null
-          ? Text(subtitle!, style: AppTextStyles.caption)
+          ? Text(
+              subtitle!,
+              style: AppTextStyles.getFont(
+                context,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.secondaryText,
+              ),
+            )
           : null,
       trailing: const Icon(
         Icons.chevron_right_rounded,

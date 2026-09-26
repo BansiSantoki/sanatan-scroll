@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../../../../app/routes/app_routes.dart';
+import '../../../../app/theme/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -176,12 +175,14 @@ class _SplashScreenState extends State<SplashScreen>
                       Text(
                         'Sanatan Scroll',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.cormorantGaramond(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: titleFontSize,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF1F3323),
                           height: 1.04,
                           letterSpacing: -0.3,
+                          isSerif: true,
                         ),
                       ),
 
@@ -191,7 +192,8 @@ class _SplashScreenState extends State<SplashScreen>
                       Text(
                         'Clarity, one scroll at a time.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: AppTextStyles.getFont(
+                          context,
                           fontSize: subtitleFontSize,
                           fontWeight: FontWeight.w400,
                           color: const Color(0xFF2D372E),

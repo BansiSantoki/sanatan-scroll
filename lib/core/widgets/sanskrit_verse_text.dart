@@ -45,14 +45,14 @@ class SanskritVerseText extends StatelessWidget {
 
     double baseSize = overrideFontSize ?? AppTypography.getShlokFontSize(formattedText.length);
     if (width < 360) {
-      baseSize = (baseSize * 0.88).clamp(24.0, 32.0);
+      baseSize = (baseSize * 0.90).clamp(16.0, 20.0);
     } else if (width > 600) {
-      baseSize = (baseSize * 1.1).clamp(26.0, 36.0);
+      baseSize = (baseSize * 1.15).clamp(20.0, 25.0);
     }
 
     return Container(
       width: double.infinity,
-      alignment: Alignment.center,
+      alignment: Alignment.centerLeft,
       child: Text(
         formattedText,
         textAlign: textAlign,
@@ -62,8 +62,8 @@ class SanskritVerseText extends StatelessWidget {
           fontSize: baseSize,
           fontWeight: FontWeight.w500,
           color: color,
-          height: 1.45,
-          letterSpacing: 0.2, // Indic tracking rule
+          height: 1.48,
+          letterSpacing: 0.1,
         ),
       ),
     );

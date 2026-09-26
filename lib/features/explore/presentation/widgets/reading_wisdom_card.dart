@@ -8,6 +8,8 @@ import '../../../../models/sacred_book_model.dart';
 import '../../../../models/sacred_chapter_model.dart';
 import '../../../../models/sacred_verse_model.dart';
 
+import 'reader_header.dart';
+
 class ReadingWisdomCard extends StatelessWidget {
   const ReadingWisdomCard({
     super.key,
@@ -17,6 +19,7 @@ class ReadingWisdomCard extends StatelessWidget {
     required this.languageCode,
     required this.isSaved,
     required this.onToggleSave,
+    required this.onShare,
     required this.isPlayingAudio,
     required this.onToggleAudio,
     required this.onBack,
@@ -30,6 +33,7 @@ class ReadingWisdomCard extends StatelessWidget {
   final String languageCode;
   final bool isSaved;
   final VoidCallback onToggleSave;
+  final VoidCallback onShare;
   final bool isPlayingAudio;
   final VoidCallback onToggleAudio;
   final VoidCallback onBack;
@@ -63,62 +67,25 @@ class ReadingWisdomCard extends StatelessWidget {
       topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? const Color(0xFFF0F2F0) : const Color(0xFF18392C);
+    final labelTextColor = isDark ? const Color(0xFFA0A6A0) : const Color(0xFF736B5E);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-
-              // Top Header Row (Back Arrow + Book/Chapter Subtitle + Bookmark Icon)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: onBack,
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                          color: Color(0xFF18392C),
-                        ),
-                        splashRadius: 22,
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: onToggleSave,
-                    tooltip: isSaved ? l10n.savedAction : l10n.save,
-                    icon: Icon(
-                      isSaved
-                          ? Icons.bookmark_rounded
-                          : Icons.bookmark_outline_rounded,
-                      color: const Color(0xFF18392C),
-                      size: 26,
-                    ),
-                    splashRadius: 22,
-                  ),
-                ],
-              ),
-
-              // Subtitle under Header: e.g. "Bhagavad Gita · Chapter 3"
-              Padding(
-                padding: const EdgeInsets.only(left: 12, bottom: 12),
-                child: Text(
-                  topSubtitle,
-                  style: AppTextStyles.getFontForLocale(
-                    locale,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF18392C),
-                    isSerif: true,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
+              ReaderHeader(
+                subtitle: topSubtitle,
+                isSaved: isSaved,
+                onBack: onBack,
+                onToggleSave: onToggleSave,
+                onShare: onShare,
+                languageCode: languageCode,
               ),
 
               // Main Scrollable Scripture + Translation Body
@@ -136,7 +103,7 @@ class ReadingWisdomCard extends StatelessWidget {
                         l10n.sanskrit,
                         style: AppTypography.sectionLabel(
                           languageCode,
-                          color: const Color(0xFF736B5E),
+                          color: labelTextColor,
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -145,7 +112,7 @@ class ReadingWisdomCard extends StatelessWidget {
                       SanskritVerseText(
                         sanskrit: verse.sanskrit,
                         textAlign: TextAlign.left,
-                        color: const Color(0xFF18392C),
+                        color: primaryTextColor,
                       ),
 
                       const SizedBox(height: 14),
@@ -155,13 +122,13 @@ class ReadingWisdomCard extends StatelessWidget {
                         verseRef,
                         style: AppTypography.verseReference(
                           languageCode,
-                          color: const Color(0xFF18392C),
+                          color: primaryTextColor,
                         ),
                       ),
 
                       const SizedBox(height: 20),
-                      const Divider(
-                        color: Color(0xFFE8E2DA),
+                      Divider(
+                        color: isDark ? Colors.white12 : const Color(0xFFE8E2DA),
                         height: 1,
                         thickness: 1,
                       ),
@@ -172,7 +139,7 @@ class ReadingWisdomCard extends StatelessWidget {
                         l10n.translation,
                         style: AppTypography.sectionLabel(
                           languageCode,
-                          color: const Color(0xFF736B5E),
+                          color: labelTextColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -182,7 +149,7 @@ class ReadingWisdomCard extends StatelessWidget {
                         translationText,
                         style: AppTypography.scriptureTranslation(
                           languageCode,
-                          color: const Color(0xFF18392C),
+                          color: primaryTextColor,
                         ),
                       ),
 
@@ -215,7 +182,7 @@ class ReadingWisdomCard extends StatelessWidget {
                                 locale,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF18392C),
+                                color: primaryTextColor,
                                 decoration: TextDecoration.none,
                               ),
                             ),
@@ -241,7 +208,7 @@ class ReadingWisdomCard extends StatelessWidget {
                         locale,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF18392C),
+                        color: primaryTextColor,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -258,7 +225,7 @@ class ReadingWisdomCard extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: isActive
                                     ? const Color(0xFFEF6523)
-                                    : const Color(0xFFF9D6C4),
+                                    : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -281,14 +248,14 @@ class ReadingWisdomCard extends StatelessWidget {
                               locale,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFF18392C),
+                              color: primaryTextColor,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(
+                          Icon(
                             Icons.arrow_forward_rounded,
                             size: 18,
-                            color: Color(0xFF18392C),
+                            color: primaryTextColor,
                           ),
                         ],
                       ),

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../providers/navigation_provider.dart';
 import '../../../../providers/streak_provider.dart';
 import 'reading_history_calendar_screen.dart';
 
@@ -13,6 +12,7 @@ class StreakScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final horizontalPadding = width >= 900
         ? 40.0
@@ -23,7 +23,7 @@ class StreakScreen extends StatelessWidget {
     final maxContentWidth = width >= 900 ? 900.0 : double.infinity;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F2),
+      backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -41,119 +41,29 @@ class StreakScreen extends StatelessWidget {
                   // 1. STREAK HEADER
                   // ============================================================
                   Text(
-                    'Streak',
+                    'Your Journey',
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 38,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                       height: 1.05,
                       isSerif: true,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Keep your spiritual journey going.',
+                    'Consistent steps on a wiser you.',
                     style: AppTextStyles.getFont(
                       context,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF555555),
+                      color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF555555),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-
                   // ============================================================
-                  // 2. READING HISTORY CARD / BUTTON (Navigates to Reading History Calendar Screen)
-                  // ============================================================
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ReadingHistoryCalendarScreen(),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF9F0),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFEAE2D2),
-                            width: 1.0,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEAF0D8),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.calendar_month_rounded,
-                                color: Color(0xFF5A6C38),
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Reading History',
-                                    style: AppTextStyles.getFont(
-                                      context,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF1B1B1B),
-                                      isSerif: true,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Your journey, day by day.',
-                                    style: AppTextStyles.getFont(
-                                      context,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                      color: const Color(0xFF666666),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              size: 26,
-                              color: Color(0xFF1B1B1B),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ============================================================
-                  // 3. MAIN TRACKER CARD (Preserved)
+                  // 2. MAIN TRACKER CARD
                   // ============================================================
                   const _MainTrackerCard(),
 
@@ -340,7 +250,11 @@ class _MainTrackerCard extends StatelessWidget {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    context.read<NavigationProvider>().setIndex(0);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ReadingHistoryCalendarScreen(),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD95A2B),
@@ -350,14 +264,25 @@ class _MainTrackerCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  child: Text(
-                    l10n.trackDailyProgress,
-                    style: AppTextStyles.getFont(
-                      context,
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.trackDailyProgress,
+                        style: AppTextStyles.getFont(
+                          context,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -379,6 +304,7 @@ class _ThisWeekSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
@@ -398,45 +324,16 @@ class _ThisWeekSection extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.thisWeek,
-                  style: AppTextStyles.getFont(
-                    context,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
-                    isSerif: true,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    context.read<NavigationProvider>().setIndex(0);
-                  },
-                  child: Row(
-                    children: [
-                      Text(
-                        l10n.viewAll,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A6C38),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 16,
-                        color: Color(0xFF5A6C38),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            // Header
+            Text(
+              l10n.thisWeek,
+              style: AppTextStyles.getFont(
+                context,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+                isSerif: true,
+              ),
             ),
 
             const SizedBox(height: 12),
@@ -446,10 +343,10 @@ class _ThisWeekSection extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF9F0),
+                color: isDark ? const Color(0xFF1E241E) : const Color(0xFFFFF9F0),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFFEAE2D2),
+                  color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
                   width: 1.0,
                 ),
               ),
@@ -462,7 +359,7 @@ class _ThisWeekSection extends StatelessWidget {
                       context,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1B1B1B),
+                      color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -472,13 +369,13 @@ class _ThisWeekSection extends StatelessWidget {
                       context,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w400,
-                      color: const Color(0xFF555555),
+                      color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF555555),
                       height: 1.35,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Divider(
-                    color: Color(0xFFEAE2D2),
+                  Divider(
+                    color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
                     height: 1,
                     thickness: 1,
                   ),
@@ -500,7 +397,7 @@ class _ThisWeekSection extends StatelessWidget {
                               context,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF333333),
+                              color: isDark ? const Color(0xFFD0D4D0) : const Color(0xFF333333),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -525,7 +422,7 @@ class _ThisWeekSection extends StatelessWidget {
                                     color: Colors.transparent,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: const Color(0xFFC4B8A5),
+                                      color: isDark ? Colors.white24 : const Color(0xFFC4B8A5),
                                       width: 1.2,
                                     ),
                                   ),
@@ -554,6 +451,7 @@ class _MilestonesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Consumer<StreakProvider>(
       builder: (context, provider, _) {
@@ -572,7 +470,7 @@ class _MilestonesSection extends StatelessWidget {
                     context,
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
+                    color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                     isSerif: true,
                   ),
                 ),
@@ -582,7 +480,7 @@ class _MilestonesSection extends StatelessWidget {
                     context,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFFD96E28),
+                    color: isDark ? const Color(0xFFE88B60) : const Color(0xFFD96E28),
                   ),
                 ),
               ],
@@ -590,41 +488,37 @@ class _MilestonesSection extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            // 4 Milestone Cards
+            // 4 Milestone Cards matching Image 2 (7, 30, 90, 180)
             _MilestoneCard(
               title: l10n.milestoneBeginning,
               targetDays: 7,
-              icon: Icons.eco_outlined,
-              iconBgColor: const Color(0xFFEAF0D8),
-              iconColor: const Color(0xFF5A6C38),
+              iconBgColor: isDark ? const Color(0xFF2E3D24) : const Color(0xFFE6EED8),
+              iconColor: isDark ? const Color(0xFFA5C478) : const Color(0xFF4A5C2B),
               isUnlocked: provider.isMilestoneUnlocked(7),
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
               title: l10n.milestoneSteady,
               targetDays: 30,
-              icon: Icons.local_florist_outlined,
-              iconBgColor: const Color(0xFFFDF0D8),
-              iconColor: const Color(0xFFD96E28),
+              iconBgColor: isDark ? const Color(0xFF3D2A1C) : const Color(0xFFFDECDA),
+              iconColor: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
               isUnlocked: provider.isMilestoneUnlocked(30),
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
-              title: l10n.milestonePracticed,
-              targetDays: 60,
-              icon: Icons.nature_outlined,
-              iconBgColor: const Color(0xFFEAF0D8),
-              iconColor: const Color(0xFF5A6C38),
-              isUnlocked: provider.isMilestoneUnlocked(60),
+              title: 'Committed',
+              targetDays: 90,
+              iconBgColor: isDark ? const Color(0xFF2E3D24) : const Color(0xFFE6EED8),
+              iconColor: isDark ? const Color(0xFFA5C478) : const Color(0xFF4A5C2B),
+              isUnlocked: provider.isMilestoneUnlocked(90),
             ),
             const SizedBox(height: 12),
             _MilestoneCard(
               title: l10n.milestoneDevoted,
-              targetDays: 100,
-              icon: Icons.filter_vintage_outlined,
-              iconBgColor: const Color(0xFFFDECDA),
-              iconColor: const Color(0xFFC85A32),
-              isUnlocked: provider.isMilestoneUnlocked(100),
+              targetDays: 180,
+              iconBgColor: isDark ? const Color(0xFF3D2A1C) : const Color(0xFFFDECDA),
+              iconColor: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+              isUnlocked: provider.isMilestoneUnlocked(180),
             ),
           ],
         );
@@ -637,7 +531,6 @@ class _MilestoneCard extends StatelessWidget {
   const _MilestoneCard({
     required this.title,
     required this.targetDays,
-    required this.icon,
     required this.iconBgColor,
     required this.iconColor,
     required this.isUnlocked,
@@ -645,7 +538,6 @@ class _MilestoneCard extends StatelessWidget {
 
   final String title;
   final int targetDays;
-  final IconData icon;
   final Color iconBgColor;
   final Color iconColor;
   final bool isUnlocked;
@@ -653,32 +545,40 @@ class _MilestoneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9F0),
+        color: isDark ? const Color(0xFF1E241E) : const Color(0xFFFFF9F0),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFEAE2D2),
+          color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
           width: 1.0,
         ),
       ),
       child: Row(
         children: [
-          // Left Spiritual Icon Badge
+          // Left Number Circle Badge (Matching Image 2: 7, 30, 90, 180)
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: iconBgColor,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 22,
+            child: Center(
+              child: Text(
+                '$targetDays',
+                style: AppTextStyles.getFont(
+                  context,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: iconColor,
+                  isSerif: true,
+                ),
+              ),
             ),
           ),
 
@@ -695,7 +595,7 @@ class _MilestoneCard extends StatelessWidget {
                     context,
                     fontSize: 15.5,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1B1B1B),
+                    color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -705,7 +605,7 @@ class _MilestoneCard extends StatelessWidget {
                     context,
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: const Color(0xFF666666),
+                    color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF666666),
                   ),
                 ),
               ],
@@ -730,13 +630,13 @@ class _MilestoneCard extends StatelessWidget {
               : Container(
                   width: 34,
                   height: 34,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE8E2D5),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2A302A) : const Color(0xFFE8E2D5),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.lock_outline_rounded,
-                    color: Color(0xFF888888),
+                    color: isDark ? const Color(0xFFA0A6A0) : const Color(0xFF888888),
                     size: 16,
                   ),
                 ),
