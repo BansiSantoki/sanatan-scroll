@@ -57,10 +57,15 @@ class _TtsAudioPlayerWidgetState extends State<TtsAudioPlayerWidget> {
       final lang = switch (widget.languageCode) {
         'gu' => 'gu-IN',
         'hi' => 'hi-IN',
+        'sa' => 'hi-IN', // Use Hindi locale as a Devanagari-capable fallback for Sanskrit
         _ => 'en-US',
       };
+
       await _flutterTts.setLanguage(lang);
-      await _flutterTts.setSpeechRate(0.45);
+
+      // Slightly slower rate for Sanskrit/Devanagari recitation
+      final double rate = (widget.languageCode == 'sa') ? 0.35 : 0.45;
+      await _flutterTts.setSpeechRate(rate);
       await _flutterTts.setPitch(1.0);
 
       await _flutterTts.speak(widget.textToSpeak);

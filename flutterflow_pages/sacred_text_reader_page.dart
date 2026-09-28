@@ -79,12 +79,26 @@ class _SacredTextReaderPageWidgetState extends State<SacredTextReaderPageWidget>
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   children: [
-                    // Audio Player Custom Widget Wrapper
-                    const TtsAudioPlayerWidget(
-                      width: double.infinity,
-                      height: 48,
-                      textToSpeak: translationText,
-                      languageCode: 'en',
+                    // Audio Player Custom Widget Wrapper (Sanskrit + translation)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Sanskrit recitation (prefer native Sanskrit TTS via 'sa')
+                        TtsAudioPlayerWidget(
+                          width: double.infinity,
+                          height: 48,
+                          textToSpeak: sanskritText,
+                          languageCode: 'sa',
+                        ),
+                        const SizedBox(height: 8),
+                        // Translation TTS (English by default)
+                        TtsAudioPlayerWidget(
+                          width: double.infinity,
+                          height: 48,
+                          textToSpeak: translationText,
+                          languageCode: 'en',
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 32),

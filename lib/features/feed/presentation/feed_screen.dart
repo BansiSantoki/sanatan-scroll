@@ -644,8 +644,8 @@ class _BookCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 48,
-                  height: 48,
+                  width: 64,
+                  height: 64,
                   child: Image.asset(
                     artwork,
                     fit: BoxFit.contain,

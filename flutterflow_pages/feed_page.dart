@@ -41,9 +41,9 @@ class _FeedPageWidgetState extends State<FeedPageWidget> {
                       'Namaste, $userName',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w600,
+                            SizedBox(
+                              width: 64,
+                              height: 64,
                         color: const Color(0xFF1B1B1B),
                         height: 1.0,
                       ),
