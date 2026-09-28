@@ -75,6 +75,11 @@ class SacredBooksRepository {
               final data = Map<String, dynamic>.from(doc.data());
               data['id'] = doc.id;
 
+              // Exclude Mahabharata from app lists if present (app owner requested removal)
+              if (doc.id.toLowerCase() == 'mahabharata') {
+                continue;
+              }
+
               final isPub = data['published'] as bool? ?? data['is_published'] as bool? ?? (data['status'] == 'published' || data['status'] == null);
               final isArc = data['archived'] as bool? ?? (data['status'] == 'archived');
 

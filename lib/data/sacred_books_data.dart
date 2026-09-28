@@ -7,8 +7,9 @@ class SacredBooksData {
 
   static final List<SacredBookModel> all = [
     _buildGitaBook(),
-    _buildRamayanaBook(),
-    ..._additionalBookIds.map(_buildAdditionalBook),
+        _buildRamayanaBook(),
+        // Mahabharata intentionally omitted from fallback list per owner's request
+        ..._additionalBookIds.map(_buildAdditionalBook),
   ];
 
   static const Map<String, String> _additionalBookTitles = {

@@ -80,6 +80,5 @@ class AppConstants {
     'Bhagavad Gita',
     'Ramayana',
     'Upanishads',
-    'Mahabharata',
   ];
 }
