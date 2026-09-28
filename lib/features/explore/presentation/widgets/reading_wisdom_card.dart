@@ -236,14 +236,14 @@ class ReadingWisdomCard extends StatelessWidget {
 
                     const SizedBox(width: 16),
 
-                    // Swipe button
+                    // Swipe / Next verse button
                     GestureDetector(
                       onTap: onNextCard,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            l10n.swipe,
+                            totalCards > 1 ? l10n.swipe : l10n.nextVerse,
                             style: AppTextStyles.getFontForLocale(
                               locale,
                               fontSize: 14,
@@ -253,7 +253,7 @@ class ReadingWisdomCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Icon(
-                            Icons.arrow_forward_rounded,
+                            totalCards > 1 ? Icons.arrow_forward_rounded : Icons.arrow_upward_rounded,
                             size: 18,
                             color: primaryTextColor,
                           ),

@@ -117,10 +117,11 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
 
       case 'upanishads':
         return [
-          _TeachingChipData(langCode == 'gu' ? 'આત્મજ્ઞાન' : (langCode == 'hi' ? 'आत्मज्ञान' : 'Wisdom of the Self'), color: const Color(0xFFE4E8D5)),
-          _TeachingChipData(langCode == 'gu' ? 'ચેતના' : (langCode == 'hi' ? 'चेतना' : 'Consciousness'), color: const Color(0xFFFDECDA)),
-          _TeachingChipData(langCode == 'gu' ? 'બ્રહ્મ' : (langCode == 'hi' ? 'ब्रह्म' : 'Brahman'), color: const Color(0xFFFDF4DA)),
-          _TeachingChipData(langCode == 'gu' ? 'મોક્ષ' : (langCode == 'hi' ? 'मोक्ष' : 'Liberation (Moksha)'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'આત્મા (Self)' : (langCode == 'hi' ? 'आत्मा (Self)' : 'Self'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'કર્મ (Action)' : (langCode == 'hi' ? 'कर्म (Action)' : 'Action'), color: const Color(0xFFFDECDA)),
+          _TeachingChipData(langCode == 'gu' ? 'સન્યાસ (Renunciation)' : (langCode == 'hi' ? 'संन्यास (Renunciation)' : 'Renunciation'), color: const Color(0xFFFDF4DA)),
+          _TeachingChipData(langCode == 'gu' ? 'જ્ઞાન (Knowledge)' : (langCode == 'hi' ? 'ज्ञान (Knowledge)' : 'Knowledge'), color: const Color(0xFFE4E8D5)),
+          _TeachingChipData(langCode == 'gu' ? 'ઈશ્વર (The Divine)' : (langCode == 'hi' ? 'ईश्वर (The Divine)' : 'The Divine'), color: const Color(0xFFFDECDA)),
         ];
 
       case 'mahabharata':
@@ -151,7 +152,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
       case 'ramayana':
         return const Color(0xFF8A9A78);
       case 'upanishads':
-        return const Color(0xFF99A878);
+        return const Color(0xFFE5B869);
       case 'mahabharata':
         return const Color(0xFFD6A350);
       case 'bhagavad_gita':
@@ -165,7 +166,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
       case 'ramayana':
         return const Color(0xFF2E3D1E);
       case 'upanishads':
-        return const Color(0xFF243314);
+        return const Color(0xFF5D4219);
       case 'mahabharata':
         return const Color(0xFF3D2E14);
       case 'bhagavad_gita':
@@ -187,7 +188,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
       case 'ramayana':
         return const Color(0xFF495736);
       case 'upanishads':
-        return const Color(0xFF5A6C44);
+        return const Color(0xFFB87635);
       case 'mahabharata':
         return const Color(0xFFC8932A);
       case 'bhagavad_gita':
@@ -209,8 +210,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         ];
       case 'upanishads':
         return const [
-          _StatItem(value: '108', label: 'Upanishads'),
-          _StatItem(value: '2,000+', label: 'Teachings'),
+          _StatItem(value: '18', label: 'Mantras'),
         ];
       case 'mahabharata':
         return const [

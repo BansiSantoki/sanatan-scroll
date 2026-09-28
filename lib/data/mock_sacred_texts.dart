@@ -34,20 +34,6 @@ class MockSacredTexts {
       keyTeachings: ['Dharma', 'Devotion', 'Relationships', 'Duty & Sacrifice', 'Righteous Leadership'],
     ),
     SacredTextModel(
-      id: 'mahabharata',
-      title: 'Mahabharata',
-      subtitle: 'The Greatest Epic',
-      description:
-          'The Mahabharata is one of the world\'s longest epic poems, narrating the story of the Bharata dynasty. It is a timeless treasure trove of wisdom on dharma, politics, morality, spirituality, and the human condition.',
-      category: 'Dharma',
-      chapters: 18,
-      verses: 100000,
-      pages: 1200,
-      gradientIndex: 2,
-      iconEmoji: '⚔️',
-      keyTeachings: ['Dharma', 'Karma', 'Bhakti', 'Life Lessons'],
-    ),
-    SacredTextModel(
       id: 'upanishads',
       title: 'Upanishads',
       subtitle: 'Wisdom of the Self',

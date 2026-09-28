@@ -149,24 +149,18 @@ class _SplashScreenState extends State<SplashScreen>
                       const Spacer(flex: 2),
 
                       // LOGO (Dark Olive Trishul S)
-                      ColorFiltered(
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xFF1F3323),
-                          BlendMode.srcIn,
-                        ),
-                        child: Image.asset(
-                          'assets/images/sanatan_logo.png',
-                          height: logoHeight,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.self_improvement_rounded,
-                              size: logoHeight * 0.7,
-                              color: const Color(0xFF1F3323),
-                            );
-                          },
-                        ),
+                      Image.asset(
+                        'assets/images/sanatan_logo.png',
+                        height: logoHeight,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.self_improvement_rounded,
+                            size: logoHeight * 0.7,
+                            color: const Color(0xFF1F3323),
+                          );
+                        },
                       ),
 
                       SizedBox(height: screenHeight < 650 ? 16 : 24),

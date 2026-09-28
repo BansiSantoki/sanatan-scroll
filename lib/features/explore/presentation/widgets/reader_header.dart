@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 
+import '../../../../core/widgets/language_selector_button.dart';
+
 class ReaderHeader extends StatelessWidget {
   const ReaderHeader({
     super.key,
@@ -33,7 +35,7 @@ class ReaderHeader extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
 
-        // Top Header Row (Back Arrow + [ Bookmark ] [ Share ])
+        // Top Header Row (Back Arrow + [ Language Dropdown ] [ Share ] [ Bookmark ])
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -49,6 +51,7 @@ class ReaderHeader extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const LanguageSelectorButton(),
                 IconButton(
                   onPressed: onShare,
                   tooltip: l10n.share,

@@ -52,18 +52,11 @@ class AuthHeader extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Dark Olive Trishul S Logo
-              ColorFiltered(
-                colorFilter: const ColorFilter.mode(
-                  Color(0xFF1F3323),
-                  BlendMode.srcIn,
-                ),
-                child: Image.asset(
-                  'assets/images/sanatan_logo.png',
-                  height: size.height < 650 ? 70 : 88,
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                ),
+              Image.asset(
+                'assets/images/sanatan_logo.png',
+                height: size.height < 650 ? 70 : 88,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
               ),
 
               const SizedBox(height: 12),

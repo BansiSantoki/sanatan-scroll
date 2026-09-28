@@ -51,7 +51,6 @@ class DailyReadingsRepository {
     if (id == 'bhagavad_gita') return 'Bhagavad Gita';
     if (id == 'ramayana') return 'Ramayana';
     if (id == 'upanishads') return 'Upanishads';
-    if (id == 'mahabharata') return 'Mahabharata';
     return id.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
   }
 

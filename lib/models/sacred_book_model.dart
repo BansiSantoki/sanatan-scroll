@@ -150,20 +150,17 @@ class SacredBookModel {
       if (titleGu != null && titleGu!.isNotEmpty) return titleGu!;
       if (id == 'bhagavad_gita' || id == 'gita') return 'ભગવદ્ ગીતા';
       if (id == 'ramayana') return 'રામાયણ';
-      if (id == 'mahabharata') return 'મહાભારત';
       if (id == 'upanishads') return 'ઉપનિષદો';
     }
     if (languageCode == 'hi') {
       if (titleHi != null && titleHi!.isNotEmpty) return titleHi!;
       if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
       if (id == 'ramayana') return 'रामायण';
-      if (id == 'mahabharata') return 'महाभारत';
       if (id == 'upanishads') return 'उपनिषद';
     }
     if (languageCode == 'sa') {
       if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
       if (id == 'ramayana') return 'रामायणम्';
-      if (id == 'mahabharata') return 'महाभारतम्';
       if (id == 'upanishads') return 'उपनिषदः';
     }
     if (titleEn != null && titleEn!.isNotEmpty) {

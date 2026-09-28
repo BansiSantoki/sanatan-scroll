@@ -12,7 +12,6 @@ class SacredBooksData {
   ];
 
   static const Map<String, String> _additionalBookTitles = {
-    'mahabharata': 'Mahabharata',
     'upanishads': 'Upanishads',
   };
 
@@ -23,7 +22,6 @@ class SacredBooksData {
     final title = _additionalBookTitles[id]!;
 
     final chapterCount = switch (id) {
-      'mahabharata' => 18,
       'upanishads' => 6,
       'vedas' => 4,
       'yoga_sutras' => 4,

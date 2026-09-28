@@ -92,45 +92,36 @@ class SacredVerseModel {
   });
 
   factory SacredVerseModel.fromMap(Map<String, dynamic> map) {
-    final translationsMap = map['translations'] is Map ? Map<String, dynamic>.from(map['translations']) : null;
+    String sanskritText = _extractFieldValue(map, ['sanskrit', 'sanskritText', 'sanskrit_text', 'shloka', 'shlok', 'verse_sanskrit', 'sa']) ?? '';
+    String englishText = _extractFieldValue(map, ['english', 'english_translation', 'translation_en', 'englishText', 'translation', 'en']) ?? '';
+    String gujaratiText = _extractFieldValue(map, ['gujarati', 'gujarati_translation', 'translation_gu', 'gujaratiText', 'gu']) ?? '';
+    String? hindiText = _extractFieldValue(map, ['hindi', 'hindi_translation', 'translation_hi', 'hindiText', 'hi']);
 
-    String sanskritText = (map['sanskrit'] ?? map['sanskritText'] ?? map['shloka'] ?? '').toString();
-    String englishText = (map['english'] ?? map['translation_en'] ?? map['english_translation'] ?? map['translation'] ?? translationsMap?['en'] ?? '').toString();
-    String gujaratiText = (map['gujarati'] ?? map['translation_gu'] ?? map['gujarati_translation'] ?? translationsMap?['gu'] ?? '').toString();
-    String? hindiText = map['hindi']?.toString() ?? map['translation_hi']?.toString() ?? map['hindi_translation']?.toString() ?? translationsMap?['hi']?.toString();
+    String meaningEn = _extractFieldValue(map, ['meaningEnglish', 'explanation_en', 'explanation', 'meaning_en', 'meaning']) ?? (englishText.isNotEmpty ? englishText : '');
+    String meaningGu = _extractFieldValue(map, ['meaningGujarati', 'explanation_gu', 'meaning_gu']) ?? (gujaratiText.isNotEmpty ? gujaratiText : '');
+    String? meaningHi = _extractFieldValue(map, ['meaningHindi', 'explanation_hi', 'meaning_hi']) ?? hindiText;
 
-    String meaningEn = (map['meaningEnglish'] ?? map['explanation_en'] ?? map['explanation'] ?? map['meaning_en'] ?? map['meaning'] ?? '').toString();
-    String meaningGu = (map['meaningGujarati'] ?? map['explanation_gu'] ?? map['meaning_gu'] ?? '').toString();
-    String? meaningHi = map['meaningHindi']?.toString() ?? map['explanation_hi']?.toString() ?? map['meaning_hi']?.toString();
-
-    final kanda = map['kanda_number'] != null ? _asInt(map['kanda_number'], fallback: -1) : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: -1) : null);
-    final sarga = map['sarga_number'] != null ? _asInt(map['sarga_number'], fallback: -1) : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: -1) : null);
-    final vNum = _asInt(map['verseNumber'] ?? map['verse_number'], fallback: 1);
-
-    // Fallback for Ramayana 1.2.15 ("Ma Nishada...") if translations in Firestore are empty
-    if (sanskritText.contains('मा निषाद') || sanskritText.contains('1.2.15') || (vNum == 15 && (sarga == 2 || kanda == 1))) {
-      if (sanskritText.isEmpty) {
-        sanskritText = 'मा निषाद प्रतिष्ठां त्वमगमश्शाश्वतीस्समा: । यत्क्रौञ्चमिथुनादेकमवधी: काममोहितम् ।।1.2.15।।';
-      }
-      if (englishText.isEmpty || englishText == 'Translation not available.') {
-        englishText = 'O niṣāda, may you not attain enduring standing for endless years, because you killed one of the krauñca pair while it was overcome by desire.';
-      }
-      if (hindiText == null || hindiText.isEmpty || hindiText == 'Translation not available.') {
-        hindiText = 'हे निषाद, तू दीर्घकाल तक प्रतिष्ठा प्राप्त न करे, क्योंकि तूने काम-मोहित क्रौञ्च-युगल में से एक को मार डाला।';
-      }
-      if (gujaratiText.isEmpty || gujaratiText == 'Translation not available.') {
-        gujaratiText = 'હે નિષાદ, તું દીર્ઘકાળ સુધી પ્રતિષ્ઠા પ્રાપ્ત ન કરે, કારણ કે તું કામમોહિત ક્રૌંચ-યુગલમાંથી એકને મારી નાખ્યો.';
-      }
-      if (meaningEn.isEmpty) {
-        meaningEn = englishText;
-      }
-      if (meaningGu.isEmpty) {
-        meaningGu = gujaratiText;
-      }
-      if (meaningHi == null || meaningHi.isEmpty) {
-        meaningHi = hindiText;
-      }
+    if (hindiText == null || hindiText.isEmpty) {
+      hindiText = meaningHi;
     }
+    if (gujaratiText.isEmpty && meaningGu.isNotEmpty) {
+      gujaratiText = meaningGu;
+    }
+    if (englishText.isEmpty && meaningEn.isNotEmpty) {
+      englishText = meaningEn;
+    }
+
+    final kanda = map['kanda_no'] != null
+        ? _asInt(map['kanda_no'], fallback: -1)
+        : (map['kanda_number'] != null
+            ? _asInt(map['kanda_number'], fallback: -1)
+            : (map['kandaNumber'] != null ? _asInt(map['kandaNumber'], fallback: -1) : null));
+    final sarga = map['sarga_no'] != null
+        ? _asInt(map['sarga_no'], fallback: -1)
+        : (map['sarga_number'] != null
+            ? _asInt(map['sarga_number'], fallback: -1)
+            : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: -1) : null));
+    final vNum = _asInt(map['shlok_no'] ?? map['shloka_no'] ?? map['verseNumber'] ?? map['verse_number'], fallback: 1);
 
     return SacredVerseModel(
       verseNumber: vNum,
@@ -143,72 +134,112 @@ class SacredVerseModel {
       meaningEnglish: meaningEn,
       meaningGujarati: meaningGu,
       meaningHindi: meaningHi,
-      transliteration: map['transliteration']?.toString(),
-      quote: map['quote']?.toString() ?? map['quote_en']?.toString(),
-      quoteHi: map['quote_hi']?.toString(),
-      quoteGu: map['quote_gu']?.toString(),
-      contextText: map['contextText']?.toString() ?? map['context_text']?.toString() ?? map['context_en']?.toString(),
-      contextTextHi: map['contextTextHi']?.toString() ?? map['context_text_hi']?.toString() ?? map['context_hi']?.toString(),
-      contextTextGu: map['contextTextGu']?.toString() ?? map['context_text_gu']?.toString() ?? map['context_gu']?.toString(),
-      whyItMatters: map['whyItMatters']?.toString() ?? map['why_it_matters']?.toString() ?? map['why_it_matters_en']?.toString(),
-      whyItMattersHi: map['whyItMattersHi']?.toString() ?? map['why_it_matters_hi']?.toString(),
-      whyItMattersGu: map['whyItMattersGu']?.toString() ?? map['why_it_matters_gu']?.toString(),
-      reflectionPreview: map['reflectionPreview']?.toString() ?? map['reflection_preview']?.toString() ?? map['reflection_preview_en']?.toString(),
-      reflectionPreviewHi: map['reflectionPreviewHi']?.toString() ?? map['reflection_preview_hi']?.toString(),
-      reflectionPreviewGu: map['reflectionPreviewGu']?.toString() ?? map['reflection_preview_gu']?.toString(),
-      reflectionFull: map['reflectionFull']?.toString() ?? map['reflection_full']?.toString() ?? map['reflection_full_en']?.toString(),
-      reflectionFullHi: map['reflectionFullHi']?.toString() ?? map['reflection_full_hi']?.toString(),
-      reflectionFullGu: map['reflectionFullGu']?.toString() ?? map['reflection_full_gu']?.toString(),
-      oneThingToNotice: map['oneThingToNotice']?.toString() ?? map['one_thing_to_notice']?.toString() ?? map['one_thing_to_notice_en']?.toString(),
-      oneThingToNoticeHi: map['oneThingToNoticeHi']?.toString() ?? map['one_thing_to_notice_hi']?.toString(),
-      oneThingToNoticeGu: map['oneThingToNoticeGu']?.toString() ?? map['one_thing_to_notice_gu']?.toString(),
-      tryThis: map['tryThis']?.toString() ?? map['try_this']?.toString() ?? map['try_this_en']?.toString(),
-      tryThisHi: map['tryThisHi']?.toString() ?? map['try_this_hi']?.toString(),
-      tryThisGu: map['tryThisGu']?.toString() ?? map['try_this_gu']?.toString(),
-      carryThisWithYou: map['carryThisWithYou']?.toString() ?? map['carry_this_with_you']?.toString() ?? map['carry_this_with_you_en']?.toString(),
-      carryThisWithYouHi: map['carryThisWithYouHi']?.toString() ?? map['carry_this_with_you_hi']?.toString(),
-      carryThisWithYouGu: map['carryThisWithYouGu']?.toString() ?? map['carry_this_with_you_gu']?.toString(),
-      audioUrl: map['audioUrl']?.toString() ?? map['audio_url']?.toString() ?? map['audio_url_en']?.toString(),
-      audioUrlHi: map['audioUrlHi']?.toString() ?? map['audio_url_hi']?.toString(),
-      audioUrlGu: map['audioUrlGu']?.toString() ?? map['audio_url_gu']?.toString(),
+      transliteration: _extractFieldValue(map, ['transliteration']),
+      quote: _extractFieldValue(map, ['quote', 'quote_en', 'quoteEnglish']),
+      quoteHi: _extractFieldValue(map, ['quote_hi', 'quoteHi', 'quoteHindi']),
+      quoteGu: _extractFieldValue(map, ['quote_gu', 'quoteGu', 'quoteGujarati']),
+      contextText: _extractFieldValue(map, ['contextText', 'context_text', 'context_en']),
+      contextTextHi: _extractFieldValue(map, ['contextTextHi', 'context_text_hi', 'context_hi']),
+      contextTextGu: _extractFieldValue(map, ['contextTextGu', 'context_text_gu', 'context_gu']),
+      whyItMatters: _extractFieldValue(map, ['whyItMatters', 'why_it_matters', 'why_it_matters_en']),
+      whyItMattersHi: _extractFieldValue(map, ['whyItMattersHi', 'why_it_matters_hi']),
+      whyItMattersGu: _extractFieldValue(map, ['whyItMattersGu', 'why_it_matters_gu']),
+      reflectionPreview: _extractFieldValue(map, ['reflectionPreview', 'reflection_preview', 'reflection_preview_en']),
+      reflectionPreviewHi: _extractFieldValue(map, ['reflectionPreviewHi', 'reflection_preview_hi']),
+      reflectionPreviewGu: _extractFieldValue(map, ['reflectionPreviewGu', 'reflection_preview_gu']),
+      reflectionFull: _extractFieldValue(map, ['reflectionFull', 'reflection_full', 'reflection_full_en']),
+      reflectionFullHi: _extractFieldValue(map, ['reflectionFullHi', 'reflection_full_hi']),
+      reflectionFullGu: _extractFieldValue(map, ['reflectionFullGu', 'reflection_full_gu']),
+      oneThingToNotice: _extractFieldValue(map, ['oneThingToNotice', 'one_thing_to_notice', 'one_thing_to_notice_en']),
+      oneThingToNoticeHi: _extractFieldValue(map, ['oneThingToNoticeHi', 'one_thing_to_notice_hi']),
+      oneThingToNoticeGu: _extractFieldValue(map, ['oneThingToNoticeGu', 'one_thing_to_notice_gu']),
+      tryThis: _extractFieldValue(map, ['tryThis', 'try_this', 'try_this_en']),
+      tryThisHi: _extractFieldValue(map, ['tryThisHi', 'try_this_hi']),
+      tryThisGu: _extractFieldValue(map, ['tryThisGu', 'try_this_gu']),
+      carryThisWithYou: _extractFieldValue(map, ['carryThisWithYou', 'carry_this_with_you', 'carry_this_with_you_en']),
+      carryThisWithYouHi: _extractFieldValue(map, ['carryThisWithYouHi', 'carry_this_with_you_hi']),
+      carryThisWithYouGu: _extractFieldValue(map, ['carryThisWithYouGu', 'carry_this_with_you_gu']),
+      audioUrl: _extractFieldValue(map, ['audioUrl', 'audio_url', 'audio_url_en']),
+      audioUrlHi: _extractFieldValue(map, ['audioUrlHi', 'audio_url_hi']),
+      audioUrlGu: _extractFieldValue(map, ['audioUrlGu', 'audio_url_gu']),
     );
   }
 
+  static String? _extractFieldValue(Map<String, dynamic> map, List<String> candidateKeys) {
+    for (final key in candidateKeys) {
+      final val = map[key];
+      if (val != null && val.toString().trim().isNotEmpty) {
+        return val.toString().trim();
+      }
+    }
+
+    if (map['translations'] is Map) {
+      final transMap = Map<String, dynamic>.from(map['translations']);
+      for (final key in candidateKeys) {
+        final val = transMap[key];
+        if (val != null && val.toString().trim().isNotEmpty) {
+          return val.toString().trim();
+        }
+      }
+      final transMapLower = <String, dynamic>{};
+      transMap.forEach((k, v) => transMapLower[k.toString().toLowerCase()] = v);
+      for (final key in candidateKeys) {
+        final val = transMapLower[key.toLowerCase()];
+        if (val != null && val.toString().trim().isNotEmpty) {
+          return val.toString().trim();
+        }
+      }
+    }
+
+    final rootLower = <String, dynamic>{};
+    map.forEach((k, v) => rootLower[k.toString().toLowerCase()] = v);
+    for (final key in candidateKeys) {
+      final val = rootLower[key.toLowerCase()];
+      if (val != null && val.toString().trim().isNotEmpty) {
+        return val.toString().trim();
+      }
+    }
+
+    return null;
+  }
+
   String getLocalizedTranslation(String languageCode) {
-    if (languageCode == 'gu') {
+    final code = languageCode.toLowerCase().split('-').first.trim();
+
+    if (code == 'gu') {
       if (gujarati.trim().isNotEmpty) return gujarati;
       if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
-      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
-      if (english.trim().isNotEmpty) return english;
-      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
       return 'અનુવાદ ઉપલબ્ધ નથી.';
     }
-    if (languageCode == 'hi') {
+    if (code == 'hi') {
       if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
       if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
-      if (gujarati.trim().isNotEmpty) return gujarati;
-      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
-      if (english.trim().isNotEmpty) return english;
-      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+      if (gujarati.trim().isNotEmpty) {
+        final derived = _deriveHindiFromGujarati(gujarati);
+        if (derived.isNotEmpty) return derived;
+      }
       return 'अनुवाद उपलब्ध नहीं है।';
     }
-    if (languageCode == 'sa') {
-      if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
-      if (gujarati.trim().isNotEmpty) return gujarati;
-      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
-      if (english.trim().isNotEmpty) return english;
-      if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
+    if (code == 'sa') {
+      if (sanskrit.trim().isNotEmpty) return sanskrit;
       return 'अनुवाद उपलब्ध नहीं है।';
     }
     if (english.trim().isNotEmpty) return english;
     if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
-    if (hindi != null && hindi!.trim().isNotEmpty) return hindi!;
-    if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
-    if (gujarati.trim().isNotEmpty) return gujarati;
-    if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
     return 'Translation not available.';
+  }
+
+  static String _deriveHindiFromGujarati(String text) {
+    if (text.trim().isEmpty) return '';
+    final buffer = StringBuffer();
+    for (final char in text.runes) {
+      if (char >= 0x0A81 && char <= 0x0AF1) {
+        buffer.writeCharCode(char - 0x180);
+      } else {
+        buffer.writeCharCode(char);
+      }
+    }
+    return buffer.toString();
   }
 
   Map<String, dynamic> toMap() {
@@ -256,23 +287,14 @@ class SacredVerseModel {
 
   String getLocalizedMeaning(String languageCode) {
     if (languageCode == 'gu') {
-      if (meaningGujarati.isNotEmpty) return meaningGujarati;
-      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
-      if (meaningEnglish.isNotEmpty) return meaningEnglish;
+      if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
+      return getLocalizedTranslation(languageCode);
     }
     if (languageCode == 'hi') {
-      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
-      if (meaningEnglish.isNotEmpty) return meaningEnglish;
-      if (meaningGujarati.isNotEmpty) return meaningGujarati;
+      if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
+      return getLocalizedTranslation(languageCode);
     }
-    if (languageCode == 'sa') {
-      if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
-      if (meaningEnglish.isNotEmpty) return meaningEnglish;
-      if (meaningGujarati.isNotEmpty) return meaningGujarati;
-    }
-    if (meaningEnglish.isNotEmpty) return meaningEnglish;
-    if (meaningHindi != null && meaningHindi!.isNotEmpty) return meaningHindi!;
-    if (meaningGujarati.isNotEmpty) return meaningGujarati;
+    if (meaningEnglish.trim().isNotEmpty) return meaningEnglish;
     return getLocalizedTranslation(languageCode);
   }
 

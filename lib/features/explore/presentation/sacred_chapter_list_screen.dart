@@ -408,6 +408,11 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
   }
 
   String _getChapterTitle(String bookId, SacredChapterModel chapter, String langCode) {
+    if (bookId == 'upanishads') {
+      if (langCode == 'gu') return 'મંત્ર ${chapter.chapterNumber}';
+      if (langCode == 'hi') return 'मंत्र ${chapter.chapterNumber}';
+      return 'Mantra ${chapter.chapterNumber}';
+    }
     if (langCode == 'gu' && chapter.titleGu != null && chapter.titleGu!.isNotEmpty) {
       return chapter.titleGu!;
     }
@@ -593,13 +598,13 @@ class _BookUiConfig {
 
       case 'upanishads':
         return _BookUiConfig(
-          headerBgColor: const Color(0xFF99A878),
-          badgeBgColor: const Color(0xFFEAF0D8),
-          badgeTextColor: const Color(0xFF5A6C38),
+          headerBgColor: const Color(0xFFE5B869),
+          badgeBgColor: const Color(0xFFF9EED4),
+          badgeTextColor: const Color(0xFF8C6647),
           artworkAsset: 'assets/images/upnishad_page.png',
-          defaultSubtitle: 'The Ultimate Truth & Wisdom',
-          sectionTitle: 'Select a Chapter',
-          unitName: (c) => c == 1 ? 'Chapter' : 'Chapters',
+          defaultSubtitle: 'The Inner Teaching',
+          sectionTitle: 'Select a Mantra',
+          unitName: (c) => c == 1 ? 'Mantra' : 'Mantras',
         );
 
       case 'bhagavad_gita':

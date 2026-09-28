@@ -309,6 +309,15 @@ class CsvImportService {
     final bool hasIdOrRef = (idIdx != -1 || canonicalRefIdx != -1);
     final bool hasAnyTranslation = (englishIdx != -1 || hindiIdx != -1 || gujaratiIdx != -1);
 
+    final schema = ScriptureImportSchema.detect(
+      targetBookId: targetBookId ?? 'ramayana',
+      detectedHeaders: normalizedHeaders,
+      hasKandaCol: kandaIdx != -1,
+      hasSargaCol: sargaIdx != -1,
+      hasVerseCol: verseIdx != -1,
+      hasRefCol: hasIdOrRef,
+    );
+
     final String fileImportMode = (!hasStructureOrSanskrit && hasIdOrRef && hasAnyTranslation)
         ? 'translation_update'
         : 'full_master';
@@ -326,6 +335,7 @@ class CsvImportService {
     if (gujaratiIdx != -1) detectedMappings['Gujarati'] = headerRowCells[gujaratiIdx];
 
     print('[CSV IMPORT] Import Mode: $fileImportMode');
+    print('[CSV IMPORT] Hierarchy Type: ${schema.hierarchyType}');
 
     final parsedRows = <RamayanaParsedRow>[];
     final seenIdsInFile = <String, int>{};
@@ -333,6 +343,9 @@ class CsvImportService {
     final detectedSargasSet = <String>{};
 
     int missingSanskritCount = 0;
+    int missingEnglishCount = 0;
+    int missingHindiCount = 0;
+    int missingGujaratiCount = 0;
     int missingChapterInfoCount = 0;
     int missingVerseNumCount = 0;
     int missingTranslationsCount = 0;
@@ -426,7 +439,11 @@ class CsvImportService {
       int finalSarga = colSarga > 0 ? colSarga : parsedSarga;
       int finalVerse = colVerse > 0 ? colVerse : parsedVerse;
 
-      if (!config.requiresSecondarySection && finalSarga <= 0) {
+      if (schema.hierarchyType == HierarchyType.referenceOnly) {
+        if (finalKanda <= 0) finalKanda = 1;
+        if (finalSarga <= 0) finalSarga = 1;
+        if (finalVerse <= 0) finalVerse = i - headerRowIdx;
+      } else if (!config.requiresSecondarySection && finalSarga <= 0) {
         finalSarga = 1;
       }
 
@@ -450,6 +467,10 @@ class CsvImportService {
       final bool hasEnglish = englishText != null && englishText.trim().isNotEmpty;
       final bool hasHindi = hindiText != null && hindiText.trim().isNotEmpty;
       final bool hasGujarati = gujaratiText != null && gujaratiText.trim().isNotEmpty;
+
+      if (!hasEnglish) missingEnglishCount++;
+      if (!hasHindi) missingHindiCount++;
+      if (!hasGujarati) missingGujaratiCount++;
 
       if (fileImportMode == 'translation_update') {
         if (rawId.isEmpty && canonicalRefStr.isEmpty && (finalKanda <= 0 || finalVerse <= 0)) {
@@ -477,32 +498,41 @@ class CsvImportService {
           affectedCols.add("Verse");
         }
 
-        // Structural requirements check
-        if (finalKanda <= 0) {
-          errors.add("Missing or invalid ${config.primaryChapterTerm} number");
-          affectedCols.add(config.primaryChapterTerm);
-          missingChapterInfoCount++;
-        } else {
+        if (schema.hierarchyType == HierarchyType.referenceOnly) {
+          if (rawId.isEmpty && canonicalRefStr.isEmpty) {
+            errors.add("Missing required reference identifier (passage_id or reference_no)");
+            affectedCols.add("Reference");
+          }
           detectedKandasSet.add(finalKanda);
-        }
-
-        if (finalSarga <= 0 && config.requiresSecondarySection) {
-          errors.add("Missing or invalid ${config.secondarySectionTerm} number");
-          affectedCols.add(config.secondarySectionTerm);
-          missingChapterInfoCount++;
-        }
-
-        if (finalKanda > 0 && finalSarga > 0) {
           detectedSargasSet.add('K${finalKanda}_S$finalSarga');
+        } else {
+          // Structural requirements check
+          if (finalKanda <= 0) {
+            errors.add("Missing or invalid ${config.primaryChapterTerm} number");
+            affectedCols.add(config.primaryChapterTerm);
+            missingChapterInfoCount++;
+          } else {
+            detectedKandasSet.add(finalKanda);
+          }
+
+          if (finalSarga <= 0 && config.requiresSecondarySection) {
+            errors.add("Missing or invalid ${config.secondarySectionTerm} number");
+            affectedCols.add(config.secondarySectionTerm);
+            missingChapterInfoCount++;
+          }
+
+          if (finalKanda > 0 && finalSarga > 0) {
+            detectedSargasSet.add('K${finalKanda}_S$finalSarga');
+          }
+
+          if (finalVerse <= 0) {
+            errors.add("Missing or invalid Verse number");
+            affectedCols.add("Verse");
+            missingVerseNumCount++;
+          }
         }
 
-        if (finalVerse <= 0) {
-          errors.add("Missing or invalid Verse number");
-          affectedCols.add("Verse");
-          missingVerseNumCount++;
-        }
-
-        if (sanskritText.isEmpty) {
+        if (!hasSanskrit) {
           errors.add("Missing Sanskrit shloka text");
           affectedCols.add("Sanskrit");
           missingSanskritCount++;
@@ -510,7 +540,7 @@ class CsvImportService {
 
         if (!hasEnglish && !hasHindi && !hasGujarati) {
           missingTranslationsCount++;
-          if (sanskritText.isEmpty) {
+          if (!hasSanskrit) {
             errors.add("Missing required translations (English, Hindi, or Gujarati)");
             affectedCols.add("Translations");
           }
@@ -518,7 +548,11 @@ class CsvImportService {
       }
 
       String canonicalVerseId;
-      if (finalKanda > 0 && finalVerse > 0) {
+      if (rawId.isNotEmpty) {
+        canonicalVerseId = rawId.trim();
+      } else if (canonicalRefStr.isNotEmpty) {
+        canonicalVerseId = canonicalRefStr.trim();
+      } else if (finalKanda > 0 && finalVerse > 0) {
         final kandaPad = finalKanda.toString().padLeft(2, '0');
         final versePad = finalVerse.toString().padLeft(3, '0');
         if (!config.requiresSecondarySection) {
@@ -527,15 +561,11 @@ class CsvImportService {
           final sargaPad = (finalSarga > 0 ? finalSarga : 1).toString().padLeft(3, '0');
           canonicalVerseId = '$bookCode-$kandaPad-$sargaPad-$versePad';
         }
-      } else if (rawId.isNotEmpty) {
-        canonicalVerseId = rawId.toUpperCase();
-      } else if (canonicalRefStr.isNotEmpty) {
-        canonicalVerseId = canonicalRefStr;
       } else {
         canonicalVerseId = 'Row ${i + 1}';
       }
 
-      final bool isDup = canonicalVerseId.contains('-') &&
+      final bool isDup = canonicalVerseId.isNotEmpty &&
           !canonicalVerseId.contains('00-000-000') &&
           seenIdsInFile.containsKey(canonicalVerseId);
 
@@ -597,6 +627,7 @@ class CsvImportService {
       scriptureRowsDetected: parsedRows.length,
       headerRowNumber: headerRowIdx + 1,
       detectedColumnMappings: detectedMappings,
+      hierarchyType: schema.hierarchyType,
       detectedKandas: sortedKandas,
       detectedSargasCount: detectedSargasSet.length,
       detectedVerseCount: parsedRows.length,
@@ -604,6 +635,9 @@ class CsvImportService {
       invalidRowsCount: invalidCount,
       duplicateRowsCount: dupCount,
       missingSanskritCount: missingSanskritCount,
+      missingEnglishCount: missingEnglishCount,
+      missingHindiCount: missingHindiCount,
+      missingGujaratiCount: missingGujaratiCount,
       missingChapterInfoCount: missingChapterInfoCount,
       missingVerseNumCount: missingVerseNumCount,
       missingTranslationsCount: missingTranslationsCount,

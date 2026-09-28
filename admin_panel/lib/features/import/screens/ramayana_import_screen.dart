@@ -35,7 +35,6 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   String _selectedBookName = 'Ramayana';
   List<Map<String, String>> _availableBooks = [
     {'id': 'ramayana', 'name': 'Ramayana', 'icon': '🏹'},
-    {'id': 'mahabharata', 'name': 'Mahabharata', 'icon': '⚔️'},
     {'id': 'bhagavad_gita', 'name': 'Bhagavad Gita', 'icon': '🪷'},
     {'id': 'upanishads', 'name': 'Upanishads', 'icon': '🕉️'},
   ];
@@ -43,7 +42,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   PlatformFile? _selectedFile;
   String? _sourceUrl;
   RamayanaParseResult? _parseResult;
-  String _importMode = 'upsert'; // 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
+  String _importMode = 'replace_all'; // 'replace_all', 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
   String _tableFilter = 'all'; // 'all', 'valid', 'invalid', 'duplicates'
 
   bool _isAnalyzing = false;
@@ -87,7 +86,6 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
 
         for (final b in [
           {'id': 'ramayana', 'name': 'Ramayana', 'icon': '🏹'},
-          {'id': 'mahabharata', 'name': 'Mahabharata', 'icon': '⚔️'},
           {'id': 'bhagavad_gita', 'name': 'Bhagavad Gita', 'icon': '🪷'},
           {'id': 'upanishads', 'name': 'Upanishads', 'icon': '🕉️'},
         ]) {
@@ -111,6 +109,17 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       _selectedBookId = bookId;
       _selectedBookName = book['name'] ?? bookId;
       _urlController.text = _resolveBookDefaultUrl(bookId);
+      if (bookId == 'ramayana') {
+        _importMode = 'replace_all';
+      }
+      _selectedFile = null;
+      _sourceUrl = null;
+      _parseResult = null;
+      _executionResult = null;
+      _errorMessage = null;
+      _verificationReport = null;
+      _importProgress = 0.0;
+      _currentStep = 1;
     });
   }
 
@@ -231,6 +240,9 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         invalidRowsCount: fetchResult.parsedRows.where((r) => !r.isValid).length,
         duplicateRowsCount: 0,
         missingSanskritCount: 0,
+        missingEnglishCount: 0,
+        missingHindiCount: 0,
+        missingGujaratiCount: 0,
         missingChapterInfoCount: 0,
         missingVerseNumCount: 0,
         missingTranslationsCount: 0,
@@ -280,6 +292,16 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   Future<void> _confirmAndImport() async {
     if (_parseResult == null || _parseResult!.rows.isEmpty) return;
 
+    if (_importMode == 'replace_all' && _parseResult!.invalidRowsCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('REPLACE mode requires 100% valid rows. There are ${_parseResult!.invalidRowsCount} invalid rows.'),
+          backgroundColor: Colors.red[800],
+        ),
+      );
+      return;
+    }
+
     final validCount = _parseResult!.rows.where((r) => r.isValid && r.action != 'skip').length;
     if (validCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -291,24 +313,71 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       return;
     }
 
+    // SAFETY CHECK: selectedBookId must match import target
+    final sampleRowBookId = _parseResult!.rows.first.bookId.toLowerCase();
+    if (_selectedBookId.toLowerCase() != sampleRowBookId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Selected book ($_selectedBookId) and imported book ($sampleRowBookId) do not match. Please select the correct book and try again.'),
+          backgroundColor: Colors.red[900],
+        ),
+      );
+      return;
+    }
+
     final adminEmail = context.read<AdminAuthProvider>().user?.email ?? 'admin@sanatan-scroll.com';
+
+    final isReplaceMode = _importMode == 'replace_all';
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirm Import to Firestore', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold)),
+        title: Text(
+          isReplaceMode ? 'CONFIRM RAMAYANA DATASET REPLACEMENT' : 'Confirm Import to Firestore',
+          style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, color: isReplaceMode ? Colors.red[900] : AdminColors.primaryDark),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to write data to production Firestore?'),
-            const SizedBox(height: 12),
-            Text('• Target Sacred Book: $_selectedBookName ($_selectedBookId)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            if (isReplaceMode) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red[300]!),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'WARNING: This operation will REMOVE existing Ramayana records in Firestore and replace them with the new Master dataset.',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.red[900]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ] else
+              Text('Are you sure you want to write data to production Firestore?'),
+            const SizedBox(height: 8),
+            Text('• Target Book: $_selectedBookName ($_selectedBookId)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             Text('• Target Collection: sacred_books/$_selectedBookId', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            Text('• Rows to process: $validCount', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            Text('• Selected Mode: ${_importMode.toUpperCase()}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AdminColors.saffron)),
+            Text('• New Verses to Write: $validCount', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('• Kandas: ${_parseResult!.detectedKandas.length}, Sargas: ${_parseResult!.detectedSargasCount}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
-            Text('Existing scripture content will be safely merged according to canonical IDs.', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700])),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(8)),
+              child: Text(
+                '• PRESERVED DATA: Bhagavad Gita, Mahabharata, Upanishads, Users, Reading Progress, Saved Items, Streaks & Ratings will NOT be modified.',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green[900]),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -319,10 +388,10 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AdminColors.primaryDark,
+              backgroundColor: isReplaceMode ? Colors.red[800] : AdminColors.primaryDark,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Import to Firestore'),
+            child: Text(isReplaceMode ? 'Confirm Replace & Import' : 'Import to Firestore'),
           ),
         ],
       ),
@@ -1029,25 +1098,32 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
               ),
               const SizedBox(height: 14),
               Wrap(
-                spacing: 16,
+                spacing: 12,
                 runSpacing: 10,
                 children: [
                   _buildDetailChip('Missing Sanskrit', '${result.missingSanskritCount}', result.missingSanskritCount > 0 ? Colors.red : Colors.grey),
-                  _buildDetailChip('Missing Chapter Info', '${result.missingChapterInfoCount}', result.missingChapterInfoCount > 0 ? Colors.red : Colors.grey),
-                  _buildDetailChip('Missing Verse #', '${result.missingVerseNumCount}', result.missingVerseNumCount > 0 ? Colors.red : Colors.grey),
-                  _buildDetailChip('Missing Translations', '${result.missingTranslationsCount}', result.missingTranslationsCount > 0 ? Colors.amber[800]! : Colors.grey),
+                  _buildDetailChip('Missing English', '${result.missingEnglishCount}', result.missingEnglishCount > 0 ? Colors.amber[800]! : Colors.grey),
+                  _buildDetailChip('Missing Hindi', '${result.missingHindiCount}', result.missingHindiCount > 0 ? Colors.amber[800]! : Colors.grey),
+                  _buildDetailChip('Missing Gujarati', '${result.missingGujaratiCount}', result.missingGujaratiCount > 0 ? Colors.amber[800]! : Colors.grey),
+                  if (result.hierarchyType != HierarchyType.referenceOnly) ...[
+                    _buildDetailChip('Missing Chapter Info', '${result.missingChapterInfoCount}', result.missingChapterInfoCount > 0 ? Colors.red : Colors.grey),
+                    _buildDetailChip('Missing Verse #', '${result.missingVerseNumCount}', result.missingVerseNumCount > 0 ? Colors.red : Colors.grey),
+                  ],
                   _buildDetailChip('Approved QA', '${result.qaStatusCounts['Approved'] ?? 0}', Colors.green),
                   _buildDetailChip('Draft QA', '${result.qaStatusCounts['Draft'] ?? 0}', Colors.orange),
                 ],
               ),
               const Divider(height: 28),
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                runSpacing: 10,
                 children: [
                   Text('Import Mode:', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 16),
                   SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment(value: 'upsert', label: Text('UPSERT (Recommended)'), icon: Icon(Icons.sync)),
+                      ButtonSegment(value: 'replace_all', label: Text('REPLACE EXISTING DATA'), icon: Icon(Icons.swap_horiz, color: Colors.red)),
+                      ButtonSegment(value: 'upsert', label: Text('UPSERT (Merge)'), icon: Icon(Icons.sync)),
                       ButtonSegment(value: 'create_only', label: Text('CREATE ONLY'), icon: Icon(Icons.add_circle_outline)),
                       ButtonSegment(value: 'update_existing', label: Text('UPDATE EXISTING'), icon: Icon(Icons.edit_note)),
                       ButtonSegment(value: 'skip_duplicates', label: Text('SKIP DUPLICATES'), icon: Icon(Icons.block)),
@@ -1184,7 +1260,12 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text('• Chap ${row.kandaNumber > 0 ? row.kandaNumber : "—"} Sec ${row.sargaNumber > 0 ? row.sargaNumber : "—"} Verse ${row.verseNumber > 0 ? row.verseNumber : "—"}', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700])),
+                      Text(
+                        parseRes.hierarchyType == HierarchyType.referenceOnly
+                            ? '• Reference: ${row.canonicalRef.isNotEmpty ? row.canonicalRef : row.verseId}'
+                            : '• Chap ${row.kandaNumber > 0 ? row.kandaNumber : "—"} Sec ${row.sargaNumber > 0 ? row.sargaNumber : "—"} Verse ${row.verseNumber > 0 ? row.verseNumber : "—"}',
+                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700]),
+                      ),
                     ],
                   ),
                   subtitle: Column(
@@ -1303,7 +1384,9 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Detected Chapters: ${result.detectedKandas.length} Chapters, ${result.detectedSargasCount} Sections, ${result.detectedVerseCount} Verses.',
+            result.hierarchyType == HierarchyType.referenceOnly
+                ? 'Detected Chapters: 0 Chapters, 0 Sections, ${result.detectedVerseCount} Verses.'
+                : 'Detected Chapters: ${result.detectedKandas.length} Chapters, ${result.detectedSargasCount} Sections, ${result.detectedVerseCount} Verses.',
             style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey[800]),
           ),
         ],
@@ -1418,23 +1501,26 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.green[300]!),
+            boxShadow: [
+              BoxShadow(color: Colors.green.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                  const Icon(Icons.check_circle, color: Colors.green, size: 36),
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'IMPORT COMPLETED SUCCESSFULLY',
-                        style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green[900]),
+                        '$_selectedBookName import completed.',
+                        style: GoogleFonts.cinzel(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[900]),
                       ),
                       Text(
-                        '$_selectedBookName content was written chapter-wise to production Firestore.',
+                        'The uploaded Excel Master Sheet has been set as the Canonical Source of Truth in Firestore.',
                         style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700]),
                       ),
                     ],
@@ -1442,29 +1528,70 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                 ],
               ),
               const Divider(height: 28),
-              Text('Summary Execution Report:', style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.bold)),
+
+              Text('PRIMARY METRICS REPORT:', style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.bold, color: AdminColors.primaryDark)),
               const SizedBox(height: 12),
+
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 700;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _buildReportStatCard('Excel rows', '${res.excelRows}', Icons.table_view, Colors.blue[800]!),
+                      _buildReportStatCard('Firestore $_selectedBookName records', '${res.totalFirestoreRecords}', Icons.cloud_done, Colors.teal[800]!),
+                      _buildReportStatCard('Kandas', '${res.totalKandas}', Icons.account_tree_outlined, Colors.purple[800]!),
+                      _buildReportStatCard('Sargas', '${res.totalSargas}', Icons.format_list_bulleted, Colors.indigo[800]!),
+                      _buildReportStatCard('Verses', '${res.totalVerses}', Icons.auto_stories, Colors.green[800]!),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+              Text('CONTENT & TRANSLATIONS BREAKDOWN:', style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.bold, color: AdminColors.primaryDark)),
+              const SizedBox(height: 12),
+
               Wrap(
-                spacing: 16,
-                runSpacing: 10,
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  _buildDetailChip('Verses Created', '${res.versesCreated}', Colors.green),
-                  _buildDetailChip('Verses Updated', '${res.versesUpdated}', Colors.blue),
-                  _buildDetailChip('Verses Skipped', '${res.skippedCount}', Colors.grey),
-                  _buildDetailChip('Invalid Rows Skipped', '${res.invalidCount}', res.invalidCount > 0 ? Colors.red : Colors.grey),
+                  _buildReportStatCard('Sanskrit verses', '${res.sanskritCount}', Icons.translate, Colors.amber[900]!),
+                  _buildReportStatCard('English translations', '${res.englishCount}', Icons.language, Colors.blue[900]!),
+                  _buildReportStatCard('Hindi translations', '${res.hindiCount}', Icons.language, Colors.orange[900]!),
+                  _buildReportStatCard('Gujarati translations', '${res.gujaratiCount}', Icons.language, Colors.deepOrange[800]!),
                 ],
               ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 20),
+              Text('ACTION BREAKDOWN:', style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.bold, color: AdminColors.primaryDark)),
+              const SizedBox(height: 12),
+
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                children: [
+                  _buildDetailChip('Added', '${res.versesCreated}', Colors.green[800]!),
+                  _buildDetailChip('Updated', '${res.versesUpdated}', Colors.blue[800]!),
+                  _buildDetailChip('Removed old $_selectedBookName records', '${res.removedOldRecords}', res.removedOldRecords > 0 ? Colors.red[700]! : Colors.grey[700]!),
+                  _buildDetailChip('Skipped', '${res.skippedCount}', Colors.grey[700]!),
+                  _buildDetailChip('Failed', '${res.invalidCount}', res.invalidCount > 0 ? Colors.red[800]! : Colors.grey[700]!),
+                ],
+              ),
+
+              const SizedBox(height: 28),
               Row(
                 children: [
                   ElevatedButton.icon(
                     onPressed: _resetImport,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Import Another Sacred Book Sheet'),
+                    label: const Text('Import / Sync Another Master Sheet'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AdminColors.primaryDark,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1474,16 +1601,18 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.verified_outlined, color: AdminColors.saffron),
                     label: Text(
-                      _isVerifyingFirestore ? 'Verifying Firestore...' : 'Verify Firestore',
+                      _isVerifyingFirestore ? 'Verifying Firestore...' : 'Verify Firestore Counts',
                       style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AdminColors.primaryDark),
                     ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       side: const BorderSide(color: AdminColors.saffron, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ],
               ),
+
               if (_verificationReport != null) ...[
                 const SizedBox(height: 20),
                 Container(
@@ -1500,7 +1629,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                         children: [
                           const Icon(Icons.cloud_done, color: Colors.blue, size: 20),
                           const SizedBox(width: 8),
-                          Text('Firestore Verification Result', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text('Live Firestore Verification Report', style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, fontSize: 14)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -1509,8 +1638,8 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                       else ...[
                         Text('• Book Path: ${_verificationReport!['bookPath']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
                         Text('• Book Status: ${_verificationReport!['published'] == true ? "PUBLISHED ✅" : "DRAFT ⚠️"}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                        Text('• Chapters Created/Verified: ${_verificationReport!['chapterCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                        Text('• Verses Created/Verified: ${_verificationReport!['verseCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        Text('• Verified Chapter Documents: ${_verificationReport!['chapterCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        Text('• Verified Verse Documents: ${_verificationReport!['verseCount']}', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600)),
                       ],
                     ],
                   ),
@@ -1520,6 +1649,42 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReportStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.grey[800]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
     );
   }
 }

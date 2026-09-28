@@ -581,10 +581,40 @@ class _BookCard extends StatelessWidget {
     required this.iconType,
   });
 
+  Color _getCardBgColor(String bookId, bool isDark) {
+    if (isDark) return const Color(0xFF222722);
+    switch (bookId) {
+      case 'ramayana':
+        return const Color(0xFFB4C5A1); // Sage green
+      case 'upanishads':
+        return const Color(0xFFE5B869); // Warm Golden Ochre
+      case 'mahabharata':
+        return const Color(0xFFD6A350); // Golden brown
+      case 'bhagavad_gita':
+      default:
+        return const Color(0xFFF49C6B); // Orange
+    }
+  }
+
+  String _getCardArtwork(String bookId) {
+    switch (bookId) {
+      case 'ramayana':
+        return 'assets/images/trishual.png';
+      case 'upanishads':
+        return 'assets/images/upnishad_page.png';
+      case 'mahabharata':
+        return 'assets/images/mahabharat_page.png';
+      case 'bhagavad_gita':
+      default:
+        return 'assets/images/chariot_lineart.png';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF222722) : bgColor;
+    final cardBg = _getCardBgColor(bookId, isDark);
+    final artwork = _getCardArtwork(bookId);
 
     return Container(
       height: 185,
@@ -607,20 +637,24 @@ class _BookCard extends StatelessWidget {
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 4,
+              horizontal: 6,
               vertical: 14,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CustomPaint(
-                    painter: _getIconPainter(iconType, isDark),
+                  width: 48,
+                  height: 48,
+                  child: Image.asset(
+                    artwork,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => CustomPaint(
+                      painter: _getIconPainter(iconType, isDark),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(

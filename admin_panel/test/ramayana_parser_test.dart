@@ -266,5 +266,28 @@ UPN-01-001,1,1,ईशा वास्यमिदं सर्वम्...,All t
       expect(result.rows[0].verseId, equals('UPN-01-001'));
       expect(result.rows[0].bookId, equals('upanishads'));
     });
+
+    test('O. Reference-based Isha Upanishad file (passage_id, reference_no) parses with 0 invalid rows', () async {
+      const csvContent = '''
+passage_id,scripture_name,reference_no,sanskrit,english,hindi,gujarati
+ISHA-K-001,Isha Upanishad,ISHA-K-01,ईशा वास्यमिदम् सर्वं यत्किञ्च जगत्यां जगत्।,All this is enveloped by the Lord,यह सब ईश्वर से व्याप्त है।,આ બધું ઈશ્વરથી વ્યાપ્ત છે.
+ISHA-K-002,Isha Upanishad,ISHA-K-02,कुर्वन्नेवेह कर्माणि जिजीविषेच्छतं समाः।,Always performing works here one should wish to live a hundred years.,कर्म करते हुए ही सौ वर्ष जीने की इच्छा करे।,કર્મો કરતા રહીને જ સો વર્ષ જીવવાની ઈચ્છા રાખવી.
+''';
+
+      final file = createCsvFile(csvContent, 'Isha_Upanishad_Reference.csv');
+      final result = await parserService.parseFile(file, targetBookId: 'upanishads', targetBookName: 'Upanishads');
+
+      expect(result.scriptureRowsDetected, equals(2));
+      expect(result.validRowsCount, equals(2));
+      expect(result.invalidRowsCount, equals(0));
+      expect(result.missingChapterInfoCount, equals(0));
+      expect(result.missingVerseNumCount, equals(0));
+      expect(result.rows[0].verseId, equals('ISHA-K-001'));
+      expect(result.rows[0].canonicalRef, equals('ISHA-K-01'));
+      expect(result.rows[0].isValid, isTrue);
+      expect(result.rows[1].verseId, equals('ISHA-K-002'));
+      expect(result.rows[1].canonicalRef, equals('ISHA-K-02'));
+      expect(result.rows[1].isValid, isTrue);
+    });
   });
 }

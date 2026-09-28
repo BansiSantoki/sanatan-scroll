@@ -71,7 +71,7 @@ class SavedProvider extends ChangeNotifier {
       notifyListeners();
     });
   }
-
+ 
   void setFilter(String filter) {
     _activeFilter = filter;
     notifyListeners();

@@ -30,6 +30,73 @@ String _unescapeHtmlEntities(String input) {
   });
 }
 
+enum HierarchyType {
+  kandaSargaVerse,
+  chapterVerse,
+  parvaSectionVerse,
+  referenceOnly,
+}
+
+class ScriptureImportSchema {
+  final HierarchyType hierarchyType;
+  final bool requiresKanda;
+  final bool requiresSarga;
+  final bool requiresVerse;
+  final bool requiresReference;
+
+  const ScriptureImportSchema({
+    required this.hierarchyType,
+    required this.requiresKanda,
+    required this.requiresSarga,
+    required this.requiresVerse,
+    required this.requiresReference,
+  });
+
+  factory ScriptureImportSchema.detect({
+    required String targetBookId,
+    required List<String> detectedHeaders,
+    required bool hasKandaCol,
+    required bool hasSargaCol,
+    required bool hasVerseCol,
+    required bool hasRefCol,
+  }) {
+    final bookId = targetBookId.toLowerCase().trim();
+    if (bookId.contains('upanishad') || bookId == 'upn' || (!hasKandaCol && !hasVerseCol && hasRefCol)) {
+      return const ScriptureImportSchema(
+        hierarchyType: HierarchyType.referenceOnly,
+        requiresKanda: false,
+        requiresSarga: false,
+        requiresVerse: false,
+        requiresReference: true,
+      );
+    } else if (bookId == 'bhagavad_gita') {
+      return const ScriptureImportSchema(
+        hierarchyType: HierarchyType.chapterVerse,
+        requiresKanda: true,
+        requiresSarga: false,
+        requiresVerse: true,
+        requiresReference: false,
+      );
+    } else if (bookId == 'mahabharata') {
+      return const ScriptureImportSchema(
+        hierarchyType: HierarchyType.parvaSectionVerse,
+        requiresKanda: true,
+        requiresSarga: true,
+        requiresVerse: true,
+        requiresReference: false,
+      );
+    } else {
+      return const ScriptureImportSchema(
+        hierarchyType: HierarchyType.kandaSargaVerse,
+        requiresKanda: true,
+        requiresSarga: true,
+        requiresVerse: true,
+        requiresReference: false,
+      );
+    }
+  }
+}
+
 /// Safe string converter for Excel cells and dynamic values
 String? safeString(dynamic value) {
   if (value == null) return null;
@@ -330,6 +397,7 @@ class RamayanaParseResult {
   final int scriptureRowsDetected;
   final int headerRowNumber;
   final Map<String, String> detectedColumnMappings;
+  final HierarchyType hierarchyType;
   final List<int> detectedKandas;
   final int detectedSargasCount;
   final int detectedVerseCount;
@@ -337,6 +405,9 @@ class RamayanaParseResult {
   final int invalidRowsCount;
   final int duplicateRowsCount;
   final int missingSanskritCount;
+  final int missingEnglishCount;
+  final int missingHindiCount;
+  final int missingGujaratiCount;
   final int missingChapterInfoCount;
   final int missingVerseNumCount;
   final int missingTranslationsCount;
@@ -352,6 +423,7 @@ class RamayanaParseResult {
     required this.scriptureRowsDetected,
     required this.headerRowNumber,
     required this.detectedColumnMappings,
+    this.hierarchyType = HierarchyType.kandaSargaVerse,
     required this.detectedKandas,
     required this.detectedSargasCount,
     required this.detectedVerseCount,
@@ -359,6 +431,9 @@ class RamayanaParseResult {
     required this.invalidRowsCount,
     required this.duplicateRowsCount,
     required this.missingSanskritCount,
+    required this.missingEnglishCount,
+    required this.missingHindiCount,
+    required this.missingGujaratiCount,
     required this.missingChapterInfoCount,
     required this.missingVerseNumCount,
     required this.missingTranslationsCount,
@@ -380,6 +455,10 @@ class RamayanaParserService {
     'documentation',
     'notes',
     'metadata',
+    'reference',
+    'list',
+    'info',
+    'sheets',
   ];
 
   static Map<String, List<List<dynamic>>> parseXlsxSheets(Uint8List bytes) {
@@ -428,7 +507,6 @@ class RamayanaParserService {
     try {
       if (val is TextCellValue) {
         final v = val.value;
-        if (v == null) return null;
         if (v is String) return v;
         try {
           final dynamic dynV = v;
@@ -515,8 +593,33 @@ class RamayanaParserService {
     int maxScore = 0;
     final Map<String, List<String>> sheetDiagnostics = {};
 
-    // 1. First pass: Scan non-documentation sheets with content
+    // 0. Priority pass: Check if a sheet named 'Ramayana_Master' or 'Ramayana' exists with valid headers!
     for (final entry in sheetsMap.entries) {
+      final sName = entry.key;
+      final sLower = sName.toLowerCase().trim().replaceAll(' ', '_');
+      if (sLower == 'ramayana_master' || sLower == 'ramayana' || sLower == 'ramayana_content') {
+        final rows = entry.value;
+        final hasTextData = rows.any((r) => r.any((cell) => safeString(cell) != null && safeString(cell)!.isNotEmpty));
+        if (hasTextData) {
+          for (int r = 0; r < rows.length && r < 50; r++) {
+            final rowStr = rows[r].map((e) => normalizeHeader(e)).toList();
+            final score = _calculateHeaderScore(rowStr);
+            if (score > 0) {
+              maxScore = score + 1000; // Priority boost for Ramayana Master sheet
+              selectedSheetName = sName;
+              rawRows = rows;
+              headerRowIdx = r;
+              break;
+            }
+          }
+        }
+      }
+      if (headerRowIdx != -1) break;
+    }
+
+    // 1. First pass: Scan non-documentation sheets with content
+    if (headerRowIdx == -1) {
+      for (final entry in sheetsMap.entries) {
       final sName = entry.key;
       final sLower = sName.toLowerCase().trim();
       final rows = entry.value;
@@ -546,9 +649,9 @@ class RamayanaParserService {
       if (scannedDetails.isEmpty) {
         sheetDiagnostics[sName] = ['Scanned first ${rows.length < 50 ? rows.length : 50} rows -> No matching header keywords'];
       } else {
-        sheetDiagnostics[sName] = scannedDetails;
       }
     }
+  }
 
     // 2. Second pass: Fallback to all sheets if no candidate found yet
     if (headerRowIdx == -1) {
@@ -618,8 +721,8 @@ class RamayanaParserService {
     print('[IMPORT DEBUG] Normalized headers: $normalizedHeaders');
 
     // Flexible Column Mapping using normalized header names & aliases
-    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'passage_id', 'passageid', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
-    final canonicalRefIdx = _findHeaderIdx(normalizedHeaders, ['canonical_reference', 'canonical_ref', 'reference', 'ref', 'verse_reference']);
+    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'passage_id', 'passageid', 'passage_no', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
+    final canonicalRefIdx = _findHeaderIdx(normalizedHeaders, ['canonical_reference', 'canonical_ref', 'reference_no', 'reference_num', 'ref_no', 'reference', 'ref', 'verse_reference']);
     final bookIdIdx = _findHeaderIdx(normalizedHeaders, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book']);
     final bookNameIdx = _findHeaderIdx(normalizedHeaders, ['book_name', 'bookname', 'book_title', 'title']);
     final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_name', 'kanda', 'kand', 'kanda_no', 'kandam', 'parva', 'parva_number', 'chapter_number', 'chapternumber', 'chapter']);
@@ -661,12 +764,28 @@ class RamayanaParserService {
     final bool hasIdOrRef = (idIdx != -1 || canonicalRefIdx != -1);
     final bool hasAnyTranslation = (englishIdx != -1 || hindiIdx != -1 || gujaratiIdx != -1);
 
+    final schema = ScriptureImportSchema.detect(
+      targetBookId: activeBookId,
+      detectedHeaders: normalizedHeaders,
+      hasKandaCol: kandaIdx != -1,
+      hasSargaCol: sargaIdx != -1,
+      hasVerseCol: verseIdx != -1,
+      hasRefCol: hasIdOrRef,
+    );
+
     final String fileImportMode = (!hasStructureOrSanskrit && hasIdOrRef && hasAnyTranslation)
         ? 'translation_update'
         : 'full_master';
 
     final detectedMappings = <String, String>{};
     detectedMappings['Import Mode'] = fileImportMode == 'translation_update' ? 'Translation Update Mode' : 'Full Master Mode';
+    detectedMappings['Hierarchy Mode'] = schema.hierarchyType == HierarchyType.referenceOnly
+        ? 'Reference Only (passage_id / reference_no)'
+        : schema.hierarchyType == HierarchyType.chapterVerse
+            ? 'Chapter + Verse'
+            : schema.hierarchyType == HierarchyType.parvaSectionVerse
+                ? 'Parva + Section + Verse'
+                : 'Kanda + Sarga + Verse';
     if (idIdx != -1) detectedMappings['ID / Verse ID'] = headerRowCells[idIdx];
     if (canonicalRefIdx != -1) detectedMappings['Canonical Reference'] = headerRowCells[canonicalRefIdx];
     if (kandaIdx != -1) detectedMappings['Chapter / Kanda / Parva'] = headerRowCells[kandaIdx];
@@ -678,6 +797,7 @@ class RamayanaParserService {
     if (gujaratiIdx != -1) detectedMappings['Gujarati'] = headerRowCells[gujaratiIdx];
 
     print('[IMPORT DEBUG] File Import Mode: $fileImportMode');
+    print('[IMPORT DEBUG] Hierarchy Type: ${schema.hierarchyType}');
     print('[IMPORT DEBUG] Column mapping: $detectedMappings');
 
     final parsedRows = <RamayanaParsedRow>[];
@@ -686,6 +806,9 @@ class RamayanaParserService {
     final detectedSargasSet = <String>{};
 
     int missingSanskritCount = 0;
+    int missingEnglishCount = 0;
+    int missingHindiCount = 0;
+    int missingGujaratiCount = 0;
     int missingChapterInfoCount = 0;
     int missingVerseNumCount = 0;
     int missingTranslationsCount = 0;
@@ -771,27 +894,61 @@ class RamayanaParserService {
             }
           }
         }
+        // Fallback: try extracting numeric groups from rawId if regex didn't match expected pattern
+        if (!idParsedSuccess && rawId.isNotEmpty) {
+          final numMatches = RegExp(r'(\d+)').allMatches(rawId).map((m) => m.group(0)).whereType<String>().toList();
+          if (numMatches.length >= 2) {
+            try {
+              final parsedA = int.tryParse(numMatches[0]) ?? -1;
+              final parsedB = int.tryParse(numMatches[1]) ?? -1;
+              if (parsedA > 0 && parsedB > 0) {
+                parsedKanda = parsedA;
+                // For IDs like UPN-01-001 -> treat second as verse when only two groups
+                parsedSarga = 1;
+                parsedVerse = parsedB;
+                idParsedSuccess = true;
+              }
+            } catch (_) {}
+          }
+        }
       }
 
       // Fallback: Parse canonicalRef (e.g. "1.2.15" or "1.15") if Kanda/Sarga/Verse not set
       if (parsedKanda <= 0 && canonicalRefStr.isNotEmpty) {
-        final parts = canonicalRefStr.split(RegExp(r'[\.\-\/\:]')).map((s) => int.tryParse(s.trim()) ?? -1).where((n) => n > 0).toList();
-        if (parts.length >= 3) {
-          parsedKanda = parts[0];
-          parsedSarga = parts[1];
-          parsedVerse = parts[2];
-        } else if (parts.length == 2) {
-          parsedKanda = parts[0];
-          parsedSarga = 1;
-          parsedVerse = parts[1];
-        }
+          // Primary: split by common separators and parse integers
+          final parts = canonicalRefStr.split(RegExp(r'[\.\-\/\:]')).map((s) => int.tryParse(s.trim()) ?? -1).where((n) => n > 0).toList();
+          if (parts.length >= 3) {
+            parsedKanda = parts[0];
+            parsedSarga = parts[1];
+            parsedVerse = parts[2];
+          } else if (parts.length == 2) {
+            parsedKanda = parts[0];
+            parsedSarga = 1;
+            parsedVerse = parts[1];
+          } else {
+            // Secondary fallback: extract numeric groups anywhere in the canonicalRef (handles 'Isha 1.1', 'Isha(1.1)')
+            final numMatches = RegExp(r'(\d+)').allMatches(canonicalRefStr).map((m) => m.group(0)).whereType<String>().toList();
+            if (numMatches.length >= 2) {
+              final first = int.tryParse(numMatches.first) ?? -1;
+              final last = int.tryParse(numMatches.last) ?? -1;
+              if (first > 0 && last > 0) {
+                parsedKanda = first;
+                parsedSarga = 1;
+                parsedVerse = last;
+              }
+            }
+          }
       }
 
       int finalKanda = colKanda > 0 ? colKanda : parsedKanda;
       int finalSarga = colSarga > 0 ? colSarga : parsedSarga;
       int finalVerse = colVerse > 0 ? colVerse : parsedVerse;
 
-      if ((activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads') && finalSarga <= 0) {
+      if (schema.hierarchyType == HierarchyType.referenceOnly) {
+        if (finalKanda <= 0) finalKanda = 1;
+        if (finalSarga <= 0) finalSarga = 1;
+        if (finalVerse <= 0) finalVerse = i - headerRowIdx;
+      } else if ((activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads') && finalSarga <= 0) {
         finalSarga = 1;
       }
 
@@ -818,6 +975,10 @@ class RamayanaParserService {
       final bool hasEnglish = englishText != null && englishText.trim().isNotEmpty;
       final bool hasHindi = hindiText != null && hindiText.trim().isNotEmpty;
       final bool hasGujarati = gujaratiText != null && gujaratiText.trim().isNotEmpty;
+
+      if (!hasEnglish) missingEnglishCount++;
+      if (!hasHindi) missingHindiCount++;
+      if (!hasGujarati) missingGujaratiCount++;
 
       if (fileImportMode == 'translation_update') {
         // Translation Update Mode Requirements
@@ -847,29 +1008,38 @@ class RamayanaParserService {
           affectedCols.add("Verse");
         }
 
-        if (finalKanda <= 0) {
-          final term = _resolveChapterTerm(activeBookId);
-          errors.add("Missing or invalid $term number");
-          affectedCols.add(term);
-          missingChapterInfoCount++;
-        } else {
+        if (schema.hierarchyType == HierarchyType.referenceOnly) {
+          if (rawId.isEmpty && canonicalRefStr.isEmpty) {
+            errors.add("Missing required reference identifier (passage_id or reference_no)");
+            affectedCols.add("Reference");
+          }
           detectedKandasSet.add(finalKanda);
-        }
-
-        if (finalSarga <= 0 && activeBookId == 'ramayana') {
-          errors.add("Missing or invalid Sarga number");
-          affectedCols.add("Sarga");
-          missingChapterInfoCount++;
-        }
-
-        if (finalKanda > 0 && finalSarga > 0) {
           detectedSargasSet.add('K${finalKanda}_S$finalSarga');
-        }
+        } else {
+          if (finalKanda <= 0) {
+            final term = _resolveChapterTerm(activeBookId);
+            errors.add("Missing or invalid $term number");
+            affectedCols.add(term);
+            missingChapterInfoCount++;
+          } else {
+            detectedKandasSet.add(finalKanda);
+          }
 
-        if (finalVerse <= 0) {
-          errors.add("Missing or invalid Verse number");
-          affectedCols.add("Verse");
-          missingVerseNumCount++;
+          if (finalSarga <= 0 && activeBookId == 'ramayana') {
+            errors.add("Missing or invalid Sarga number");
+            affectedCols.add("Sarga");
+            missingChapterInfoCount++;
+          }
+
+          if (finalKanda > 0 && finalSarga > 0) {
+            detectedSargasSet.add('K${finalKanda}_S$finalSarga');
+          }
+
+          if (finalVerse <= 0) {
+            errors.add("Missing or invalid Verse number");
+            affectedCols.add("Verse");
+            missingVerseNumCount++;
+          }
         }
 
         if (!hasSanskrit) {
@@ -887,7 +1057,11 @@ class RamayanaParserService {
 
       // Canonical verse ID generation
       String canonicalVerseId;
-      if (finalKanda > 0 && finalVerse > 0) {
+      if (rawId.isNotEmpty) {
+        canonicalVerseId = rawId.trim();
+      } else if (canonicalRefStr.isNotEmpty) {
+        canonicalVerseId = canonicalRefStr.trim();
+      } else if (finalKanda > 0 && finalVerse > 0) {
         final kandaPad = finalKanda.toString().padLeft(2, '0');
         final versePad = finalVerse.toString().padLeft(3, '0');
         if (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads') {
@@ -896,15 +1070,11 @@ class RamayanaParserService {
           final sargaPad = (finalSarga > 0 ? finalSarga : 1).toString().padLeft(3, '0');
           canonicalVerseId = '$bookCode-$kandaPad-$sargaPad-$versePad';
         }
-      } else if (rawId.isNotEmpty) {
-        canonicalVerseId = rawId.toUpperCase();
-      } else if (canonicalRefStr.isNotEmpty) {
-        canonicalVerseId = canonicalRefStr;
       } else {
         canonicalVerseId = 'Row ${i + 1}';
       }
 
-      final bool isDup = canonicalVerseId.contains('-') &&
+      final bool isDup = canonicalVerseId.isNotEmpty &&
           !canonicalVerseId.contains('00-000-000') &&
           seenIdsInFile.containsKey(canonicalVerseId);
 
@@ -966,6 +1136,7 @@ class RamayanaParserService {
       scriptureRowsDetected: parsedRows.length,
       headerRowNumber: headerRowIdx + 1,
       detectedColumnMappings: detectedMappings,
+      hierarchyType: schema.hierarchyType,
       detectedKandas: sortedKandas,
       detectedSargasCount: detectedSargasSet.length,
       detectedVerseCount: parsedRows.length,
@@ -973,6 +1144,9 @@ class RamayanaParserService {
       invalidRowsCount: invalidCount,
       duplicateRowsCount: dupCount,
       missingSanskritCount: missingSanskritCount,
+      missingEnglishCount: missingEnglishCount,
+      missingHindiCount: missingHindiCount,
+      missingGujaratiCount: missingGujaratiCount,
       missingChapterInfoCount: missingChapterInfoCount,
       missingVerseNumCount: missingVerseNumCount,
       missingTranslationsCount: missingTranslationsCount,

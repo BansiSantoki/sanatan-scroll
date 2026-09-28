@@ -123,6 +123,7 @@ class SacredBooksRepository {
 
     controller = StreamController<SacredBookModel?>.broadcast(
       onListen: () {
+        debugPrint('[MOBILE BOOK] MOBILE BOOK: $bookId | FIRESTORE BOOK: $bookId');
         debugPrint('[PERF LOG] CHAPTER_QUERY_START: Subscribing to chapters for bookId=$bookId...');
 
         // Return initial cached version if present
@@ -240,6 +241,7 @@ class SacredBooksRepository {
 
     controller = StreamController<SacredBookModel?>.broadcast(
       onListen: () {
+        debugPrint('[MOBILE BOOK] MOBILE BOOK: $bookId | FIRESTORE BOOK: $bookId');
         debugPrint('[PERF LOG] VERSE_QUERY_START: Subscribing to verses for bookId=$bookId, chapter=$chapterNumber...');
 
         baseBookSub = streamBookById(bookId).listen((book) async {

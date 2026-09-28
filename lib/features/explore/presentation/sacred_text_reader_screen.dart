@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
@@ -187,7 +188,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     final langCode = localeProvider.languageCode;
     final l10n = AppLocalizations.of(context);
     final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
-    final cardsPerVerse = isBhagavadGita ? 3 : 2;
+    final cardsPerVerse = isBhagavadGita ? 3 : 1;
 
     return StreamBuilder<SacredBookModel?>(
       stream: SacredBooksRepository.streamBookWithChapterVerses(
@@ -366,6 +367,26 @@ class _VerseViewState extends State<_VerseView> {
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode && (widget.book.id.contains('gita') || widget.isBhagavadGita)) {
+      final verse = widget.verse;
+      final lang = widget.langCode.toLowerCase().split('-').first.trim();
+      final enAvail = verse.english.trim().isNotEmpty || verse.meaningEnglish.trim().isNotEmpty;
+      final hiAvail = (verse.hindi != null && verse.hindi!.trim().isNotEmpty) || (verse.meaningHindi != null && verse.meaningHindi!.trim().isNotEmpty);
+      final guAvail = verse.gujarati.trim().isNotEmpty || verse.meaningGujarati.trim().isNotEmpty;
+      final displayedField = lang == 'hi' ? 'hindi' : (lang == 'gu' ? 'gujarati' : 'english');
+
+      debugPrint('==================================================');
+      debugPrint('[GITA VERSE READER DEBUG LOG]');
+      debugPrint('Book: ${widget.book.title}');
+      debugPrint('Verse ID: ${widget.book.id}_c${widget.chapter.chapterNumber}_v${verse.verseNumber}');
+      debugPrint('Selected language: $lang');
+      debugPrint('English available: $enAvail');
+      debugPrint('Hindi available: $hiAvail');
+      debugPrint('Gujarati available: $guAvail');
+      debugPrint('Displayed translation field: $displayedField');
+      debugPrint('==================================================');
+    }
+
     final savedProvider = context.watch<SavedProvider>();
     final savedItem = SavedItemModel(
       id: '${widget.book.id}_c${widget.chapter.chapterNumber}_v${widget.verse.verseNumber}',
@@ -395,7 +416,7 @@ class _VerseViewState extends State<_VerseView> {
             isPlayingAudio: widget.isSpeaking,
             onToggleAudio: widget.onToggleAudio,
             onBack: widget.onBack,
-            onNextCard: _goToNextCard,
+            onNextCard: widget.cardsPerVerse > 1 ? _goToNextCard : widget.onNextVerse,
             totalCards: widget.cardsPerVerse,
           );
         }

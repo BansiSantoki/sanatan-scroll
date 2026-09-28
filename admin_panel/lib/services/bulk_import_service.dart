@@ -48,24 +48,44 @@ class ParsedVerseRow {
 }
 
 class RamayanaImportExecutionResult {
+  final int excelRows;
+  final int totalFirestoreRecords;
+  final int totalKandas;
+  final int totalSargas;
+  final int totalVerses;
+  final int englishCount;
+  final int hindiCount;
+  final int gujaratiCount;
+  final int sanskritCount;
   final int booksCreated;
   final int booksUpdated;
   final int chaptersCreated;
   final int chaptersUpdated;
   final int versesCreated;
   final int versesUpdated;
+  final int removedOldRecords;
   final int skippedCount;
   final int duplicateCount;
   final int invalidCount;
   final List<String> errors;
 
   const RamayanaImportExecutionResult({
+    this.excelRows = 0,
+    this.totalFirestoreRecords = 0,
+    this.totalKandas = 0,
+    this.totalSargas = 0,
+    this.totalVerses = 0,
+    this.englishCount = 0,
+    this.hindiCount = 0,
+    this.gujaratiCount = 0,
+    this.sanskritCount = 0,
     required this.booksCreated,
     required this.booksUpdated,
     required this.chaptersCreated,
     required this.chaptersUpdated,
     required this.versesCreated,
     required this.versesUpdated,
+    this.removedOldRecords = 0,
     required this.skippedCount,
     required this.duplicateCount,
     required this.invalidCount,
@@ -319,14 +339,15 @@ class BulkImportService {
   }
 
   /// Analyze Sacred Book rows against Firestore for duplicate & mode evaluation
+  /// Analyze Sacred Book rows against Firestore for duplicate & mode evaluation
   Future<void> analyzeRamayanaRowsAgainstFirestore({
     required List<RamayanaParsedRow> rows,
-    required String mode, // 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
+    required String mode, // 'replace_all', 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
     String? targetBookId,
   }) async {
     final bool hasTranslationModeRows = rows.any((r) => r.importMode == 'translation_update');
 
-    // 1. Instantly assign memory actions based on row validity and target mode
+    // 1. Instantly assign memory actions based on row validity and target mode (0 DB network calls)
     for (final row in rows) {
       if (!row.isValid) {
         row.action = 'error';
@@ -334,12 +355,18 @@ class BulkImportService {
       }
       if (row.importMode == 'translation_update') {
         row.action = 'update';
+      } else if (mode == 'replace_all' || mode == 'upsert') {
+        row.action = 'new';
       } else {
         row.action = (mode == 'update_existing') ? 'skip' : 'new';
       }
     }
 
-    // 2. Query Firestore if required by selected mode or translation_update mode
+    if (mode == 'replace_all' || mode == 'upsert') {
+      return; // Fast path: replace_all and upsert modes perform direct upserts via SetOptions(merge: true)
+    }
+
+    // 2. Query Firestore only if strictly required by selected mode
     if (hasTranslationModeRows || mode == 'create_only' || mode == 'skip_duplicates' || mode == 'update_existing') {
       final Map<String, List<RamayanaParsedRow>> chapterGroups = {};
       for (final row in rows) {
@@ -359,7 +386,7 @@ class BulkImportService {
       }
 
       final groupKeys = chapterGroups.keys.toList();
-      const int batchSize = 10;
+      const int batchSize = 20;
       for (int i = 0; i < groupKeys.length; i += batchSize) {
         final batchKeys = groupKeys.sublist(i, i + batchSize > groupKeys.length ? groupKeys.length : i + batchSize);
         await Future.wait(batchKeys.map((key) async {
@@ -375,7 +402,8 @@ class BulkImportService {
                 .collection('chapters')
                 .doc(cId)
                 .collection('verses')
-                .get();
+                .get()
+                .timeout(const Duration(seconds: 10));
 
             final existingDocs = snap.docs;
             final existingDocIds = existingDocs.map((d) => d.id).toSet();
@@ -426,6 +454,7 @@ class BulkImportService {
             }
           }
         }));
+        await Future.delayed(const Duration(milliseconds: 10));
       }
     }
   }
@@ -434,7 +463,7 @@ class BulkImportService {
   Future<RamayanaImportExecutionResult> executeRamayanaImport({
     required String fileName,
     required List<RamayanaParsedRow> rows,
-    required String mode, // 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
+    required String mode, // 'replace_all', 'upsert', 'create_only', 'update_existing', 'skip_duplicates'
     required String adminEmail,
     String? targetBookId,
     String? targetBookName,
@@ -446,9 +475,16 @@ class BulkImportService {
     int chaptersUpdated = 0;
     int versesCreated = 0;
     int versesUpdated = 0;
+    int removedOldRecords = 0;
     int skippedCount = 0;
     int duplicateCount = 0;
     int invalidCount = 0;
+    int sanskritCount = 0;
+    int englishCount = 0;
+    int hindiCount = 0;
+    int gujaratiCount = 0;
+    final Set<int> kandasSet = {};
+    final Set<String> sargasSet = {};
     final List<String> importErrors = [];
 
     final String activeBookId = (targetBookId != null && targetBookId.isNotEmpty)
@@ -477,231 +513,376 @@ class BulkImportService {
       }
     }
 
-    onProgress?.call(0, rowsToProcess.length, 'Initializing $activeBookName Book Document...');
+    print('[IMPORT DEBUG] SELECTED BOOK: $activeBookId');
+    print('[IMPORT DEBUG] IMPORT BOOK: $activeBookId');
+    print('[IMPORT DEBUG] SCHEMA: ${_resolveBookSchema(activeBookId)}');
+    print('[IMPORT DEBUG] FIRESTORE TARGET: sacred_books/$activeBookId');
+    print('[IMPORT DEBUG] IMPORTED ROWS: ${rowsToProcess.length}');
 
-    // 1. Ensure Parent Sacred Book Document exists
     final bookRef = _firestore.collection('sacred_books').doc(activeBookId);
-    final bookDoc = await bookRef.get();
 
-    String defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
-    String defaultSourceName = '$activeBookName Source';
-    if (rowsToProcess.isNotEmpty) {
-      defaultSourceUrl = rowsToProcess.first.sourceUrl ?? defaultSourceUrl;
-      defaultSourceName = rowsToProcess.first.sourceName ?? defaultSourceName;
-    }
+    try {
+      onProgress?.call(0, rowsToProcess.length, '[IMPORT] Initializing $activeBookName Parent Book Document...');
 
-    final bookMap = <String, dynamic>{
-      'id': activeBookId,
-      'title': activeBookName,
-      'subtitle': '$activeBookName Sacred Text',
-      'title_en': activeBookName,
-      'subtitle_en': '$activeBookName Sacred Text',
-      'iconEmoji': _resolveBookEmoji(activeBookId),
-      'order': _resolveBookOrder(activeBookId),
-      'published': true,
-      'archived': false,
-      'source_url': defaultSourceUrl,
-      'source_name': defaultSourceName,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+      // 1. Ensure Parent Sacred Book Document exists
+      final bookDoc = await bookRef.get().timeout(const Duration(seconds: 15));
 
-    if (bookDoc.exists) {
-      await bookRef.set(bookMap, SetOptions(merge: true));
-      booksUpdated++;
-    } else {
-      bookMap['createdAt'] = FieldValue.serverTimestamp();
-      bookMap['totalChapters'] = 1;
-      await bookRef.set(bookMap);
-      booksCreated++;
-    }
+      String defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
+      String defaultSourceName = '$activeBookName Source';
+      if (rowsToProcess.isNotEmpty) {
+        defaultSourceUrl = rowsToProcess.first.sourceUrl ?? defaultSourceUrl;
+        defaultSourceName = rowsToProcess.first.sourceName ?? defaultSourceName;
+      }
 
-    // 2. Group rows by Chapter
-    final chapterGroups = <String, List<RamayanaParsedRow>>{};
-    for (final row in rowsToProcess) {
-      final String key = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
-          ? 'chapter_${row.kandaNumber}'
-          : 'kanda_${row.kandaNumber}_sarga_${row.sargaNumber}';
-      chapterGroups.putIfAbsent(key, () => []).add(row);
-    }
-
-    onProgress?.call(0, rowsToProcess.length, 'Processing ${chapterGroups.length} Chapter Groups...');
-
-    int processedRowsCount = 0;
-    WriteBatch batch = _firestore.batch();
-    int opCount = 0;
-
-    for (final entry in chapterGroups.entries) {
-      final chapterDocId = entry.key;
-      final groupRows = entry.value;
-      final firstRow = groupRows.first;
-
-      final kandaNum = firstRow.kandaNumber;
-      final sargaNum = firstRow.sargaNumber;
-
-      final globalChapterNumber = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
-          ? kandaNum
-          : (kandaNum * 1000) + sargaNum;
-
-      final chapterRef = bookRef.collection('chapters').doc(chapterDocId);
-
-      final String chapTitle = _formatChapterTitle(activeBookId, kandaNum, sargaNum);
-      final String chapSubtitle = _formatChapterSubtitle(activeBookId, kandaNum, sargaNum);
-
-      // Chapter document map
-      final chapterMap = <String, dynamic>{
-        'chapterNumber': globalChapterNumber,
-        'kanda_number': kandaNum,
-        'sarga_number': sargaNum,
-        'title': chapTitle,
-        'subtitle': chapSubtitle,
-        'title_en': chapTitle,
-        'subtitle_en': chapSubtitle,
-        'descriptionEnglish': '$chapTitle of $activeBookName.',
-        'source_url': firstRow.sourceUrl,
-        'source_name': firstRow.sourceName,
-        'qa_status': firstRow.qaStatus,
+      final bookMap = <String, dynamic>{
+        'id': activeBookId,
+        'title': activeBookName,
+        'subtitle': '$activeBookName Sacred Text',
+        'title_en': activeBookName,
+        'subtitle_en': '$activeBookName Sacred Text',
+        'iconEmoji': _resolveBookEmoji(activeBookId),
+        'order': _resolveBookOrder(activeBookId),
         'published': true,
         'archived': false,
+        'source_url': defaultSourceUrl,
+        'source_name': defaultSourceName,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      batch.set(chapterRef, chapterMap, SetOptions(merge: true));
-      opCount++;
+      if (bookDoc.exists && mode != 'replace_all') {
+        await bookRef.set(bookMap, SetOptions(merge: true)).timeout(const Duration(seconds: 15));
+        booksUpdated++;
+      } else {
+        bookMap['createdAt'] = FieldValue.serverTimestamp();
+        bookMap['totalChapters'] = 1;
+        await bookRef.set(bookMap).timeout(const Duration(seconds: 15));
+        booksCreated++;
+      }
 
-      for (final row in groupRows) {
-        final verseRef = chapterRef.collection('verses').doc(row.verseId);
+      // 2. Group rows by Chapter
+      final chapterGroups = <String, List<RamayanaParsedRow>>{};
+      for (final row in rowsToProcess) {
+        final String key = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
+            ? 'chapter_${row.kandaNumber}'
+            : 'kanda_${row.kandaNumber}_sarga_${row.sargaNumber}';
+        chapterGroups.putIfAbsent(key, () => []).add(row);
+      }
 
-        if (row.importMode == 'translation_update') {
-          // Translation Update Mode: ONLY update non-empty provided translation fields!
-          final Map<String, dynamic> updateMap = {};
-          if (row.english != null && row.english!.trim().isNotEmpty) {
-            updateMap['english'] = row.english;
-            updateMap['translations.en'] = row.english;
-          }
-          if (row.hindi != null && row.hindi!.trim().isNotEmpty) {
-            updateMap['hindi'] = row.hindi;
-            updateMap['translations.hi'] = row.hindi;
-          }
-          if (row.gujarati != null && row.gujarati!.trim().isNotEmpty) {
-            updateMap['gujarati'] = row.gujarati;
-            updateMap['translations.gu'] = row.gujarati;
-          }
-          if (updateMap.isNotEmpty) {
-            updateMap['updatedAt'] = FieldValue.serverTimestamp();
-            batch.set(verseRef, updateMap, SetOptions(merge: true));
-            opCount++;
-            versesUpdated++;
-          }
-        } else {
-          // Full Master Mode: Writes full verse schema
-          final verseMap = <String, dynamic>{
-            'verse_id': row.verseId,
-            'passage_id': row.rawId.isNotEmpty ? row.rawId : row.verseId,
-            'verseNumber': row.verseNumber,
-            'kanda_number': row.kandaNumber,
-            'sarga_number': row.sargaNumber,
-            'sanskrit': row.sanskrit,
-            'sanskritText': row.sanskrit,
-            'english': row.english,
-            'hindi': row.hindi,
-            'gujarati': row.gujarati,
-            'translations': {
-              'en': row.english,
-              'hi': row.hindi,
-              'gu': row.gujarati,
-            },
-            'meaningEnglish': row.explanation,
-            'meaningGujarati': row.explanation,
-            'meaningHindi': row.explanation,
-            'explanation': row.explanation,
-            'source_url': row.sourceUrl,
-            'source_name': row.sourceName,
-            'qa_status': row.qaStatus,
-            'notes': row.notes,
-            'published': true,
-            'archived': false,
-            'updatedAt': FieldValue.serverTimestamp(),
-          };
+      final int totalRowsCount = rowsToProcess.length;
+      onProgress?.call(0, totalRowsCount, '[IMPORT] Processing $totalRowsCount data rows across ${chapterGroups.length} Chapter groups...');
 
-          batch.set(verseRef, verseMap, SetOptions(merge: true));
-          opCount++;
+      // 3. SAFE BATCHING WRITE LOOP WITH TIMEOUT, RETRY & EVENT LOOP YIELD
+      const int maxOpsPerBatch = 80;
+      int processedRowsCount = 0;
+      int batchOpCount = 0;
 
-          if (row.action == 'update') {
-            versesUpdated++;
-          } else {
-            versesCreated++;
+      // Estimate total ops (chapters + verses)
+      final int totalOpsCount = chapterGroups.length + rowsToProcess.length;
+      int totalBatchesCount = (totalOpsCount / maxOpsPerBatch).ceil();
+      if (totalBatchesCount == 0) totalBatchesCount = 1;
+      int currentBatchIndex = 0;
+
+      WriteBatch currentBatch = _firestore.batch();
+      int batchRowStart = 1;
+
+      Future<void> commitCurrentBatch() async {
+        if (batchOpCount == 0) return;
+        currentBatchIndex++;
+        bool committed = false;
+
+        for (int attempt = 1; attempt <= 3; attempt++) {
+          try {
+            onProgress?.call(
+              processedRowsCount,
+              totalRowsCount,
+              '[IMPORT] Uploading Batch $currentBatchIndex / $totalBatchesCount ($processedRowsCount / $totalRowsCount rows completed)...',
+            );
+            await currentBatch.commit().timeout(const Duration(seconds: 20));
+            committed = true;
+            print('[IMPORT] Batch $currentBatchIndex / $totalBatchesCount committed successfully ($batchOpCount ops).');
+            break;
+          } catch (e) {
+            print('[IMPORT WARNING] Batch $currentBatchIndex attempt $attempt failed: $e');
+            if (attempt == 3) {
+              importErrors.add('Batch $currentBatchIndex failed after 3 retries: $e');
+              invalidCount += (processedRowsCount - batchRowStart + 1);
+            } else {
+              await Future.delayed(Duration(milliseconds: 300 * attempt));
+            }
           }
         }
 
-        processedRowsCount++;
-
-        if (opCount >= 380) {
-          await batch.commit();
-          batch = _firestore.batch();
-          opCount = 0;
+        if (committed) {
           onProgress?.call(
             processedRowsCount,
-            rowsToProcess.length,
-            'Importing $chapTitle (Verse ${row.verseNumber})...',
+            totalRowsCount,
+            '[IMPORT] Uploading... $processedRowsCount / $totalRowsCount (Batch $currentBatchIndex / $totalBatchesCount)',
           );
         }
+
+        // Always reset batch state and yield to main event loop for smooth Web UI progress
+        currentBatch = _firestore.batch();
+        batchOpCount = 0;
+        batchRowStart = processedRowsCount + 1;
+        await Future.delayed(const Duration(milliseconds: 10));
       }
+
+      for (final entry in chapterGroups.entries) {
+        final chapterDocId = entry.key;
+        final groupRows = entry.value;
+        final firstRow = groupRows.first;
+
+        final kandaNum = firstRow.kandaNumber;
+        final sargaNum = firstRow.sargaNumber;
+        if (kandaNum > 0) kandasSet.add(kandaNum);
+        if (kandaNum > 0 && sargaNum > 0) sargasSet.add('K${kandaNum}_S$sargaNum');
+
+        final globalChapterNumber = (activeBookId == 'bhagavad_gita' || activeBookId == 'upanishads')
+            ? kandaNum
+            : (kandaNum * 1000) + sargaNum;
+
+        final chapterRef = bookRef.collection('chapters').doc(chapterDocId);
+        final String chapTitle = _formatChapterTitle(activeBookId, kandaNum, sargaNum);
+        final String chapSubtitle = _formatChapterSubtitle(activeBookId, kandaNum, sargaNum);
+
+        final chapterMap = <String, dynamic>{
+          'chapterNumber': globalChapterNumber,
+          'kanda_number': kandaNum,
+          'sarga_number': sargaNum,
+          'title': chapTitle,
+          'subtitle': chapSubtitle,
+          'title_en': chapTitle,
+          'subtitle_en': chapSubtitle,
+          'descriptionEnglish': '$chapTitle of $activeBookName.',
+          'source_url': firstRow.sourceUrl,
+          'source_name': firstRow.sourceName,
+          'qa_status': firstRow.qaStatus,
+          'published': true,
+          'archived': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        currentBatch.set(chapterRef, chapterMap, SetOptions(merge: true));
+        batchOpCount++;
+        chaptersCreated++;
+
+        if (batchOpCount >= maxOpsPerBatch) {
+          await commitCurrentBatch();
+        }
+
+        for (final row in groupRows) {
+          final verseRef = chapterRef.collection('verses').doc(row.verseId);
+
+          if (row.sanskrit.isNotEmpty) sanskritCount++;
+          if (row.english != null && row.english!.isNotEmpty) englishCount++;
+          if (row.hindi != null && row.hindi!.isNotEmpty) hindiCount++;
+          if (row.gujarati != null && row.gujarati!.isNotEmpty) gujaratiCount++;
+
+          if (row.importMode == 'translation_update') {
+            final Map<String, dynamic> updateMap = {};
+            if (row.english != null && row.english!.trim().isNotEmpty) {
+              updateMap['english'] = row.english;
+              updateMap['translations.en'] = row.english;
+              updateMap['meaningEnglish'] = row.english;
+            }
+            if (row.hindi != null && row.hindi!.trim().isNotEmpty) {
+              updateMap['hindi'] = row.hindi;
+              updateMap['translations.hi'] = row.hindi;
+              updateMap['meaningHindi'] = row.hindi;
+            }
+            if (row.gujarati != null && row.gujarati!.trim().isNotEmpty) {
+              updateMap['gujarati'] = row.gujarati;
+              updateMap['translations.gu'] = row.gujarati;
+              updateMap['meaningGujarati'] = row.gujarati;
+            }
+            if (updateMap.isNotEmpty) {
+              updateMap['updatedAt'] = FieldValue.serverTimestamp();
+              currentBatch.set(verseRef, updateMap, SetOptions(merge: true));
+              batchOpCount++;
+              versesUpdated++;
+            }
+          } else {
+            final verseMap = <String, dynamic>{
+              'verse_id': row.verseId,
+              'passage_id': row.rawId.isNotEmpty ? row.rawId : row.verseId,
+              'canonical_reference': row.canonicalRef.isNotEmpty ? row.canonicalRef : '${row.kandaNumber}.${row.sargaNumber}.${row.verseNumber}',
+              'verseNumber': row.verseNumber,
+              'shlok_no': row.verseNumber,
+              'kanda_number': row.kandaNumber,
+              'kanda_no': row.kandaNumber,
+              'kanda_name': _getKandaName(row.kandaNumber),
+              'sarga_number': row.sargaNumber,
+              'sarga_no': row.sargaNumber,
+              'sanskrit': row.sanskrit,
+              'sanskritText': row.sanskrit,
+              'english': row.english ?? '',
+              'hindi': row.hindi ?? '',
+              'gujarati': row.gujarati ?? '',
+              'translations': {
+                'en': row.english ?? '',
+                'hi': row.hindi ?? '',
+                'gu': row.gujarati ?? '',
+              },
+              'meaningEnglish': (row.english != null && row.english!.isNotEmpty) ? row.english : (row.explanation ?? ''),
+              'meaningHindi': (row.hindi != null && row.hindi!.isNotEmpty) ? row.hindi : (row.explanation ?? ''),
+              'meaningGujarati': (row.gujarati != null && row.gujarati!.isNotEmpty) ? row.gujarati : (row.explanation ?? ''),
+              'explanation': row.explanation ?? row.english ?? '',
+              'source_url': row.sourceUrl ?? '',
+              'qa_status': row.qaStatus ?? 'Approved',
+              'notes': row.notes ?? '',
+              'published': true,
+              'archived': false,
+              'updatedAt': FieldValue.serverTimestamp(),
+            };
+
+            currentBatch.set(verseRef, verseMap, SetOptions(merge: true));
+            batchOpCount++;
+
+            if (row.action == 'update') {
+              versesUpdated++;
+            } else {
+              versesCreated++;
+            }
+          }
+
+          processedRowsCount++;
+
+          if (batchOpCount >= maxOpsPerBatch) {
+            await commitCurrentBatch();
+          }
+        }
+      }
+
+      if (batchOpCount > 0) {
+        await commitCurrentBatch();
+      }
+
+      // Update parent book total chapters count safely
+      try {
+        await bookRef.update({
+          'totalChapters': chapterGroups.length,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }).timeout(const Duration(seconds: 10));
+      } catch (_) {}
+
+      // 4. SAFE OBSOLETE CLEANUP FOR ACTIVE BOOK ONLY (REPLACE_ALL MODE)
+      if (mode == 'replace_all') {
+        onProgress?.call(totalRowsCount, totalRowsCount, '[IMPORT] Cleaning obsolete records for $activeBookName safely...');
+        try {
+          final newDocIds = rowsToProcess.map((r) => r.verseId).toSet();
+          final existingChapSnap = await bookRef.collection('chapters').get().timeout(const Duration(seconds: 15));
+          for (final chapDoc in existingChapSnap.docs) {
+            final verseSnap = await chapDoc.reference.collection('verses').get().timeout(const Duration(seconds: 15));
+            WriteBatch cleanBatch = _firestore.batch();
+            int cleanCount = 0;
+            for (final verseDoc in verseSnap.docs) {
+              if (!newDocIds.contains(verseDoc.id)) {
+                cleanBatch.delete(verseDoc.reference);
+                cleanCount++;
+                removedOldRecords++;
+                if (cleanCount >= maxOpsPerBatch) {
+                  await cleanBatch.commit().timeout(const Duration(seconds: 15));
+                  cleanBatch = _firestore.batch();
+                  cleanCount = 0;
+                  await Future.delayed(const Duration(milliseconds: 10));
+                }
+              }
+            }
+            if (cleanCount > 0) {
+              await cleanBatch.commit().timeout(const Duration(seconds: 15));
+            }
+          }
+        } catch (e) {
+          print('[IMPORT WARNING] Cleanup of obsolete records encountered error: $e');
+        }
+      }
+
+      onProgress?.call(totalRowsCount, totalRowsCount, '[IMPORT] Import complete! $processedRowsCount / $totalRowsCount rows processed.');
+
+      // Write import history log
+      final historyRef = _firestore.collection('import_history').doc();
+      final historyModel = ImportHistoryAdminModel(
+        id: historyRef.id,
+        fileName: fileName,
+        bookId: activeBookId,
+        bookName: activeBookName,
+        totalRows: rows.length,
+        successCount: versesCreated + versesUpdated,
+        errorCount: invalidCount,
+        status: invalidCount == 0 ? 'completed' : (versesCreated + versesUpdated > 0 ? 'partial' : 'failed'),
+        errors: importErrors.take(20).toList(),
+        timestamp: DateTime.now(),
+        importedBy: adminEmail,
+      );
+
+      try {
+        await historyRef.set(historyModel.toMap()).timeout(const Duration(seconds: 10));
+        await _firestore.collection('admin_activity_logs').add({
+          'action': 'SACRED_BOOK_IMPORT',
+          'userEmail': adminEmail,
+          'details': 'Imported $activeBookName ($activeBookId): $versesCreated verses created, $versesUpdated updated, $removedOldRecords old records removed from $fileName (Mode: $mode)',
+          'timestamp': FieldValue.serverTimestamp(),
+        }).timeout(const Duration(seconds: 10));
+      } catch (e) {
+        print('[BULK IMPORT WARNING] Could not write history log: $e');
+      }
+
+      final int totalFirestoreRecords = 1 + chapterGroups.length + (versesCreated + versesUpdated);
+
+      return RamayanaImportExecutionResult(
+        excelRows: rows.length,
+        totalFirestoreRecords: totalFirestoreRecords,
+        totalKandas: kandasSet.length,
+        totalSargas: sargasSet.length,
+        totalVerses: versesCreated + versesUpdated,
+        englishCount: englishCount,
+        hindiCount: hindiCount,
+        gujaratiCount: gujaratiCount,
+        sanskritCount: sanskritCount,
+        booksCreated: booksCreated,
+        booksUpdated: booksUpdated,
+        chaptersCreated: chaptersCreated,
+        chaptersUpdated: chaptersUpdated,
+        versesCreated: versesCreated,
+        versesUpdated: versesUpdated,
+        removedOldRecords: removedOldRecords,
+        skippedCount: skippedCount,
+        duplicateCount: duplicateCount,
+        invalidCount: invalidCount,
+        errors: importErrors,
+      );
+    } catch (e, stack) {
+      print('[CRITICAL IMPORT ERROR] executeRamayanaImport threw: $e\n$stack');
+      importErrors.add('Critical execution error: $e');
+      return RamayanaImportExecutionResult(
+        excelRows: rows.length,
+        totalFirestoreRecords: 0,
+        totalKandas: 0,
+        totalSargas: 0,
+        totalVerses: 0,
+        englishCount: 0,
+        hindiCount: 0,
+        gujaratiCount: 0,
+        sanskritCount: 0,
+        booksCreated: 0,
+        booksUpdated: 0,
+        chaptersCreated: 0,
+        chaptersUpdated: 0,
+        versesCreated: 0,
+        versesUpdated: 0,
+        skippedCount: skippedCount,
+        duplicateCount: duplicateCount,
+        invalidCount: rows.length,
+        errors: importErrors,
+      );
     }
+  }
 
-    if (opCount > 0) {
-      await batch.commit();
-      opCount = 0;
-    }
-
-    // Update parent book total chapters count
-    final totalChaptersSnap = await bookRef.collection('chapters').get();
-    await bookRef.update({
-      'totalChapters': totalChaptersSnap.docs.length,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    onProgress?.call(rowsToProcess.length, rowsToProcess.length, 'Finalizing import logs...');
-
-    // Write import history log safely
-    final historyRef = _firestore.collection('import_history').doc();
-    final historyModel = ImportHistoryAdminModel(
-      id: historyRef.id,
-      fileName: fileName,
-      bookId: activeBookId,
-      bookName: activeBookName,
-      totalRows: rows.length,
-      successCount: versesCreated + versesUpdated,
-      errorCount: invalidCount,
-      status: invalidCount == 0 ? 'completed' : (versesCreated + versesUpdated > 0 ? 'partial' : 'failed'),
-      errors: importErrors.take(20).toList(),
-      timestamp: DateTime.now(),
-      importedBy: adminEmail,
-    );
-
-    try {
-      await historyRef.set(historyModel.toMap());
-      await _firestore.collection('admin_activity_logs').add({
-        'action': 'SACRED_BOOK_IMPORT',
-        'userEmail': adminEmail,
-        'details': 'Imported $activeBookName ($activeBookId): $versesCreated verses created, $versesUpdated updated, $skippedCount skipped from $fileName (Mode: $mode)',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('[BULK IMPORT WARNING] Could not write activity log to Firestore: $e');
-    }
-
-    return RamayanaImportExecutionResult(
-      booksCreated: booksCreated,
-      booksUpdated: booksUpdated,
-      chaptersCreated: chaptersCreated,
-      chaptersUpdated: chaptersUpdated,
-      versesCreated: versesCreated,
-      versesUpdated: versesUpdated,
-      skippedCount: skippedCount,
-      duplicateCount: duplicateCount,
-      invalidCount: invalidCount,
-      errors: importErrors,
-    );
+  static int _asInt(dynamic val, {int fallback = 0}) {
+    if (val == null) return fallback;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString().trim()) ?? fallback;
   }
 
   static String _resolveBookTitle(String bookId) {
@@ -731,6 +912,15 @@ class BulkImportService {
       case 'mahabharata': return 3;
       case 'upanishads': return 4;
       default: return 10;
+    }
+  }
+
+  static String _resolveBookSchema(String bookId) {
+    switch (bookId.toLowerCase()) {
+      case 'ramayana': return 'kanda_sarga_verse';
+      case 'bhagavad_gita': return 'chapter_verse';
+      case 'upanishads': return 'reference_only';
+      default: return 'reference_only';
     }
   }
 
