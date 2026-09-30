@@ -43,13 +43,13 @@ class SeedService {
       // Always clean up legacy static Ramayana chapter documents ('1'..'7') if present
       await cleanupOldStaticRamayanaDocs();
 
+      // Always sync 18 Isha Upanishad chapters and clean up legacy placeholders
+      await syncIshaUpanishadData();
+
       // Ensure exact Ramayana 1.2.15 verse ("Ma Nishada...") is upserted in Firestore
       await upsertRamayanaMaNishadaVerse();
 
-      // If books already exist in Firestore and force is false, skip migration
-      if (!force && booksSnapshot.docs.isNotEmpty) {
-        return booksSnapshot.docs.length;
-      }
+      // Sync all books, chapters, and verses from SacredBooksData.all to Firestore
 
       final existingBooks = SacredBooksData.all;
       int totalBooks = existingBooks.length;
@@ -385,6 +385,158 @@ class SeedService {
       );
     } catch (e) {
       print('Error upserting Ramayana 1.2.15 verse: $e');
+    }
+  }
+
+  /// Deletes legacy placeholder Upanishad chapter documents ('chapter_1'..'chapter_5' or title 'Upanishads Chapter...')
+  /// from Firestore sacred_books/upanishads/chapters/ if present.
+  Future<void> cleanupOldUpanishadDocs() async {
+    try {
+      final upanishadsRef = _firestore.collection('sacred_books').doc('upanishads');
+      final chaptersRef = upanishadsRef.collection('chapters');
+      final snap = await chaptersRef.get();
+
+      final batch = _firestore.batch();
+      int deleteCount = 0;
+
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final title = (data['title'] ?? '').toString();
+        // Delete if ID starts with 'chapter_' or title starts with 'Upanishads Chapter'
+        if (doc.id.startsWith('chapter_') || title.startsWith('Upanishads Chapter')) {
+          final versesSnap = await doc.reference.collection('verses').get();
+          for (final vDoc in versesSnap.docs) {
+            batch.delete(vDoc.reference);
+          }
+          batch.delete(doc.reference);
+          deleteCount++;
+        }
+      }
+
+      if (deleteCount > 0) {
+        await batch.commit();
+      }
+
+      await _logsService.logAction(
+        action: 'Cleaned Up Legacy Upanishad Data',
+        target: 'Firestore sacred_books/upanishads/chapters',
+        details: 'Purged $deleteCount legacy placeholder chapter documents',
+      );
+    } catch (e) {
+      print('Error during legacy Upanishad cleanup: $e');
+    }
+  }
+
+  /// Ensures all 18 Isha Upanishad chapters and verses from mobile local data
+  /// are written to Firestore under sacred_books/upanishads/chapters/{1..18} and cleans up old placeholder docs.
+  Future<void> syncIshaUpanishadData() async {
+    try {
+      await cleanupOldUpanishadDocs();
+
+      final upanishadsBook = SacredBooksData.all.firstWhere(
+        (b) => b.id == 'upanishads',
+        orElse: () => SacredBooksData.all.last,
+      );
+
+      if (upanishadsBook.id != 'upanishads') return;
+
+      final upanishadsRef = _firestore.collection('sacred_books').doc('upanishads');
+
+      // 1. Update main book doc
+      await upanishadsRef.set({
+        'id': 'upanishads',
+        'title': upanishadsBook.title,
+        'subtitle': upanishadsBook.subtitle,
+        'title_en': upanishadsBook.titleEn ?? upanishadsBook.title,
+        'title_gu': upanishadsBook.titleGu,
+        'title_hi': upanishadsBook.titleHi,
+        'subtitle_en': upanishadsBook.subtitleEn ?? upanishadsBook.subtitle,
+        'subtitle_gu': upanishadsBook.subtitleGu,
+        'subtitle_hi': upanishadsBook.subtitleHi,
+        'iconEmoji': upanishadsBook.iconEmoji,
+        'totalChapters': upanishadsBook.chapters.length,
+        'order': 3,
+        'published': true,
+        'archived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 2. Upsert all 18 chapters and their verses
+      WriteBatch batch = _firestore.batch();
+      int opCount = 0;
+
+      for (final chapter in upanishadsBook.chapters) {
+        final chapterDocRef = upanishadsRef.collection('chapters').doc(chapter.chapterNumber.toString());
+
+        final chapterMap = {
+          'chapterNumber': chapter.chapterNumber,
+          'title': chapter.title,
+          'subtitle': chapter.subtitle,
+          'title_en': chapter.titleEn ?? chapter.title,
+          'title_gu': chapter.titleGu,
+          'title_hi': chapter.titleHi,
+          'subtitle_en': chapter.subtitleEn ?? chapter.subtitle,
+          'subtitle_gu': chapter.subtitleGu,
+          'subtitle_hi': chapter.subtitleHi,
+          'descriptionEnglish': chapter.descriptionEnglish,
+          'descriptionGujarati': chapter.descriptionGujarati,
+          'descriptionHindi': chapter.descriptionHindi,
+          'totalVerses': chapter.verses.length,
+          'order': chapter.chapterNumber,
+          'published': true,
+          'archived': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+
+        batch.set(chapterDocRef, chapterMap, SetOptions(merge: true));
+        opCount++;
+
+        for (final verse in chapter.verses) {
+          final verseDocRef = chapterDocRef.collection('verses').doc(verse.verseNumber.toString());
+
+          final verseMap = {
+            'verseNumber': verse.verseNumber,
+            'sanskrit': verse.sanskrit,
+            'english': verse.english,
+            'gujarati': verse.gujarati,
+            'hindi': verse.hindi,
+            'meaningEnglish': verse.meaningEnglish,
+            'meaningGujarati': verse.meaningGujarati,
+            'meaningHindi': verse.meaningHindi,
+            'transliteration': verse.transliteration,
+            'quote': verse.quote,
+            'quote_hi': verse.quoteHi,
+            'quote_gu': verse.quoteGu,
+            'contextText': verse.contextText,
+            'context_text_hi': verse.contextTextHi,
+            'context_text_gu': verse.contextTextGu,
+            'published': true,
+            'archived': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          };
+
+          batch.set(verseDocRef, verseMap, SetOptions(merge: true));
+          opCount++;
+
+          if (opCount >= 400) {
+            await batch.commit();
+            batch = _firestore.batch();
+            opCount = 0;
+          }
+        }
+      }
+
+      if (opCount > 0) {
+        await batch.commit();
+      }
+
+      await _logsService.logAction(
+        action: 'Synced Isha Upanishad Data',
+        target: 'Firestore sacred_books/upanishads',
+        details: 'Upserted 18 Isha Upanishad chapters and verses into Firestore',
+      );
+    } catch (e) {
+      print('Error syncing Isha Upanishad data: $e');
     }
   }
 }

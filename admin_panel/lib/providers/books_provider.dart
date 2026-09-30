@@ -67,10 +67,10 @@ class BooksProvider extends ChangeNotifier {
         _books = data;
         _isLoading = false;
 
-        // Auto-seed if Firestore has 0 books and we haven't attempted yet
-        if (data.isEmpty && !_isSeeding && !_hasAttemptedAutoSeed) {
+        // Auto-seed to ensure all mobile content (Gita 18 ch, Ramayana 7 Kandas, Upanishads 18 ch) is in Firestore
+        if (!_isSeeding && !_hasAttemptedAutoSeed) {
           _hasAttemptedAutoSeed = true;
-          syncMobileContent(force: false);
+          syncMobileContent(force: true);
         } else {
           notifyListeners();
         }

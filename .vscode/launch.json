@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Sanatan Scroll (Android Phone - CPH2585)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "6db91ae8"
+    },
+    {
+      "name": "Sanatan Scroll (Auto Target)",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "Sanatan Scroll (Chrome Web)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome"
+    }
+  ]
+}

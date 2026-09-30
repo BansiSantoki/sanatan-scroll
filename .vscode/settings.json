@@ -1,4 +1,7 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "cmake.sourceDirectory": "D:/sanatan-scroll-main/linux"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "cmake.sourceDirectory": "D:/sanatan-scroll-main/linux",
+  "dart.flutterSelectDeviceWhenConnected": true,
+  "dart.flutterHotReloadOnSave": "always",
+  "dart.openFlutterTarget": "preferred"
 }
