@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class UpanishadsDetailScreen extends StatelessWidget {
   const UpanishadsDetailScreen({super.key});
@@ -174,11 +175,7 @@ class UpanishadsDetailScreen extends StatelessWidget {
         const SizedBox(height: 24),
 
         Text(
-          'The Upanishads are a collection of ancient Hindu scriptures '
-          'that explore the nature of reality, the self (Atman), and the '
-          'ultimate truth (Brahman). They are the philosophical '
-          'foundation of Hinduism, offering timeless insights into '
-          'consciousness, wisdom, and liberation.',
+          'The Isha Upanishad is a profound and concise Sanskrit text that reveals the essential unity of all existence, the nature of the Self, and the path to live in the world with wisdom, detachment and harmony.',
 
           style: GoogleFonts.inter(
             fontSize: 17,
@@ -428,7 +425,7 @@ class _UpanishadsHero extends StatelessWidget {
                       top: 61,
 
                       child: Text(
-                        'SACRED SCRIPTURE',
+                        context.l10n.sacredScripture,
 
                         style: GoogleFonts.inter(
                           fontSize: 15,
@@ -455,7 +452,7 @@ class _UpanishadsHero extends StatelessWidget {
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Upanishads',
+                          'Isha Upanishad',
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
@@ -480,7 +477,7 @@ class _UpanishadsHero extends StatelessWidget {
                       top: 235,
 
                       child: Text(
-                        'Wisdom of the Self',
+                        'The Inner Teaching',
 
                         style: GoogleFonts.inter(
                           fontSize: 21,
@@ -498,15 +495,15 @@ class _UpanishadsHero extends StatelessWidget {
                     // ============================================
 
                     Positioned(
-                      right: -8,
-                      bottom: 0,
+                      right: 10,
+                      bottom: 20,
 
                       child: SizedBox(
-                        width: 350,
-                        height: 305,
+                        width: 220,
+                        height: 220,
 
                         child: Image.asset(
-                          'assets/images/upanishads_lineart.png',
+                          'assets/images/upanishad_leaf_art.png',
 
                           fit: BoxFit.contain,
 
@@ -543,33 +540,12 @@ class _UpanishadsHero extends StatelessWidget {
             top: 455,
 
             child: Row(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
-              children: [
-
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
                 Expanded(
                   child: _StatCard(
-                    number: '108',
-                    label: 'Upanishads',
-                  ),
-                ),
-
-                const SizedBox(width: 3),
-
-                Expanded(
-                  child: _StatCard(
-                    number: '2000+',
-                    label: 'Teachings',
-                  ),
-                ),
-
-                const SizedBox(width: 3),
-
-                Expanded(
-                  child: _StatCard(
-                    number: '500+',
-                    label: 'Verses',
+                    number: '18',
+                    label: 'Mantras',
                   ),
                 ),
               ],

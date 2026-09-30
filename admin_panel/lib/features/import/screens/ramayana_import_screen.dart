@@ -142,10 +142,17 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       final file = await UniversalWebFilePicker.pickImportFile();
 
       if (file != null) {
+        // Auto-detect book by filename (helps when uploading Upanishads files)
+        final detected = _detectBookFromFilename(file.name);
         setState(() {
           _selectedFile = file;
           _sourceUrl = null;
           _errorMessage = null;
+          if (detected != null) {
+            _selectedBookId = detected['id']!;
+            _selectedBookName = detected['name']!;
+            _urlController.text = _resolveBookDefaultUrl(_selectedBookId);
+          }
           _currentStep = 2;
         });
         await _processParsedFile(file);
@@ -156,6 +163,23 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         _currentStep = 1;
       });
     }
+  }
+
+  Map<String, String>? _detectBookFromFilename(String filename) {
+    final lname = filename.toLowerCase();
+    if (lname.contains('upanishad') || lname.contains('isha') || lname.contains('upn')) {
+      return {'id': 'upanishads', 'name': 'Upanishads'};
+    }
+    if (lname.contains('gita') || lname.contains('bhagavad')) {
+      return {'id': 'bhagavad_gita', 'name': 'Bhagavad Gita'};
+    }
+    if (lname.contains('mahabharata') || lname.contains('maha')) {
+      return {'id': 'mahabharata', 'name': 'Mahabharata'};
+    }
+    if (lname.contains('ramayan') || lname.contains('ramayana') || lname.contains('ram')) {
+      return {'id': 'ramayana', 'name': 'Ramayana'};
+    }
+    return null;
   }
 
   Future<void> _processParsedFile(PlatformFile file) async {
@@ -274,11 +298,14 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       _isAnalyzing = true;
     });
 
-    await _bulkImportService.analyzeRamayanaRowsAgainstFirestore(
-      rows: _parseResult!.rows,
-      mode: newMode,
-      targetBookId: _selectedBookId,
-    );
+    // Safety: only analyze when parsed rows exist
+    if (_parseResult != null && _parseResult!.rows.isNotEmpty) {
+      await _bulkImportService.analyzeRamayanaRowsAgainstFirestore(
+        rows: _parseResult!.rows,
+        mode: newMode,
+        targetBookId: _selectedBookId,
+      );
+    }
 
     setState(() {
       _isAnalyzing = false;
@@ -368,7 +395,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
             Text('• Target Book: $_selectedBookName ($_selectedBookId)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             Text('• Target Collection: sacred_books/$_selectedBookId', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             Text('• New Verses to Write: $validCount', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            Text('• Kandas: ${_parseResult!.detectedKandas.length}, Sargas: ${_parseResult!.detectedSargasCount}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('• Kandas: ${_parseResult?.detectedKandas.length ?? 0}, Sargas: ${_parseResult?.detectedSargasCount ?? 0}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
@@ -798,9 +825,9 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
             spacing: 12,
             runSpacing: 10,
             children: _availableBooks.map((book) {
-              final id = book['id']!;
-              final name = book['name']!;
-              final icon = book['icon'] ?? '📜';
+              final id = (book['id'] ?? book['name'] ?? '').toString();
+              final name = (book['name'] ?? id).toString();
+              final icon = (book['icon'] ?? '📜').toString();
               final isSelected = id == _selectedBookId;
 
               return ChoiceChip(
@@ -1490,7 +1517,11 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   // ============================================================
 
   Widget _buildStep5ResultReportSection() {
-    final res = _executionResult!;
+    final res = _executionResult;
+
+    if (res == null) {
+      return Center(child: Text('No import results available.', style: GoogleFonts.inter(color: Colors.grey[700])));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1534,7 +1565,6 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
 
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 700;
                   return Wrap(
                     spacing: 12,
                     runSpacing: 12,

@@ -57,6 +57,7 @@ class AppPages {
       case AppRoutes.sacredChapterList:
         final dynamic args = settings.arguments;
         String textId = 'bhagavad_gita';
+        int? kandaNumber;
 
         if (args is String) {
           textId = args;
@@ -65,10 +66,19 @@ class AppPages {
           if (value is String && value.isNotEmpty) {
             textId = value;
           }
+          final kVal = args['kandaNumber'] ?? args['kanda'];
+          if (kVal is int) {
+            kandaNumber = kVal;
+          } else if (kVal is String) {
+            kandaNumber = int.tryParse(kVal);
+          }
         }
 
         return _slideRoute(
-          SacredChapterListScreen(textId: textId),
+          SacredChapterListScreen(
+            textId: textId,
+            initialKandaNumber: kandaNumber,
+          ),
           settings,
         );
 

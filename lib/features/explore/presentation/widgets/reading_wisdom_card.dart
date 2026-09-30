@@ -54,7 +54,10 @@ class ReadingWisdomCard extends StatelessWidget {
     String verseRef;
     String topSubtitle;
 
-    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
+    if (book.id == 'upanishads') {
+      verseRef = 'Isha Upanishad • ${chapter.title}';
+      topSubtitle = 'Isha Upanishad • ${chapter.title}';
+    } else if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
       final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
       final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
 
@@ -196,72 +199,83 @@ class ReadingWisdomCard extends StatelessWidget {
                 ),
               ),
 
-              // Bottom Bar: 01 / 03 | Progress Bars | Swipe ->
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                child: Row(
-                  children: [
-                    // Card number e.g. "01 / 03"
-                    Text(
-                      '01 / 0$totalCards',
-                      style: AppTextStyles.getFontForLocale(
-                        locale,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: primaryTextColor,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+              // Bottom Bar: 01 / 18 | Progress Bars | Next Passage ↑
+              Builder(
+                builder: (context) {
+                  final isUpanishads = book.id == 'upanishads';
+                  final cardLabel = isUpanishads
+                      ? '${chapter.chapterNumber.toString().padLeft(2, '0')} / 18'
+                      : '01 / 0$totalCards';
+                  final totalProgressSteps = isUpanishads ? 18 : totalCards;
+                  final activeStepIndex = isUpanishads ? (chapter.chapterNumber - 1) : 0;
 
-                    // Progress indicators
-                    Expanded(
-                      child: Row(
-                        children: List.generate(totalCards, (index) {
-                          final isActive = index == 0;
-                          return Expanded(
-                            child: Container(
-                              height: 4,
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? const Color(0xFFEF6523)
-                                    : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-
-                    const SizedBox(width: 16),
-
-                    // Swipe / Next verse button
-                    GestureDetector(
-                      onTap: onNextCard,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            totalCards > 1 ? l10n.swipe : l10n.nextVerse,
-                            style: AppTextStyles.getFontForLocale(
-                              locale,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: primaryTextColor,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            totalCards > 1 ? Icons.arrow_forward_rounded : Icons.arrow_upward_rounded,
-                            size: 18,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: [
+                        // Card number e.g. "01 / 18" or "01 / 03"
+                        Text(
+                          cardLabel,
+                          style: AppTextStyles.getFontForLocale(
+                            locale,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                             color: primaryTextColor,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // Progress indicators
+                        Expanded(
+                          child: Row(
+                            children: List.generate(totalProgressSteps, (index) {
+                              final isActive = index == activeStepIndex;
+                              return Expanded(
+                                child: Container(
+                                  height: 4,
+                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? const Color(0xFFEF6523)
+                                        : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+
+                        const SizedBox(width: 16),
+
+                        // Swipe / Next verse button
+                        GestureDetector(
+                          onTap: onNextCard,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                (totalCards > 1 && !isUpanishads) ? l10n.swipe : l10n.nextVerse,
+                                style: AppTextStyles.getFontForLocale(
+                                  locale,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryTextColor,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                (totalCards > 1 && !isUpanishads) ? Icons.arrow_forward_rounded : Icons.arrow_upward_rounded,
+                                size: 18,
+                                color: primaryTextColor,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),

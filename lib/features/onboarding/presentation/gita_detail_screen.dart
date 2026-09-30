@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class GitaDetailScreen extends StatelessWidget {
   const GitaDetailScreen({super.key});
@@ -179,8 +180,7 @@ class GitaDetailScreen extends StatelessWidget {
                   top: 42,
 
                   child: Text(
-                    'SACRED SCRIPTURE',
-
+                    context.l10n.sacredScripture,
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -203,7 +203,7 @@ class GitaDetailScreen extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Bhagavad Gita',
+                      context.l10n.bhagavadGita,
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
@@ -226,8 +226,7 @@ class GitaDetailScreen extends StatelessWidget {
                   top: 190,
 
                   child: Text(
-                    'The Song of the Divine',
-
+                    context.l10n.gitaSubtitle,
                     style: GoogleFonts.inter(
                       fontSize: 21,
                       fontWeight: FontWeight.w400,

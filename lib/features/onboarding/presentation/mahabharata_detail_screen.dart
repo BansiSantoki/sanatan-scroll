@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class MahabharataDetailScreen extends StatelessWidget {
   const MahabharataDetailScreen({super.key});
@@ -484,7 +485,7 @@ class _MahabharataHero extends StatelessWidget {
                       top: 61,
 
                       child: Text(
-                        'SACRED SCRIPTURE',
+                        context.l10n.sacredScripture,
 
                         style:
                             GoogleFonts.inter(

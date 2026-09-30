@@ -1,0 +1,9 @@
+name: parse_upanishads_tool
+description: Simple CLI to parse Upanishads XLSX into CSV + report
+version: 0.0.1
+environment:
+  sdk: '>=2.18.0 <4.0.0'
+
+dependencies:
+  excel: ^2.0.2
+  csv: ^5.0.0

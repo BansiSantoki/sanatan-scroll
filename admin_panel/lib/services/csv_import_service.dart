@@ -419,6 +419,18 @@ class CsvImportService {
             }
           }
         }
+        // Special-case fallback for Upanishads-style IDs like 'ISHA-K-001' where
+        // the middle group may be non-numeric. Extract trailing numeric sequence
+        // as the verse and default kanda/sarga to 1 so import can proceed.
+        if (!idParsedSuccess && rawId.isNotEmpty && config.bookId == 'upanishads') {
+          final trailingNum = RegExp(r'(\d+)\$').firstMatch(rawId);
+          if (trailingNum != null) {
+            parsedVerse = int.tryParse(trailingNum.group(1) ?? '') ?? -1;
+            parsedKanda = parsedKanda > 0 ? parsedKanda : 1;
+            parsedSarga = parsedSarga > 0 ? parsedSarga : 1;
+            idParsedSuccess = parsedVerse > 0;
+          }
+        }
       }
 
       // Fallback: Parse canonicalRef (e.g. "1.2.15" or "1.15") if Kanda/Sarga/Verse not set
@@ -432,6 +444,17 @@ class CsvImportService {
           parsedKanda = parts[0];
           parsedSarga = 1;
           parsedVerse = parts[1];
+        }
+        // If canonicalRef contains letters (e.g. 'ISHA-K-01') the numeric parse
+        // above may find only the trailing number. In that case, treat the trailing
+        // number as the verse and default kanda/sarga to 1 for Upanishads.
+        if (parsedKanda <= 0 && parsedVerse <= 0 && canonicalRefStr.isNotEmpty && config.bookId == 'upanishads') {
+          final trailing = RegExp(r'(\d+)\$').firstMatch(canonicalRefStr);
+          if (trailing != null) {
+            parsedVerse = int.tryParse(trailing.group(1) ?? '') ?? -1;
+            parsedKanda = 1;
+            parsedSarga = 1;
+          }
         }
       }
 

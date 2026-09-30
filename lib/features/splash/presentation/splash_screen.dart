@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/routes/app_routes.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -29,13 +30,10 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1400),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
-    );
+    _fadeAnimation = AlwaysStoppedAnimation<double>(1.0);
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.08),
+      begin: const Offset(0.0, 0.04),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
@@ -50,12 +48,20 @@ class _SplashScreenState extends State<SplashScreen>
   void _startSplash() {
     _animationController.forward();
 
-    // Navigation timer: preserves original 4-second timeout & auth route switching
-    _navigationTimer = Timer(const Duration(seconds: 4), () {
+    _navigationTimer = Timer(const Duration(seconds: 3), () async {
       if (!mounted) return;
-      final nextRoute = FirebaseAuth.instance.currentUser == null
-          ? AppRoutes.auth
-          : AppRoutes.main;
+      try {
+        await Firebase.initializeApp();
+      } catch (_) {}
+
+      if (!mounted) return;
+      String nextRoute = AppRoutes.auth;
+      try {
+        if (FirebaseAuth.instance.currentUser != null) {
+          nextRoute = AppRoutes.main;
+        }
+      } catch (_) {}
+
       Navigator.of(context).pushReplacementNamed(nextRoute);
     });
   }

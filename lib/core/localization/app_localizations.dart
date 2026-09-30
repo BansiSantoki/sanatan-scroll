@@ -36,6 +36,10 @@ class AppLocalizations {
       'hindi': 'हिंदी',
       'gujarati': 'ગુજરાતી',
       'dailyWisdom': 'DAILY WISDOM',
+      'sacredScripture': 'SACRED SCRIPTURE',
+      'selectChapter': 'Select a Chapter',
+      'selectKanda': 'Select a Kanda',
+      'selectMantra': 'Select a Mantra',
       'continueYourJourney': 'Continue Your Journey',
       'pickUpWhereYouLeftOff': 'Pick up where you left off',
       'startReading': 'Start Reading',
@@ -43,12 +47,12 @@ class AppLocalizations {
       'exploreScriptures': 'EXPLORE SCRIPTURES',
       'diveIntoTimelessWisdom': 'Dive into timeless wisdom',
       'gita': 'Gita',
-      'gitaSubtitle': 'The Song of the Divine',
+      'gitaSubtitle': 'The Divine Song of Lord Krishna',
       'bhagavadGita': 'Bhagavad Gita',
       'ramayana': 'Ramayana',
       'ramayanaSubtitle': 'The Epic of Duty',
-      'upanishads': 'Upanishads',
-      'upanishadsSubtitle': 'Wisdom of the Self',
+      'upanishads': 'Isha Upanishad',
+      'upanishadsSubtitle': 'The Inner Teaching',
       'mahabharata': 'Mahabharata',
       'mahabharataSubtitle': 'The Great Epic',
       'chapter': 'Chapter',
@@ -182,6 +186,10 @@ class AppLocalizations {
       'hindi': 'हिंदी',
       'gujarati': 'ગુજરાતી',
       'dailyWisdom': 'દૈનિક જ્ઞાન',
+      'sacredScripture': 'પવિત્ર શાસ્ત્ર',
+      'selectChapter': 'અધ્યાય પસંદ કરો',
+      'selectKanda': 'કાંડ પસંદ કરો',
+      'selectMantra': 'મંત્ર પસંદ કરો',
       'continueYourJourney': 'તમારી યાત્રા શરૂ રાખો',
       'pickUpWhereYouLeftOff': 'જ્યાંથી છોડ્યું હતું ત્યાંથી શરૂ કરો',
       'startReading': 'વાંચવાનું શરૂ કરો',
@@ -328,6 +336,10 @@ class AppLocalizations {
       'hindi': 'हिंदी',
       'gujarati': 'ગુજરાતી',
       'dailyWisdom': 'दैनिक ज्ञान',
+      'sacredScripture': 'पवित्र शास्त्र',
+      'selectChapter': 'अध्याय चुनें',
+      'selectKanda': 'कांड चुनें',
+      'selectMantra': 'मंत्र चुनें',
       'continueYourJourney': 'अपनी यात्रा जारी रखें',
       'pickUpWhereYouLeftOff': 'जहां से छोड़ा था वहीं से शुरू करें',
       'startReading': 'पढ़ना शुरू करें',
@@ -497,6 +509,10 @@ class AppLocalizations {
   String get hindi => translate('hindi');
   String get gujarati => translate('gujarati');
   String get dailyWisdom => translate('dailyWisdom');
+  String get sacredScripture => translate('sacredScripture');
+  String get selectChapter => translate('selectChapter');
+  String get selectKanda => translate('selectKanda');
+  String get selectMantra => translate('selectMantra');
   String get continueYourJourney => translate('continueYourJourney');
   String get pickUpWhereYouLeftOff => translate('pickUpWhereYouLeftOff');
   String get startReading => translate('startReading');

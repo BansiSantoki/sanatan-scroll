@@ -129,10 +129,11 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget> {
                     Text(
                       'What brings you to\nSanatan Scroll?',
                       style: GoogleFonts.cormorantGaramond(
-                        fontSize: size.width < 360 ? 32 : 38,
+                        fontSize: size.width < 360 ? 26 : 31,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF141814),
-                        height: 1.1,
+                        height: 1.15,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     const SizedBox(height: 12),

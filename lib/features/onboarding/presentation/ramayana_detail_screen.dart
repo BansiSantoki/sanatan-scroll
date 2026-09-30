@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class RamayanaDetailScreen extends StatelessWidget {
   const RamayanaDetailScreen({super.key});
@@ -485,7 +486,7 @@ class _RamayanaHero extends StatelessWidget {
                       top: 61,
 
                       child: Text(
-                        'SACRED SCRIPTURE',
+                        context.l10n.sacredScripture,
 
                         style:
                             GoogleFonts.inter(
@@ -509,7 +510,7 @@ class _RamayanaHero extends StatelessWidget {
                     Positioned(
                       left: 39,
                       top: 121,
-                      right: 20,
+                      right: 140,
 
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -538,6 +539,7 @@ class _RamayanaHero extends StatelessWidget {
                     Positioned(
                       left: 40,
                       top: 235,
+                      right: 140,
 
                       child: Text(
                         'The Epic of Duty',
@@ -556,25 +558,25 @@ class _RamayanaHero extends StatelessWidget {
                     ),
 
                     // ============================================
-                    // RAMAYANA IMAGE
+                    // BOW AND ARROW IMAGE
                     // ============================================
 
                     Positioned(
-                      right: -8,
-                      bottom: 0,
+                      right: 14,
+                      top: 40,
+                      bottom: 80,
+                      width: 210,
 
-                      child: SizedBox(
-                        width: 310,
-                        height: 305,
-
+                      child: Align(
+                        alignment: Alignment.centerRight,
                         child: Image.asset(
-                          'assets/images/ramayana_lineart.png',
+                          'assets/images/ramayana_bow_art.png',
 
                           fit:
                               BoxFit.contain,
 
                           alignment:
-                              Alignment.bottomRight,
+                              Alignment.centerRight,
 
                           filterQuality:
                               FilterQuality.high,
@@ -585,7 +587,11 @@ class _RamayanaHero extends StatelessWidget {
                             error,
                             stackTrace,
                           ) {
-                            return const SizedBox();
+                            return Image.asset(
+                              'assets/images/ramayana_bow_art.png',
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerRight,
+                            );
                           },
                         ),
                       ),

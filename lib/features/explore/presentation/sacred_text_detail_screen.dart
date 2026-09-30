@@ -39,17 +39,33 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // ============================================================
 
   String _getLocalizedTitle(BuildContext context) {
-    final l10n = context.l10n;
+    final langCode = context.watch<LocaleProvider>().languageCode;
     switch (widget.bookId) {
       case 'ramayana':
-        return l10n.ramayana;
+        return context.l10n.ramayana;
       case 'upanishads':
-        return l10n.upanishads;
+        if (langCode == 'gu') return 'ઇશોપનિષદ';
+        if (langCode == 'hi') return 'ईशोपनिषद्';
+        return 'Isha Upanishad';
       case 'mahabharata':
-        return l10n.mahabharata;
+        return context.l10n.mahabharata;
       case 'bhagavad_gita':
       default:
-        return l10n.bhagavadGita;
+        return context.l10n.bhagavadGita;
+    }
+  }
+
+  String _getHeroArtwork(String bookId) {
+    switch (bookId) {
+      case 'ramayana':
+        return 'assets/images/ramayana_bow_art.png';
+      case 'upanishads':
+        return 'assets/images/upanishad_leaf_art.png';
+      case 'mahabharata':
+        return 'assets/images/mahabharat_page.png';
+      case 'bhagavad_gita':
+      default:
+        return 'assets/images/bhagavat_gita_big.png';
     }
   }
 
@@ -80,11 +96,11 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
         return 'The Ramayana is an ancient Sanskrit epic that narrates the life of Lord Rama, his unwavering commitment to dharma, his exile, the battle against Ravana, and his return to Ayodhya. It is a timeless guide to righteous living, ideal leadership, loyalty, love and devotion.';
       case 'upanishads':
         if (langCode == 'gu') {
-          return 'ઉપનિષદો એ પ્રાચીન હિન્દુ શાસ્ત્રોનો સંગ્રહ છે જે સત્યનું સ્વરૂપ, આત્મા અને પરમ સત્ય (બ્રહ્મ)નું અન્વેષણ કરે છે. તેઓ હિન્દુ ધર્મનો દાર્શનિક આધાર છે, જે ચૈતન્ય, જ્ઞાન અને મોક્ષ વિશે સદાબહાર આંતરદ્રષ્ટિ પ્રદાન કરે છે.';
+          return 'ઈશાવાસ્યોપનિષદ એ એક અત્યંત ગૂઢ અને સંક્ષિપ્ત સંસ્કૃત ગ્રંથ છે જે સમસ્ત અસ્તિત્વની મૂળભૂત એકતા, આત્માનું સ્વરૂપ, અને વિવેક, અનાસક્તિ તથા સદ્ભાવ સાથે જગતમાં જીવવાનો માર્ગ પ્રગટ કરે છે.';
         } else if (langCode == 'hi') {
-          return 'उपनिषद प्राचीन हिंदू शास्त्रों का संग्रह हैं जो सत्य के स्वरूप, आत्मा और परम सत्य (ब्रह्म) का अन्वेषण करते हैं। वे हिंदू दर्शन की आधारशिला हैं, जो चेतना, ज्ञान और मोक्ष के बारे में शाश्वत अंतर्दृष्टि प्रदान करते हैं।';
+          return 'ईशावास्योपनिषद् एक अत्यंत गूढ़ और संक्षिप्त संस्कृत ग्रन्थ है जो समस्त अस्तित्व की मूलभूत एकता, आत्मा के स्वरूप, और विवेक, अनासक्ति तथा सद्भाव के साथ जगत् में जीने का मार्ग प्रकट करता है।';
         }
-        return 'The Upanishads are a collection of ancient Hindu scriptures that explore the nature of reality, the self (Atman), and the ultimate truth (Brahman). They are the philosophical foundation of Hinduism, offering timeless insights into consciousness, wisdom, and liberation.';
+        return 'The Isha Upanishad is a profound and concise Sanskrit text that reveals the essential unity of all existence, the nature of the Self, and the path to live in the world with wisdom, detachment and harmony.';
       case 'mahabharata':
         if (langCode == 'gu') {
           return 'મહાભારત વિશ્વના સૌથી લાંબા મહાકાવ્યોમાંનું એક છે, જે ભારત વંશની કથા વર્ણવે છે. તે ધર્મ, રાજનીતિ, નૈતિકતા, અધ્યાત્મ અને માનવ જીવન વિશે જ્ઞાનનો મહાન ખજાનો છે.';
@@ -325,10 +341,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   // ============================================================
 
   Widget _buildHeroCard(BuildContext context, bool isDark) {
-    final langCode = context.watch<LocaleProvider>().languageCode;
-    final labelText = langCode == 'gu'
-        ? 'પવિત્ર ગ્રંથ'
-        : (langCode == 'hi' ? 'पवित्र ग्रंथ' : 'SACRED SCRIPTURE');
+    final labelText = AppLocalizations.of(context).sacredScripture;
 
     final stats = _stats;
     final title = _getLocalizedTitle(context);
@@ -350,7 +363,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
               children: [
                 // Text Content
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 22, 115, 55),
+                  padding: const EdgeInsets.fromLTRB(20, 22, 126, 55),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -397,15 +410,21 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
                   ),
                 ),
 
-                // Right Line Art Illustration
+                // Right Illustration: replaced white badge with supplied asset
                 Positioned(
-                  right: 8,
-                  bottom: 30,
-                  top: 10,
-                  width: 110,
+                  right: 4,
+                  bottom: 4,
+                  top: 4,
+                  width: 145,
                   child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: _buildBookIllustration(),
+                    alignment: Alignment.centerRight,
+                    child: Image.asset(
+                      _getHeroArtwork(widget.bookId),
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerRight,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ],
@@ -480,30 +499,6 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // ============================================================
-  // BOOK ILLUSTRATION SWITCHER
-  // ============================================================
-
-  Widget _buildBookIllustration() {
-    final String imagePath = switch (widget.bookId) {
-      'ramayana' => 'assets/images/trishual.png',
-      'upanishads' => 'assets/images/upnishad_page.png',
-      'mahabharata' => 'assets/images/mahabharat_page.png',
-      'bhagavad_gita' => 'assets/images/chariot_lineart.png',
-      _ => 'assets/images/chariot_lineart.png',
-    };
-
-    return Image.asset(
-      imagePath,
-      fit: BoxFit.contain,
-      alignment: Alignment.bottomRight,
-      filterQuality: FilterQuality.high,
-      errorBuilder: (context, error, stackTrace) {
-        return const SizedBox.shrink();
-      },
     );
   }
 
@@ -703,3 +698,4 @@ class _TeachingChipData {
     required this.color,
   });
 }
+

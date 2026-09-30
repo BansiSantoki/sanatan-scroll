@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 
-import '../../../../core/widgets/language_selector_button.dart';
-
 class ReaderHeader extends StatelessWidget {
   const ReaderHeader({
     super.key,
@@ -51,7 +49,6 @@ class ReaderHeader extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const LanguageSelectorButton(),
                 IconButton(
                   onPressed: onShare,
                   tooltip: l10n.share,

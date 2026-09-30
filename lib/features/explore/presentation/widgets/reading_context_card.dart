@@ -47,7 +47,9 @@ class ReadingContextCard extends StatelessWidget {
     final chapterWord = l10n.chapter;
 
     String topSubtitle;
-    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
+    if (book.id == 'upanishads') {
+      topSubtitle = 'Isha Upanishad • ${chapter.title}';
+    } else if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
       final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
       final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
       final isBalaKanda = kanda == 1;

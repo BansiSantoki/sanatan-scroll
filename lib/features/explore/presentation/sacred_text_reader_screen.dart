@@ -14,6 +14,7 @@ import '../../../../providers/chapter_completion_provider.dart';
 import '../../../../providers/locale_provider.dart';
 import '../../../../providers/reading_progress_provider.dart';
 import '../../../../providers/saved_provider.dart';
+import '../../../../providers/streak_provider.dart';
 import 'widgets/reading_context_card.dart';
 import 'widgets/reading_reflection_card.dart';
 import 'widgets/reading_wisdom_card.dart';
@@ -44,7 +45,10 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   void initState() {
     super.initState();
     currentChapter = widget.initialChapterNumber;
-    _pageController = PageController();
+    final initialPage = (widget.textId == 'upanishads' && widget.initialChapterNumber > 0)
+        ? widget.initialChapterNumber - 1
+        : 0;
+    _pageController = PageController(initialPage: initialPage);
     _tts = FlutterTts();
   }
 
@@ -128,6 +132,33 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
+    if (book.id == 'upanishads') {
+      final passageRef = chapter.title;
+      final sanskritText = verse.sanskrit.trim();
+      final translationText = verse.getLocalizedTranslation(langCode).trim();
+
+      final buffer = StringBuffer();
+      buffer.writeln('Book:');
+      buffer.writeln('Isha Upanishad');
+      buffer.writeln();
+      buffer.writeln('Reference:');
+      buffer.writeln(passageRef);
+      buffer.writeln();
+      if (sanskritText.isNotEmpty) {
+        buffer.writeln('Sanskrit:');
+        buffer.writeln(sanskritText);
+        buffer.writeln();
+      }
+      buffer.writeln('Translation:');
+      buffer.writeln(translationText);
+
+      ShareService.share(
+        title: 'Isha Upanishad · $passageRef',
+        text: buffer.toString(),
+      );
+      return;
+    }
+
     final l10n = AppLocalizations.of(context);
     final chapterWord = l10n.chapter;
     final verseWord = l10n.verse;
@@ -180,6 +211,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           chapterNumber: chapterNumber,
           verseNumber: verseNumber,
         );
+    context.read<StreakProvider>().markCompleted(DateTime.now());
   }
 
   @override
@@ -188,6 +220,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     final langCode = localeProvider.languageCode;
     final l10n = AppLocalizations.of(context);
     final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
+    final isUpanishad = (widget.textId == 'upanishads');
     final cardsPerVerse = isBhagavadGita ? 3 : 1;
 
     return StreamBuilder<SacredBookModel?>(
@@ -229,7 +262,9 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         }
 
         final chapter = book.getChapter(currentChapter);
-        if (chapter == null || chapter.verses.isEmpty) {
+        final itemCount = isUpanishad ? book.chapters.length : (chapter?.verses.length ?? 0);
+
+        if (itemCount == 0) {
           return Scaffold(
             backgroundColor: bgColor,
             appBar: AppBar(
@@ -246,26 +281,45 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         return PageView.builder(
           controller: _pageController,
           scrollDirection: Axis.vertical,
-          itemCount: chapter.verses.length,
-          onPageChanged: (verseIndex) {
-            _saveProgress(currentChapter, verseIndex + 1);
-
-            if (verseIndex == chapter.verses.length - 1) {
+          itemCount: itemCount,
+          onPageChanged: (pageIndex) {
+            if (isUpanishad) {
+              final activeChap = book.chapters[pageIndex];
+              _saveProgress(activeChap.chapterNumber, 1);
               context.read<ChapterCompletionProvider>().markCompleted(
                     bookTitle: book.title,
-                    chapterTitle: chapter.title,
+                    chapterTitle: activeChap.title,
                     bookId: book.id,
-                    chapterNumber: chapter.chapterNumber,
+                    chapterNumber: activeChap.chapterNumber,
                   );
+            } else if (chapter != null) {
+              _saveProgress(currentChapter, pageIndex + 1);
+              if (pageIndex == chapter.verses.length - 1) {
+                context.read<ChapterCompletionProvider>().markCompleted(
+                      bookTitle: book.title,
+                      chapterTitle: chapter.title,
+                      bookId: book.id,
+                      chapterNumber: chapter.chapterNumber,
+                    );
+              }
             }
           },
-          itemBuilder: (context, verseIndex) {
-            final verse = chapter.verses[verseIndex];
+          itemBuilder: (context, pageIndex) {
+            final SacredChapterModel activeChapter;
+            final SacredVerseModel activeVerse;
+
+            if (isUpanishad) {
+              activeChapter = book.chapters[pageIndex];
+              activeVerse = activeChapter.verses.first;
+            } else {
+              activeChapter = chapter!;
+              activeVerse = chapter.verses[pageIndex];
+            }
 
             void handleNextVerse() {
-              if (verseIndex < chapter.verses.length - 1) {
+              if (pageIndex < itemCount - 1) {
                 _pageController.animateToPage(
-                  verseIndex + 1,
+                  pageIndex + 1,
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.easeOutCubic,
                 );
@@ -278,16 +332,16 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
 
             final fullAudioContent = _buildFullPageAudioContent(
               book: book,
-              chapter: chapter,
-              verse: verse,
+              chapter: activeChapter,
+              verse: activeVerse,
               langCode: langCode,
             );
 
             return _VerseView(
-              key: ValueKey('${book.id}_c${chapter.chapterNumber}_v${verse.verseNumber}'),
+              key: ValueKey('${book.id}_c${activeChapter.chapterNumber}_v${activeVerse.verseNumber}'),
               book: book,
-              chapter: chapter,
-              verse: verse,
+              chapter: activeChapter,
+              verse: activeVerse,
               langCode: langCode,
               isBhagavadGita: isBhagavadGita,
               cardsPerVerse: cardsPerVerse,
@@ -295,8 +349,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
               onToggleAudio: () => _toggleAudio(fullAudioContent, langCode),
               onShareVerse: () => _shareVerse(
                 book: book,
-                chapter: chapter,
-                verse: verse,
+                chapter: activeChapter,
+                verse: activeVerse,
                 langCode: langCode,
               ),
               onBack: handleBack,

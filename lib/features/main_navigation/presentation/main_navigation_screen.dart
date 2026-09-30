@@ -7,15 +7,17 @@ import '../../profile/presentation/profile_screen.dart';
 import '../../saved/presentation/saved_screen.dart';
 import '../../streak/presentation/streak_screen.dart';
 
+import '../../home/presentation/home_screen.dart';
+
 class MainNavigationScreen extends StatelessWidget {
   const MainNavigationScreen({super.key});
 
-  static const _screens = [
-    FeedScreen(),
-    StreakScreen(),
-    SavedScreen(),
-    FeedScreen(),
-    ProfileScreen(),
+  static final _screens = [
+    const HomePageWidget(),
+    const StreakScreen(),
+    const SavedScreen(),
+    const FeedScreen(),
+    const ProfileScreen(),
   ];
 
   @override

@@ -7,7 +7,7 @@ class MockSacredTexts {
     SacredTextModel(
       id: 'bhagavad_gita',
       title: 'Bhagavad Gita',
-      subtitle: 'The Song of the Divine',
+      subtitle: 'The Divine Song of Lord Krishna',
       description:
           'The Bhagavad Gita is a 700-verse Hindu scripture that is part of the epic Mahabharata. It is a conversation between Lord Krishna and Arjuna on the battlefield, covering dharma, devotion, knowledge and selfless action.',
       category: 'Bhagavad Gita',
@@ -35,10 +35,10 @@ class MockSacredTexts {
     ),
     SacredTextModel(
       id: 'upanishads',
-      title: 'Upanishads',
-      subtitle: 'Wisdom of the Self',
+      title: 'Isha Upanishad',
+      subtitle: 'The Inner Teaching',
       description:
-          'The Upanishads are a collection of ancient Hindu scriptures that explore the nature of reality, the self (Atman), and the ultimate truth (Brahman). They are the philosophical foundation of Hinduism, offering timeless insights into consciousness, wisdom, and liberation.',
+          'The Isha Upanishad is a profound and concise Sanskrit text that reveals the essential unity of all existence, the nature of the Self, and the path to live in the world with wisdom, detachment and harmony.',
       category: 'Upanishads',
       chapters: 108,
       verses: 0,

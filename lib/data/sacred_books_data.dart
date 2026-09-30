@@ -1,15 +1,16 @@
 import '../models/sacred_book_model.dart';
 import '../models/sacred_chapter_model.dart';
 import '../models/sacred_verse_model.dart';
+import 'upanishads_data.dart';
 
 class SacredBooksData {
   SacredBooksData._();
 
   static final List<SacredBookModel> all = [
     _buildGitaBook(),
-        _buildRamayanaBook(),
-        // Mahabharata intentionally omitted from fallback list per owner's request
-        ..._additionalBookIds.map(_buildAdditionalBook),
+    _buildRamayanaBook(),
+    // Mahabharata intentionally omitted from fallback list per owner's request
+    ..._additionalBookIds.map(_buildAdditionalBook),
   ];
 
   static const Map<String, String> _additionalBookTitles = {
@@ -20,10 +21,12 @@ class SacredBooksData {
       _additionalBookTitles.keys.toList(growable: false);
 
   static SacredBookModel _buildAdditionalBook(String id) {
-    final title = _additionalBookTitles[id]!;
+    if (id == 'upanishads') {
+      return UpanishadsData.buildUpanishadsBook();
+    }
 
+    final title = _additionalBookTitles[id]!;
     final chapterCount = switch (id) {
-      'upanishads' => 6,
       'vedas' => 4,
       'yoga_sutras' => 4,
       'arthashastra' => 15,

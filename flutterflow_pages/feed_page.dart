@@ -36,17 +36,28 @@ class _FeedPageWidgetState extends State<FeedPageWidget> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: CircleAvatar(
+                      backgroundColor: const Color(0xFF1B1B1B),
+                      radius: 32,
+                      child: Text(
+                        userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Namaste, $userName',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                            SizedBox(
-                              width: 64,
-                              height: 64,
-                        color: const Color(0xFF1B1B1B),
-                        height: 1.0,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 8),

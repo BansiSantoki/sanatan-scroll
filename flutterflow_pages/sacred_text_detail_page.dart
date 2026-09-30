@@ -31,7 +31,7 @@ class SacredTextDetailPageWidget extends StatelessWidget {
 
     final aboutText = switch (bookId) {
       'ramayana' => 'The Ramayana is an ancient epic depicting the life of Lord Rama, his devotion to dharma, and his timeless triumph over evil.',
-      'upanishads' => 'The Upanishads are supreme philosophical texts exploring Brahman, Atman, and ultimate spiritual liberation.',
+      'upanishads' => 'The Isha Upanishad is a profound and concise Sanskrit text that reveals the essential unity of all existence, the nature of the Self, and the path to live in the world with wisdom, detachment and harmony.',
       'mahabharata' => 'The Mahabharata is a vast epic exploring righteous duty, cosmic order, politics, and devotion.',
       _ => 'The Bhagavad Gita is a 700-verse sacred conversation between Lord Krishna and Arjuna on karma, devotion, and self-realization.',
     };

@@ -130,10 +130,11 @@ class OnboardingScreen extends StatelessWidget {
                       l10n.whatBringsYouToSanatanScroll,
                       style: AppTextStyles.getFont(
                         context,
-                        fontSize: screenWidth < 360 ? 30 : 36,
+                        fontSize: screenWidth < 360 ? 26 : 31,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF141814),
                         height: 1.15,
+                        letterSpacing: -0.3,
                         isSerif: true,
                       ),
                     ),

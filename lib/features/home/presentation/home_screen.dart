@@ -1,13 +1,13 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../lib/app/routes/app_routes.dart';
-import '../lib/core/localization/app_localizations.dart';
-import '../lib/providers/locale_provider.dart';
-import '../lib/providers/reading_progress_provider.dart';
+import '../../../app/routes/app_routes.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../providers/locale_provider.dart';
+import '../../../providers/reading_progress_provider.dart';
+import '../../../providers/streak_provider.dart';
 
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -35,6 +35,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     final readingProgress = Provider.of<ReadingProgressProvider>(context);
     final lastReadBookId = readingProgress.lastReadBookId;
 
+    // Daily Wisdom dynamic content based on lastReadBookId
     final Map<String, dynamic> dailyWisdomData = _getDailyWisdomData(lastReadBookId, langCode, l10n);
 
     final List<Map<String, dynamic>> scriptureBooks = [
@@ -42,12 +43,12 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         'id': 'bhagavad_gita',
         'title': l10n.bhagavadGita,
         'subtitle': l10n.gitaSubtitle,
-        'bgColor': const Color(0xFFF89E53),
-        'imagePath': 'assets/images/gita_chariot_art.png',
+        'bgColor': const Color(0xFFE47A46),
+        'imagePath': 'assets/images/bhagavat_gita_big.png',
       },
       {
         'id': 'ramayana',
-        'title': 'Ramayana',
+        'title': l10n.ramayana,
         'subtitle': l10n.ramayanaSubtitle,
         'bgColor': const Color(0xFF94AA84),
         'imagePath': 'assets/images/ramayana_bow_art.png',
@@ -98,19 +99,9 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       // Streak Pill Widget
-                      StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                        stream: user != null
-                            ? FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(user.uid)
-                                .collection('streak')
-                                .doc('current')
-                                .snapshots()
-                            : const Stream.empty(),
-                        builder: (context, snapshot) {
-                          final streakCount = (snapshot.hasData && snapshot.data!.exists)
-                              ? (snapshot.data!.data()?['currentStreak'] as num?)?.toInt() ?? 7
-                              : 7;
+                      Consumer<StreakProvider>(
+                        builder: (context, streakProvider, _) {
+                          final streakCount = streakProvider.streak.currentStreak;
 
                           return InkWell(
                             onTap: () => Navigator.of(context).pushNamed('/streak'),
@@ -222,7 +213,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+                  padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
                   decoration: BoxDecoration(
                     color: dailyWisdomData['bgColor'] as Color,
                     borderRadius: BorderRadius.circular(24.0),
@@ -236,11 +227,12 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                   ),
                   child: Row(
                     children: [
-                      // Text content on Left
+                      // Text content on Left (52% width)
                       Expanded(
-                        flex: 46,
+                        flex: 52,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               l10n.dailyWisdom,
@@ -293,21 +285,25 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
 
-                      // PROMINENT ENLARGED LINE-ART ICON ON RIGHT
+                      // Illustration on Right (50% width, large Bhagavad Gita chariot image)
                       Expanded(
-                        flex: 54,
-                        child: Image.asset(
-                          dailyWisdomData['imagePath'] as String,
-                          height: 220,
-                          fit: BoxFit.contain,
+                        flex: 50,
+                        child: Align(
                           alignment: Alignment.centerRight,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/images/gita_chariot_art.png',
-                            height: 210,
+                          child: Image.asset(
+                            dailyWisdomData['imagePath'] as String,
+                            height: 225,
                             fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                            filterQuality: FilterQuality.high,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/images/bhagavat_gita_big.png',
+                              height: 225,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerRight,
+                            ),
                           ),
                         ),
                       ),
@@ -321,67 +317,78 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               // ==========================================
               // 3. CONTINUE YOUR JOURNEY CARD
               // ==========================================
-              InkWell(
-                onTap: () {
+              Builder(
+                builder: (context) {
                   final String targetBook = lastReadBookId.isNotEmpty ? lastReadBookId : 'bhagavad_gita';
-                  Navigator.of(context).pushNamed(
-                    AppRoutes.sacredTextReading,
-                    arguments: {'textId': targetBook, 'chapterNumber': 1},
+                  final lastPos = readingProgress.positionFor(targetBook);
+                  final targetChapter = lastPos?.chapterNumber ?? 1;
+
+                  final subtitleText = lastPos != null
+                      ? _getLocalizedPositionText(context, targetBook, lastPos.chapterNumber, lastPos.verseNumber)
+                      : l10n.pickUpWhereYouLeftOff;
+
+                  return InkWell(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(
+                        AppRoutes.sacredTextReading,
+                        arguments: {'textId': targetBook, 'chapterNumber': targetChapter},
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7BE78),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF7BE78).withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.continueYourJourney,
+                                  style: GoogleFonts.cormorantGaramond(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF141814),
+                                    height: 1.08,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  subtitleText,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xFF2C2218),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            child: const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 28,
+                              color: Color(0xFF141814),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7BE78),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF7BE78).withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.continueYourJourney,
-                              style: GoogleFonts.cormorantGaramond(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF141814),
-                                height: 1.08,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              l10n.pickUpWhereYouLeftOff,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF2C2218),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 28,
-                          color: Color(0xFF141814),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
 
               const SizedBox(height: 24),
@@ -453,7 +460,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               : 'Rama is the embodiment of Dharma, righteous and truthful in valor.');
       return {
         'bookId': 'ramayana',
-        'title': 'Ramayana',
+        'title': l10n.ramayana,
         'verseRef': '1.1',
         'shloka': 'रामो विग्रहवान् धर्मः साधुः सत्यपराक्रमः।',
         'translation': translation,
@@ -488,9 +495,31 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         'verseRef': '2.47',
         'shloka': 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।',
         'translation': translation,
-        'bgColor': const Color(0xFFF89E53),
-        'imagePath': 'assets/images/gita_chariot_art.png',
+        'bgColor': const Color(0xFFE47A46),
+        'imagePath': 'assets/images/bhagavat_gita_big.png',
       };
+    }
+  }
+
+  String _getLocalizedPositionText(
+    BuildContext context,
+    String bookId,
+    int chapterNum,
+    int verseNum,
+  ) {
+    final langCode = Provider.of<LocaleProvider>(context, listen: false).languageCode;
+    if (bookId == 'upanishads') {
+      if (langCode == 'gu') return 'ઇશોપનિષદ · મંત્ર $verseNum';
+      if (langCode == 'hi') return 'ईशोपनिषद् · मन्त्र $verseNum';
+      return 'Isha Upanishad · Mantra $verseNum';
+    } else if (bookId == 'ramayana') {
+      if (langCode == 'gu') return 'રામાયણ · કાંડ $chapterNum';
+      if (langCode == 'hi') return 'रामायण · काण्ड $chapterNum';
+      return 'Ramayana · Kanda $chapterNum';
+    } else {
+      if (langCode == 'gu') return 'ભગવદ્ ગીતા · અધ્યાય $chapterNum, શ્લોક $verseNum';
+      if (langCode == 'hi') return 'भगवद् गीता · अध्याय $chapterNum, श्लोक $verseNum';
+      return 'Bhagavad Gita · Chapter $chapterNum, Verse $verseNum';
     }
   }
 }
@@ -530,7 +559,7 @@ class _ScriptureHorizontalBookCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 14),
         child: Column(
           children: [
-            // Top Line-Art Image (Prominent Big Size)
+            // Top Line-Art Image
             Expanded(
               child: Center(
                 child: Image.asset(
