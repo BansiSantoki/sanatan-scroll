@@ -146,37 +146,39 @@ class SacredBookModel {
   }
 
   String getLocalizedTitle(String languageCode) {
-    if (languageCode == 'gu') {
-      if (titleGu != null && titleGu!.isNotEmpty) return titleGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (titleGu != null && titleGu!.trim().isNotEmpty) return titleGu!;
       if (id == 'bhagavad_gita' || id == 'gita') return 'ભગવદ્ ગીતા';
       if (id == 'ramayana') return 'રામાયણ';
       if (id == 'upanishads') return 'ઉપનિષદો';
     }
-    if (languageCode == 'hi') {
-      if (titleHi != null && titleHi!.isNotEmpty) return titleHi!;
+    if (code == 'hi') {
+      if (titleHi != null && titleHi!.trim().isNotEmpty) return titleHi!;
       if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
       if (id == 'ramayana') return 'रामायण';
       if (id == 'upanishads') return 'उपनिषद';
     }
-    if (languageCode == 'sa') {
+    if (code == 'sa') {
       if (id == 'bhagavad_gita' || id == 'gita') return 'भगवद्गीता';
       if (id == 'ramayana') return 'रामायणम्';
       if (id == 'upanishads') return 'उपनिषदः';
     }
-    if (titleEn != null && titleEn!.isNotEmpty) {
+    if (titleEn != null && titleEn!.trim().isNotEmpty) {
       return titleEn!;
     }
     return title;
   }
 
   String getLocalizedSubtitle(String languageCode) {
-    if (languageCode == 'gu' && subtitleGu != null && subtitleGu!.isNotEmpty) {
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu' && subtitleGu != null && subtitleGu!.trim().isNotEmpty) {
       return subtitleGu!;
     }
-    if (languageCode == 'hi' && subtitleHi != null && subtitleHi!.isNotEmpty) {
+    if (code == 'hi' && subtitleHi != null && subtitleHi!.trim().isNotEmpty) {
       return subtitleHi!;
     }
-    if (subtitleEn != null && subtitleEn!.isNotEmpty) {
+    if (subtitleEn != null && subtitleEn!.trim().isNotEmpty) {
       return subtitleEn!;
     }
     return subtitle;

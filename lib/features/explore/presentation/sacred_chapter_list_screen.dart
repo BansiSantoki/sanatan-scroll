@@ -128,6 +128,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     return kanda['subtitleEn']!;
   }
 
+  String _formatNumber(int number, String langCode) {
+    return number.toString();
+  }
+
   List<SacredChapterModel> _getSargasForKanda(List<SacredChapterModel> allChapters, int kandaNumber) {
     final filtered = allChapters.where((chap) {
       if (chap.chapterNumber >= 1000) {
@@ -415,18 +419,23 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     String countText;
 
     if (isRamayana) {
-      localizedTitle = book.getLocalizedTitle(langCode);
-      localizedSubtitle = config.defaultSubtitle;
-      countText = '7 Kandas';
+      localizedTitle = (langCode == 'gu') ? 'રામાયણ' : (langCode == 'hi' ? 'रामायण' : 'Ramayana');
+      localizedSubtitle = (langCode == 'gu') ? 'કર્તવ્યની મહાગાથા' : (langCode == 'hi' ? 'कर्तव्य की महागाथा' : 'The Epic of Duty');
+      countText = (langCode == 'gu') ? '7 કાંડ' : (langCode == 'hi' ? '7 काण्ड' : '7 Kandas');
     } else if (book.id == 'upanishads') {
-      localizedTitle = 'Isha Upanishad';
-      localizedSubtitle = 'The Inner Teaching';
-      countText = '18 Mantras';
+      localizedTitle = (langCode == 'gu') ? 'ઈશા ઉપનિષદ' : (langCode == 'hi' ? 'ईशावास्योपनिषद्' : 'Isha Upanishad');
+      localizedSubtitle = (langCode == 'gu') ? 'આત્મજ્ઞાનનું ઉપદેશ' : (langCode == 'hi' ? 'आत्मज्ञान का उपदेश' : 'The Inner Teaching');
+      countText = (langCode == 'gu') ? '18 મંત્ર' : (langCode == 'hi' ? '18 मंत्र' : '18 Mantras');
+    } else if (book.id == 'bhagavad_gita' || book.id == 'gita') {
+      localizedTitle = (langCode == 'gu') ? 'ભગવદ્ ગીતા' : (langCode == 'hi' ? 'भगवद् गीता' : 'Bhagavad Gita');
+      localizedSubtitle = (langCode == 'gu') ? 'ભગવાન શ્રી કૃષ્ણનું દિવ્ય સંગીત' : (langCode == 'hi' ? 'भगवान श्री कृष्ण का दिव्य गीत' : 'The Divine Song of Lord Krishna');
+      countText = (langCode == 'gu') ? '18 અધ્યાય' : (langCode == 'hi' ? '18 अध्याय' : '18 Chapters');
     } else {
       localizedTitle = book.getLocalizedTitle(langCode);
       final rawSubtitle = book.getLocalizedSubtitle(langCode);
       localizedSubtitle = rawSubtitle.isNotEmpty ? rawSubtitle : config.defaultSubtitle;
-      countText = '${book.totalChapters} ${config.unitName(book.totalChapters)}';
+      final chapUnit = (langCode == 'gu') ? 'અધ્યાય' : (langCode == 'hi' ? 'अध्याय' : 'Chapters');
+      countText = '${book.totalChapters} $chapUnit';
     }
 
     final iconColor = isDark ? const Color(0xFFE6E8E6) : const Color(0xFF1B1B1B);
@@ -703,7 +712,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  '$kandaNum',
+                  _formatNumber(kandaNum, langCode),
                   maxLines: 1,
                   textAlign: TextAlign.center,
                   style: AppTextStyles.getFont(
@@ -784,10 +793,10 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     bool isDark,
   ) {
     final sargaNumber = index + 1;
+    final kandaTitle = _getKandaTitle(kandaMap, langCode);
     final sargaPrefix = (langCode == 'gu') ? 'સર્ગ' : (langCode == 'hi' ? 'सर्ग' : 'Sarga');
-    final sargaTitle = sarga.getLocalizedTitle(langCode).isNotEmpty
-        ? sarga.getLocalizedTitle(langCode)
-        : '$sargaPrefix $sargaNumber';
+    final sargaNumStr = _formatNumber(sargaNumber, langCode);
+    final sargaTitle = '$kandaTitle - $sargaPrefix $sargaNumStr';
 
     return Material(
       color: Colors.transparent,
@@ -843,7 +852,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$sargaNumber',
+                  sargaNumStr,
                   maxLines: 1,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.cormorantGaramond(
@@ -896,12 +905,29 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
     bool isDark,
   ) {
     final bool isUpanishad = book.id == 'upanishads';
-    final chapterTitle = isUpanishad
-        ? chapter.title
-        : chapter.getLocalizedTitle(langCode);
-    final chapterSubtitle = isUpanishad
-        ? ''
-        : chapter.getLocalizedSubtitle(langCode);
+    final String numStr = _formatNumber(chapter.chapterNumber, langCode);
+
+    String chapterTitle;
+    String chapterSubtitle;
+
+    if (isUpanishad) {
+      final mantraPrefix = (langCode == 'gu') ? 'મંત્ર' : (langCode == 'hi' ? 'मंत्र' : 'Mantra');
+      chapterTitle = '$mantraPrefix $numStr';
+      chapterSubtitle = '';
+    } else if (book.id == 'bhagavad_gita' || book.id == 'gita') {
+      chapterTitle = chapter.getLocalizedTitle(langCode);
+      final code = langCode.toLowerCase().split('-').first.split('_').first.trim();
+      if (code == 'gu') {
+        chapterSubtitle = 'ભગવદ્ ગીતા અધ્યાય $numStr';
+      } else if (code == 'hi') {
+        chapterSubtitle = 'भगवद् गीता अध्याय $numStr';
+      } else {
+        chapterSubtitle = 'Bhagavad Gita Chapter ${chapter.chapterNumber}';
+      }
+    } else {
+      chapterTitle = chapter.getLocalizedTitle(langCode);
+      chapterSubtitle = chapter.getLocalizedSubtitle(langCode);
+    }
 
     return Material(
       color: Colors.transparent,
@@ -957,7 +983,7 @@ class _SacredChapterListScreenState extends State<SacredChapterListScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  '${chapter.chapterNumber}',
+                  numStr,
                   maxLines: 1,
                   textAlign: TextAlign.center,
                   style: AppTextStyles.getFont(

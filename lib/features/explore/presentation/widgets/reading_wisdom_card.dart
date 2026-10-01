@@ -25,6 +25,11 @@ class ReadingWisdomCard extends StatelessWidget {
     required this.onBack,
     required this.onNextCard,
     this.totalCards = 3,
+    this.customCardLabel,
+    this.customTotalProgress,
+    this.customActiveProgressIndex,
+    this.customNextButtonLabel,
+    this.customNextButtonIcon,
   });
 
   final SacredBookModel book;
@@ -39,6 +44,11 @@ class ReadingWisdomCard extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onNextCard;
   final int totalCards;
+  final String? customCardLabel;
+  final int? customTotalProgress;
+  final int? customActiveProgressIndex;
+  final String? customNextButtonLabel;
+  final IconData? customNextButtonIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +71,25 @@ class ReadingWisdomCard extends StatelessWidget {
       final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
       final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
 
+      const kandaNames = [
+        {'en': 'Bala Kanda', 'hi': 'बाल काण्ड', 'gu': 'બાળ કાંડ'},
+        {'en': 'Ayodhya Kanda', 'hi': 'अयोध्या काण्ड', 'gu': 'અયોધ્યા કાંડ'},
+        {'en': 'Aranya Kanda', 'hi': 'अरण्य काण्ड', 'gu': 'અરણ્ય કાંડ'},
+        {'en': 'Kishkindha Kanda', 'hi': 'किष्किन्धा काण्ड', 'gu': 'કિષ્કિંધા કાંડ'},
+        {'en': 'Sundara Kanda', 'hi': 'सुन्दर काण्ड', 'gu': 'સુંદર કાંડ'},
+        {'en': 'Yuddha Kanda', 'hi': 'युद्ध काण्ड', 'gu': 'યુદ્ધ કાંડ'},
+        {'en': 'Uttara Kanda', 'hi': 'उत्तर काण्ड', 'gu': 'ઉત્તર કાંડ'},
+      ];
+
+      final kandaMap = (kanda >= 1 && kanda <= 7) ? kandaNames[kanda - 1] : null;
+      final kandaName = kandaMap != null
+          ? (languageCode == 'hi' ? kandaMap['hi']! : (languageCode == 'gu' ? kandaMap['gu']! : kandaMap['en']!))
+          : 'Kanda $kanda';
+
+      final sargaWord = (languageCode == 'gu') ? 'સર્ગ' : (languageCode == 'hi' ? 'सर्ग' : 'Sarga');
+
       verseRef = '$bookTitle $kanda.$sarga.${verse.verseNumber}';
-      final isBalaKanda = kanda == 1;
-      final kandaName = isBalaKanda ? 'Bala Kanda' : 'Kanda $kanda';
-      topSubtitle = '$bookTitle · $kandaName (Sarga $sarga)';
+      topSubtitle = '$bookTitle · $kandaName ($sargaWord $sarga)';
     } else {
       verseRef = '$bookTitle ${chapter.chapterNumber}.${verse.verseNumber}';
       topSubtitle = '$bookTitle · $chapterWord ${chapter.chapterNumber}';
@@ -203,17 +228,23 @@ class ReadingWisdomCard extends StatelessWidget {
               Builder(
                 builder: (context) {
                   final isUpanishads = book.id == 'upanishads';
-                  final cardLabel = isUpanishads
-                      ? '${chapter.chapterNumber.toString().padLeft(2, '0')} / 18'
-                      : '01 / 0$totalCards';
-                  final totalProgressSteps = isUpanishads ? 18 : totalCards;
-                  final activeStepIndex = isUpanishads ? (chapter.chapterNumber - 1) : 0;
+                  final cardLabel = customCardLabel ??
+                      (isUpanishads
+                          ? '${chapter.chapterNumber.toString().padLeft(2, '0')} / 18'
+                          : '01 / 0$totalCards');
+                  final totalProgressSteps = customTotalProgress ?? (isUpanishads ? 18 : totalCards);
+                  final activeStepIndex = customActiveProgressIndex ?? (isUpanishads ? (chapter.chapterNumber - 1) : 0);
+
+                  final nextLabel = customNextButtonLabel ??
+                      ((totalCards > 1 && !isUpanishads) ? l10n.swipe : l10n.nextVerse);
+                  final nextIcon = customNextButtonIcon ??
+                      ((totalCards > 1 && !isUpanishads) ? Icons.arrow_forward_rounded : Icons.arrow_upward_rounded);
 
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     child: Row(
                       children: [
-                        // Card number e.g. "01 / 18" or "01 / 03"
+                        // Card number / Shloka count e.g. "01 / 100" or "01 / 18"
                         Text(
                           cardLabel,
                           style: AppTextStyles.getFontForLocale(
@@ -227,49 +258,58 @@ class ReadingWisdomCard extends StatelessWidget {
 
                         // Progress indicators
                         Expanded(
-                          child: Row(
-                            children: List.generate(totalProgressSteps, (index) {
-                              final isActive = index == activeStepIndex;
-                              return Expanded(
-                                child: Container(
-                                  height: 4,
-                                  margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: isActive
-                                        ? const Color(0xFFEF6523)
-                                        : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
+                          child: (totalProgressSteps > 0 && totalProgressSteps <= 20)
+                              ? Row(
+                                  children: List.generate(totalProgressSteps, (index) {
+                                    final isActive = index == activeStepIndex;
+                                    return Expanded(
+                                      child: Container(
+                                        height: 4,
+                                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                        decoration: BoxDecoration(
+                                          color: isActive
+                                              ? const Color(0xFFEF6523)
+                                              : (isDark ? const Color(0xFF38291E) : const Color(0xFFF9D6C4)),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                )
+                              : const SizedBox.shrink(),
                         ),
 
                         const SizedBox(width: 16),
 
-                        // Swipe / Next verse button
+                        // Next arrow button pill
                         GestureDetector(
                           onTap: onNextCard,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                (totalCards > 1 && !isUpanishads) ? l10n.swipe : l10n.nextVerse,
-                                style: AppTextStyles.getFontForLocale(
-                                  locale,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: primaryTextColor,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF6523).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  nextLabel,
+                                  style: AppTextStyles.getFontForLocale(
+                                    locale,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFEF6523),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                (totalCards > 1 && !isUpanishads) ? Icons.arrow_forward_rounded : Icons.arrow_upward_rounded,
-                                size: 18,
-                                color: primaryTextColor,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  nextIcon,
+                                  size: 18,
+                                  color: const Color(0xFFEF6523),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],

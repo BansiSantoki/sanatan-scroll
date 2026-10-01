@@ -78,6 +78,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         for (final doc in snap.docs) {
           final data = doc.data();
           final id = doc.id.toLowerCase();
+          if (id == 'mahabharata') continue;
           final name = (data['title'] ?? data['name'] ?? id).toString();
           final icon = (data['iconEmoji'] ?? '📜').toString();
           fetched.add({'id': id, 'name': name, 'icon': icon});

@@ -167,7 +167,7 @@ class BooksScreen extends StatelessWidget {
                     title: 'No Sacred Books Found in Firestore',
                     message: booksProvider.searchQuery.isNotEmpty
                         ? 'No books matching "${booksProvider.searchQuery}"'
-                        : 'Firestore currently has 0 books. Click below to automatically seed and sync all existing mobile app scriptures (Bhagavad Gita, Ramayana, Upanishads, Mahabharata, etc.).',
+                        : 'Firestore currently has 0 books. Click below to automatically seed and sync all existing mobile app scriptures (Bhagavad Gita, Ramayana, Isha Upanishad).',
                     actionLabel: 'Sync Existing Mobile Content to Firestore',
                     onAction: () async {
                       final ok = await booksProvider.syncMobileContent(force: true);

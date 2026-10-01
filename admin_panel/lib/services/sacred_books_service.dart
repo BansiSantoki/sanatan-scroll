@@ -9,7 +9,9 @@ class SacredBooksService {
 
   Stream<List<SacredBookAdminModel>> streamBooks() {
     return _booksCollection.snapshots().map((snapshot) {
-      final books = snapshot.docs.map((doc) {
+      final books = snapshot.docs
+          .where((doc) => doc.id.toLowerCase() != 'mahabharata')
+          .map((doc) {
         return SacredBookAdminModel.fromMap(doc.id, doc.data());
       }).toList();
       books.sort((a, b) => a.order.compareTo(b.order));
@@ -19,7 +21,9 @@ class SacredBooksService {
 
   Future<List<SacredBookAdminModel>> getBooks() async {
     final snapshot = await _booksCollection.get();
-    final books = snapshot.docs.map((doc) {
+    final books = snapshot.docs
+        .where((doc) => doc.id.toLowerCase() != 'mahabharata')
+        .map((doc) {
       return SacredBookAdminModel.fromMap(doc.id, doc.data());
     }).toList();
     books.sort((a, b) => a.order.compareTo(b.order));

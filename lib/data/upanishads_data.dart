@@ -178,7 +178,7 @@ class UpanishadsData {
     return SacredBookModel(
       id: 'upanishads',
       title: 'Isha Upanishad',
-      subtitle: 'The Inner Teaching',
+      subtitle: '18 Mantras',
       iconEmoji: '📜',
       totalChapters: 18,
       chapters: List.generate(18, (index) {
@@ -186,11 +186,11 @@ class UpanishadsData {
         final num = index + 1;
         return SacredChapterModel(
           chapterNumber: num,
-          title: passage.referenceNo,
+          title: 'Mantra $num',
           subtitle: 'Isha Upanishad • ${passage.referenceNo}',
-          titleEn: passage.referenceNo,
-          titleHi: passage.referenceNo,
-          titleGu: passage.referenceNo,
+          titleEn: 'Mantra $num',
+          titleHi: 'मन्त्र $num',
+          titleGu: 'મંત્ર $num',
           subtitleEn: 'Isha Upanishad • ${passage.referenceNo}',
           subtitleHi: 'ईशोपनिषद् • ${passage.referenceNo}',
           subtitleGu: 'ઈશોપનિષદ • ${passage.referenceNo}',
@@ -199,7 +199,7 @@ class UpanishadsData {
           descriptionGujarati: passage.gujarati,
           verses: [
             SacredVerseModel(
-              verseNumber: 1,
+              verseNumber: num,
               sanskrit: passage.sanskrit,
               english: passage.english,
               hindi: passage.hindi,

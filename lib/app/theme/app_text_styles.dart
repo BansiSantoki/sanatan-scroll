@@ -46,10 +46,12 @@ class AppTextStyles {
     String primaryFont;
     List<String> fallbacks;
 
-    if (locale.languageCode == 'gu') {
+    final code = locale.languageCode.toLowerCase().split('-').first.split('_').first.trim();
+
+    if (code == 'gu') {
       primaryFont = gujaratiFont;
       fallbacks = [gujaratiFont, devanagariFont, englishSerif, englishSans];
-    } else if (locale.languageCode == 'hi' || locale.languageCode == 'sa') {
+    } else if (code == 'hi' || code == 'sa') {
       primaryFont = devanagariFont;
       fallbacks = [devanagariFont, gujaratiFont, englishSerif, englishSans];
     } else {
@@ -58,9 +60,9 @@ class AppTextStyles {
     }
 
     // Indic scripts (HI, GU, SA) must NOT use wide English-style letter spacing
-    final double? adjustedLetterSpacing = (locale.languageCode == 'hi' ||
-            locale.languageCode == 'gu' ||
-            locale.languageCode == 'sa')
+    final double? adjustedLetterSpacing = (code == 'hi' ||
+            code == 'gu' ||
+            code == 'sa')
         ? (letterSpacing != null && letterSpacing > 0.4 ? 0.2 : letterSpacing)
         : letterSpacing;
 

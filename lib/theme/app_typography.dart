@@ -20,7 +20,8 @@ class AppTypography {
 
   /// Get heading font family based on language code
   static String getHeadingFontFamily(String langCode) {
-    switch (langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first.trim();
+    switch (code) {
       case 'gu':
         return fontNotoSansGujarati;
       case 'hi':
@@ -34,7 +35,8 @@ class AppTypography {
 
   /// Get body/UI font family based on language code
   static String getBodyFontFamily(String langCode) {
-    switch (langCode) {
+    final code = langCode.toLowerCase().split('-').first.split('_').first.trim();
+    switch (code) {
       case 'gu':
         return fontNotoSansGujarati;
       case 'hi':

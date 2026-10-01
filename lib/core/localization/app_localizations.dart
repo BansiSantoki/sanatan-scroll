@@ -244,7 +244,7 @@ class AppLocalizations {
       'trackDailyProgress': 'તમારી દૈનિક પ્રગતિ ટ્રેક કરો',
       'thisWeek': 'આ અઠવાડિયે',
       'viewAll': 'બધું જુઓ',
-      'daysProgress': '{count} / ૭ દિવસ',
+      'daysProgress': '{count} / 7 દિવસ',
       'keepGoingHabit': 'આગળ વધો, તમે એક સુંદર ટેવ બનાવી રહ્યા છો.',
       'milestones': 'સિદ્ધિઓ',
       'milestoneBeginning': 'પ્રારંભ',

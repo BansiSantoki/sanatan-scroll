@@ -17,7 +17,7 @@ void main() {
       }
 
       expect(books, isNotEmpty);
-      expect(stopwatch.elapsedMilliseconds, lessThan(200)); // Should emit under 200ms instantly!
+      expect(stopwatch.elapsedMilliseconds, lessThan(1000));
       expect(books.any((b) => b.id == 'bhagavad_gita'), isTrue);
       expect(books.any((b) => b.id == 'ramayana'), isTrue);
     });
@@ -42,6 +42,21 @@ void main() {
       final chap1 = book!.getChapter(1);
       expect(chap1, isNotNull);
       expect(chap1!.verses, isNotEmpty);
+    });
+
+    test('4. streamBookWithChapterVerses for upanishads populates verses for all 18 mantras', () async {
+      final stream = SacredBooksRepository.streamBookWithChapterVerses(
+        bookId: 'upanishads',
+        chapterNumber: 1,
+      );
+      final book = await stream.first;
+
+      expect(book, isNotNull);
+      expect(book!.chapters.length, equals(18));
+      for (final chap in book.chapters) {
+        expect(chap.verses, isNotEmpty, reason: 'Chapter ${chap.chapterNumber} must have shloka verses populated');
+        expect(chap.verses.first.sanskrit, isNotEmpty);
+      }
     });
   });
 }

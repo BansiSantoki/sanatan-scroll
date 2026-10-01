@@ -66,16 +66,30 @@ class SacredBooksData {
       id: 'bhagavad_gita',
       title: 'Bhagavad Gita',
       subtitle: 'The Divine Song of Lord Krishna',
+      titleEn: 'Bhagavad Gita',
+      titleGu: 'ભગવદ્ ગીતા',
+      titleHi: 'भगवद् गीता',
+      subtitleEn: 'The Divine Song of Lord Krishna',
+      subtitleGu: 'ભગવાન શ્રી કૃષ્ણનું દિવ્ય સંગીત',
+      subtitleHi: 'भगवान श्री कृष्ण का दिव्य गीत',
       iconEmoji: '🕉️',
       totalChapters: 18,
       chapters: List.generate(18, (index) {
         final chapterNumber = index + 1;
-        final chapterTitle = _gitaChapterTitle(chapterNumber);
+        final chapterTitleEn = _gitaChapterTitle(chapterNumber);
+        final chapterTitleGu = _gitaChapterTitleGu(chapterNumber);
+        final chapterTitleHi = _gitaChapterTitleHi(chapterNumber);
 
         return SacredChapterModel(
           chapterNumber: chapterNumber,
-          title: chapterTitle,
+          title: chapterTitleEn,
           subtitle: 'Bhagavad Gita Chapter $chapterNumber',
+          titleEn: chapterTitleEn,
+          titleGu: chapterTitleGu,
+          titleHi: chapterTitleHi,
+          subtitleEn: 'Bhagavad Gita Chapter $chapterNumber',
+          subtitleGu: 'ભગવદ્ ગીતા અધ્યાય $chapterNumber',
+          subtitleHi: 'भगवद् गीता अध्याय $chapterNumber',
           descriptionEnglish:
     _gitaChapterDescriptionsEnglish.length > chapterNumber - 1
         ? _gitaChapterDescriptionsEnglish[chapterNumber - 1]
@@ -137,9 +151,9 @@ descriptionGujarati:
                     sanskrit:
                         'अध्याय $chapterNumber श्लोक $verseNumber - योगः $theme',
                     english:
-                        'In $chapterTitle, verse $verseNumber guides the seeker to practice $theme with steadiness, faith, and surrender to the Divine.',
+                        'In $chapterTitleEn, verse $verseNumber guides the seeker to practice $theme with steadiness, faith, and surrender to the Divine.',
                     gujarati:
-                        '$chapterTitle ના શ્લોક $verseNumber માં સાધકને $theme ને નિષ્ઠા, શ્રદ્ધા અને પરમાત્મા સમર્પણ સાથે જીવવાની પ્રેરણા આપે છે.',
+                        '$chapterTitleGu ના શ્લોક $verseNumber માં સાધકને $theme ને નિષ્ઠા, શ્રદ્ધા અને પરમાત્મા સમર્પણ સાથે જીવવાની પ્રેરણા આપે છે.',
                     meaningEnglish:
                         'This verse teaches that progress comes when action, devotion, and inner balance are practiced together without ego.',
                     meaningGujarati:
@@ -3129,8 +3143,67 @@ static List<SacredVerseModel> _gitaChapter6Verses() {
       'Moksha Sannyasa Yoga',
     ];
 
+    if (chapterNumber < 1 || chapterNumber > titles.length) return 'Chapter $chapterNumber';
     return titles[chapterNumber - 1];
   }
+
+  static String getGitaChapterTitle(int chapterNumber) => _gitaChapterTitle(chapterNumber);
+
+  static String _gitaChapterTitleGu(int chapterNumber) {
+    const titlesGu = [
+      'અર્જુન વિષાદ યોગ',
+      'સાંખ્ય યોગ',
+      'કર્મ યોગ',
+      'જ્ઞાન કર્મ સંન્યાસ યોગ',
+      'કર્મ સંન્યાસ યોગ',
+      'ધ્યાન યોગ',
+      'જ્ઞાન વિજ્ઞાન યોગ',
+      'અક્ષર બ્રહ્મ યોગ',
+      'રાજ વિદ્યા રાજ ગુહ્ય યોગ',
+      'વિભૂતિ યોગ',
+      'વિશ્વરૂપ દર્શન યોગ',
+      'ભક્તિ યોગ',
+      'ક્ષેત્ર ક્ષેત્રજ્ઞ વિભાગ યોગ',
+      'ગુણત્રય વિભાગ યોગ',
+      'પુરુષોત્તમ યોગ',
+      'દૈવાસુર સંપદ્ વિભાગ યોગ',
+      'શ્રદ્ધાત્રય વિભાગ યોગ',
+      'મોક્ષ સંન્યાસ યોગ',
+    ];
+
+    if (chapterNumber < 1 || chapterNumber > titlesGu.length) return 'અધ્યાય $chapterNumber';
+    return titlesGu[chapterNumber - 1];
+  }
+
+  static String getGitaChapterTitleGu(int chapterNumber) => _gitaChapterTitleGu(chapterNumber);
+
+  static String _gitaChapterTitleHi(int chapterNumber) {
+    const titlesHi = [
+      'अर्जुनविषादयोग',
+      'सांख्ययोग',
+      'कर्मयोग',
+      'ज्ञानकर्मसंन्यासयोग',
+      'कर्मसंन्यासयोग',
+      'ध्यानयोग',
+      'ज्ञानविज्ञानयोग',
+      'अक्षरब्रह्मयोग',
+      'राजविद्याराजगुह्ययोग',
+      'विभूतियोग',
+      'विश्वरूपदर्शनयोग',
+      'भक्तियोग',
+      'क्षेत्रक्षेत्रज्ञविभागयोग',
+      'गुणत्रयविभागयोग',
+      'पुरुषोत्तमयोग',
+      'दैवासुरसम्पद्विभागयोग',
+      'श्रद्धात्रयविभागयोग',
+      'मोक्षसंन्यासयोग',
+    ];
+
+    if (chapterNumber < 1 || chapterNumber > titlesHi.length) return 'अध्याय $chapterNumber';
+    return titlesHi[chapterNumber - 1];
+  }
+
+  static String getGitaChapterTitleHi(int chapterNumber) => _gitaChapterTitleHi(chapterNumber);
 
 
 // =====================================================

@@ -62,8 +62,15 @@ class _HomePageWidgetState extends State<HomePageWidget> {
       },
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF141714) : const Color(0xFFFAF6F0);
+    final headerTextColor = isDark ? const Color(0xFFF0F2F0) : const Color(0xFF141814);
+    final subLabelColor = isDark ? const Color(0xFFA0A6A0) : const Color(0xFF736D66);
+    final bodyLabelColor = isDark ? const Color(0xFFE0E4E0) : const Color(0xFF382F24);
+    final popupBgColor = isDark ? const Color(0xFF222622) : const Color(0xFFFFFDF9);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF6F0),
+      backgroundColor: bgColor,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -87,7 +94,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 34,
                           fontWeight: FontWeight.w700,
-                          color: const Color(0xFF141814),
+                          color: headerTextColor,
                           height: 1.0,
                         ),
                       ),
@@ -146,7 +153,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        color: const Color(0xFFFFFDF9),
+                        color: popupBgColor,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
@@ -401,7 +408,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF736D66),
+                  color: subLabelColor,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -411,7 +418,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF382F24),
+                  color: bodyLabelColor,
                 ),
               ),
               const SizedBox(height: 16),

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sanatan_scroll/data/sacred_books_data.dart';
+import 'package:sanatan_scroll/data/upanishads_data.dart';
 import 'activity_logs_service.dart';
 
 class MigrationProgress {
@@ -38,7 +39,6 @@ class SeedService {
     void Function(MigrationProgress progress)? onProgress,
   }) async {
     try {
-      final booksSnapshot = await _firestore.collection('sacred_books').get();
 
       // Always clean up legacy static Ramayana chapter documents ('1'..'7') if present
       await cleanupOldStaticRamayanaDocs();
@@ -269,16 +269,14 @@ class SeedService {
         return 2;
       case 'upanishads':
         return 3;
-      case 'mahabharata':
-        return 4;
       case 'vedas':
-        return 5;
+        return 4;
       case 'puranas':
-        return 6;
+        return 5;
       case 'yoga_sutras':
-        return 7;
+        return 6;
       case 'arthashastra':
-        return 8;
+        return 7;
       default:
         return defaultOrder;
     }
@@ -390,26 +388,28 @@ class SeedService {
 
   /// Deletes legacy placeholder Upanishad chapter documents ('chapter_1'..'chapter_5' or title 'Upanishads Chapter...')
   /// from Firestore sacred_books/upanishads/chapters/ if present.
+  /// Deletes all legacy/old chapter documents in Firestore sacred_books/upanishads/chapters/
+  /// to ensure a clean 18-mantra dataset is written.
   Future<void> cleanupOldUpanishadDocs() async {
     try {
       final upanishadsRef = _firestore.collection('sacred_books').doc('upanishads');
       final chaptersRef = upanishadsRef.collection('chapters');
       final snap = await chaptersRef.get();
 
-      final batch = _firestore.batch();
+      WriteBatch batch = _firestore.batch();
       int deleteCount = 0;
 
       for (final doc in snap.docs) {
-        final data = doc.data();
-        final title = (data['title'] ?? '').toString();
-        // Delete if ID starts with 'chapter_' or title starts with 'Upanishads Chapter'
-        if (doc.id.startsWith('chapter_') || title.startsWith('Upanishads Chapter')) {
-          final versesSnap = await doc.reference.collection('verses').get();
-          for (final vDoc in versesSnap.docs) {
-            batch.delete(vDoc.reference);
-          }
-          batch.delete(doc.reference);
-          deleteCount++;
+        final versesSnap = await doc.reference.collection('verses').get();
+        for (final vDoc in versesSnap.docs) {
+          batch.delete(vDoc.reference);
+        }
+        batch.delete(doc.reference);
+        deleteCount++;
+
+        if (deleteCount % 400 == 0) {
+          await batch.commit();
+          batch = _firestore.batch();
         }
       }
 
@@ -420,7 +420,7 @@ class SeedService {
       await _logsService.logAction(
         action: 'Cleaned Up Legacy Upanishad Data',
         target: 'Firestore sacred_books/upanishads/chapters',
-        details: 'Purged $deleteCount legacy placeholder chapter documents',
+        details: 'Purged $deleteCount legacy chapter documents prior to seeding 18 mantras',
       );
     } catch (e) {
       print('Error during legacy Upanishad cleanup: $e');
@@ -429,100 +429,126 @@ class SeedService {
 
   /// Ensures all 18 Isha Upanishad chapters and verses from mobile local data
   /// are written to Firestore under sacred_books/upanishads/chapters/{1..18} and cleans up old placeholder docs.
+  /// Ensures all 18 Isha Upanishad chapters and verses from mobile local data
+  /// are written to Firestore under sacred_books/upanishads/chapters/{1..18} with deterministic IDs ISHA-K-001..018.
   Future<void> syncIshaUpanishadData() async {
     try {
       await cleanupOldUpanishadDocs();
-
-      final upanishadsBook = SacredBooksData.all.firstWhere(
-        (b) => b.id == 'upanishads',
-        orElse: () => SacredBooksData.all.last,
-      );
-
-      if (upanishadsBook.id != 'upanishads') return;
 
       final upanishadsRef = _firestore.collection('sacred_books').doc('upanishads');
 
       // 1. Update main book doc
       await upanishadsRef.set({
         'id': 'upanishads',
-        'title': upanishadsBook.title,
-        'subtitle': upanishadsBook.subtitle,
-        'title_en': upanishadsBook.titleEn ?? upanishadsBook.title,
-        'title_gu': upanishadsBook.titleGu,
-        'title_hi': upanishadsBook.titleHi,
-        'subtitle_en': upanishadsBook.subtitleEn ?? upanishadsBook.subtitle,
-        'subtitle_gu': upanishadsBook.subtitleGu,
-        'subtitle_hi': upanishadsBook.subtitleHi,
-        'iconEmoji': upanishadsBook.iconEmoji,
-        'totalChapters': upanishadsBook.chapters.length,
+        'title': 'Isha Upanishad',
+        'subtitle': '18 Mantras',
+        'title_en': 'Isha Upanishad',
+        'title_gu': 'ઈશોપનિષદ',
+        'title_hi': 'ईशोपनिषद्',
+        'subtitle_en': '18 Mantras',
+        'subtitle_gu': '૧૮ મંત્રો',
+        'subtitle_hi': '१८ मन्त्र',
+        'iconEmoji': '📜',
+        'totalChapters': 18,
+        'contentType': 'mantra',
         'order': 3,
         'published': true,
         'archived': false,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // 2. Upsert all 18 chapters and their verses
+      // 2. Upsert single chapter document: isha-upanishad
       WriteBatch batch = _firestore.batch();
       int opCount = 0;
 
-      for (final chapter in upanishadsBook.chapters) {
-        final chapterDocRef = upanishadsRef.collection('chapters').doc(chapter.chapterNumber.toString());
+      final ishaChapRef = upanishadsRef.collection('chapters').doc('isha-upanishad');
+      final ishaChapMap = {
+        'chapterNumber': 1,
+        'title': 'Isha Upanishad',
+        'subtitle': 'Isha Upanishad',
+        'title_en': 'Isha Upanishad',
+        'title_gu': 'ઈશોપનિષદ',
+        'title_hi': 'ईशोपनिषद्',
+        'subtitle_en': 'Isha Upanishad',
+        'subtitle_gu': 'ઈશોપનિષદ',
+        'subtitle_hi': 'ईशोपनिषद्',
+        'descriptionEnglish': 'Complete 18 mantras of Isha Upanishad',
+        'totalVerses': 18,
+        'order': 1,
+        'published': true,
+        'archived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      batch.set(ishaChapRef, ishaChapMap, SetOptions(merge: true));
+      opCount++;
 
-        final chapterMap = {
-          'chapterNumber': chapter.chapterNumber,
-          'title': chapter.title,
-          'subtitle': chapter.subtitle,
-          'title_en': chapter.titleEn ?? chapter.title,
-          'title_gu': chapter.titleGu,
-          'title_hi': chapter.titleHi,
-          'subtitle_en': chapter.subtitleEn ?? chapter.subtitle,
-          'subtitle_gu': chapter.subtitleGu,
-          'subtitle_hi': chapter.subtitleHi,
-          'descriptionEnglish': chapter.descriptionEnglish,
-          'descriptionGujarati': chapter.descriptionGujarati,
-          'descriptionHindi': chapter.descriptionHindi,
-          'totalVerses': chapter.verses.length,
-          'order': chapter.chapterNumber,
+      for (int i = 0; i < UpanishadsData.passages.length; i++) {
+        final passage = UpanishadsData.passages[i];
+        final mantraNum = i + 1;
+        final verseDocId = passage.id; // ISHA-K-001 .. ISHA-K-018
+        final refNo = passage.referenceNo; // ISHA-K-01 .. ISHA-K-18
+
+        final verseMap = {
+          'id': verseDocId,
+          'passage_id': verseDocId,
+          'reference_no': refNo,
+          'referenceNo': refNo,
+          'book_id': 'upanishads',
+          'bookId': 'upanishads',
+          'bookName': 'Isha Upanishad',
+          'contentType': 'mantra',
+          'mantraNumber': mantraNum,
+          'chapterNumber': mantraNum,
+          'verseNumber': mantraNum,
+          'sanskrit': passage.sanskrit,
+          'english': passage.english,
+          'gujarati': passage.gujarati,
+          'hindi': passage.hindi,
+          'meaningEnglish': passage.english,
+          'meaningGujarati': passage.gujarati,
+          'meaningHindi': passage.hindi,
           'published': true,
           'archived': false,
           'updatedAt': FieldValue.serverTimestamp(),
         };
 
-        batch.set(chapterDocRef, chapterMap, SetOptions(merge: true));
+        // Write to isha-upanishad/verses/{ISHA-K-00x}
+        final verseDocRef = ishaChapRef.collection('verses').doc(verseDocId);
+        batch.set(verseDocRef, verseMap, SetOptions(merge: true));
         opCount++;
 
-        for (final verse in chapter.verses) {
-          final verseDocRef = chapterDocRef.collection('verses').doc(verse.verseNumber.toString());
+        // Also write to chapters/{1..18} chapter & verse docs
+        final mantraChapRef = upanishadsRef.collection('chapters').doc(mantraNum.toString());
+        final mantraChapMap = {
+          'chapterNumber': mantraNum,
+          'title': 'Mantra $mantraNum',
+          'subtitle': 'Isha Upanishad • $refNo',
+          'title_en': 'Mantra $mantraNum',
+          'title_gu': 'મંત્ર $mantraNum',
+          'title_hi': 'मन्त्र $mantraNum',
+          'subtitle_en': 'Isha Upanishad • $refNo',
+          'subtitle_gu': 'ઈશોપનિષદ • $refNo',
+          'subtitle_hi': 'ईशोपनिषद् • $refNo',
+          'descriptionEnglish': passage.english,
+          'descriptionGujarati': passage.gujarati,
+          'descriptionHindi': passage.hindi,
+          'totalVerses': 1,
+          'order': mantraNum,
+          'published': true,
+          'archived': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        batch.set(mantraChapRef, mantraChapMap, SetOptions(merge: true));
+        opCount++;
 
-          final verseMap = {
-            'verseNumber': verse.verseNumber,
-            'sanskrit': verse.sanskrit,
-            'english': verse.english,
-            'gujarati': verse.gujarati,
-            'hindi': verse.hindi,
-            'meaningEnglish': verse.meaningEnglish,
-            'meaningGujarati': verse.meaningGujarati,
-            'meaningHindi': verse.meaningHindi,
-            'transliteration': verse.transliteration,
-            'quote': verse.quote,
-            'quote_hi': verse.quoteHi,
-            'quote_gu': verse.quoteGu,
-            'contextText': verse.contextText,
-            'context_text_hi': verse.contextTextHi,
-            'context_text_gu': verse.contextTextGu,
-            'published': true,
-            'archived': false,
-            'updatedAt': FieldValue.serverTimestamp(),
-          };
+        final mantraVerseRef = mantraChapRef.collection('verses').doc(verseDocId);
+        batch.set(mantraVerseRef, verseMap, SetOptions(merge: true));
+        opCount++;
 
-          batch.set(verseDocRef, verseMap, SetOptions(merge: true));
-          opCount++;
-
-          if (opCount >= 400) {
-            await batch.commit();
-            batch = _firestore.batch();
-            opCount = 0;
-          }
+        if (opCount >= 300) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
         }
       }
 
@@ -533,7 +559,7 @@ class SeedService {
       await _logsService.logAction(
         action: 'Synced Isha Upanishad Data',
         target: 'Firestore sacred_books/upanishads',
-        details: 'Upserted 18 Isha Upanishad chapters and verses into Firestore',
+        details: 'Upserted 18 Isha Upanishad mantras into Firestore with deterministic IDs ISHA-K-001..018',
       );
     } catch (e) {
       print('Error syncing Isha Upanishad data: $e');

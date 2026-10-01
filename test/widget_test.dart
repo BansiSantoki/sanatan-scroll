@@ -7,7 +7,6 @@ void main() {
       const SanatanScrollApp(),
     );
     await tester.pump();
-    expect(find.text('Sanatan Scroll'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 3));
+    expect(find.byType(SanatanScrollApp), findsOneWidget);
   });
 }

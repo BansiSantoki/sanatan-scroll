@@ -1,3 +1,4 @@
+import '../data/sacred_books_data.dart';
 import 'sacred_verse_model.dart';
 
 class SacredChapterModel {
@@ -30,6 +31,38 @@ class SacredChapterModel {
     this.descriptionHindi,
     required this.verses,
   });
+
+  SacredChapterModel copyWith({
+    int? chapterNumber,
+    String? title,
+    String? subtitle,
+    String? titleEn,
+    String? titleGu,
+    String? titleHi,
+    String? subtitleEn,
+    String? subtitleGu,
+    String? subtitleHi,
+    String? descriptionEnglish,
+    String? descriptionGujarati,
+    String? descriptionHindi,
+    List<SacredVerseModel>? verses,
+  }) {
+    return SacredChapterModel(
+      chapterNumber: chapterNumber ?? this.chapterNumber,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      titleEn: titleEn ?? this.titleEn,
+      titleGu: titleGu ?? this.titleGu,
+      titleHi: titleHi ?? this.titleHi,
+      subtitleEn: subtitleEn ?? this.subtitleEn,
+      subtitleGu: subtitleGu ?? this.subtitleGu,
+      subtitleHi: subtitleHi ?? this.subtitleHi,
+      descriptionEnglish: descriptionEnglish ?? this.descriptionEnglish,
+      descriptionGujarati: descriptionGujarati ?? this.descriptionGujarati,
+      descriptionHindi: descriptionHindi ?? this.descriptionHindi,
+      verses: verses ?? this.verses,
+    );
+  }
 
   factory SacredChapterModel.fromMap(Map<String, dynamic> map) {
     final rawVerses = map['verses'];
@@ -76,36 +109,59 @@ class SacredChapterModel {
   }
 
   String getLocalizedTitle(String languageCode) {
-    if (languageCode == 'gu' && titleGu != null && titleGu!.isNotEmpty) {
-      return titleGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (titleGu != null && titleGu!.trim().isNotEmpty) return titleGu!;
+      if (chapterNumber >= 1 && chapterNumber <= 18) {
+        return SacredBooksData.getGitaChapterTitleGu(chapterNumber);
+      }
     }
-    if (languageCode == 'hi' && titleHi != null && titleHi!.isNotEmpty) {
-      return titleHi!;
+    if (code == 'hi') {
+      if (titleHi != null && titleHi!.trim().isNotEmpty) return titleHi!;
+      if (chapterNumber >= 1 && chapterNumber <= 18) {
+        return SacredBooksData.getGitaChapterTitleHi(chapterNumber);
+      }
     }
-    if (titleEn != null && titleEn!.isNotEmpty) {
+    if (titleEn != null && titleEn!.trim().isNotEmpty) {
       return titleEn!;
     }
-    return title;
+    if (title.trim().isNotEmpty) return title;
+    if (chapterNumber >= 1 && chapterNumber <= 18) {
+      return SacredBooksData.getGitaChapterTitle(chapterNumber);
+    }
+    return 'Chapter $chapterNumber';
   }
 
   String getLocalizedSubtitle(String languageCode) {
-    if (languageCode == 'gu' && subtitleGu != null && subtitleGu!.isNotEmpty) {
-      return subtitleGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (subtitleGu != null && subtitleGu!.trim().isNotEmpty) return subtitleGu!;
+      if (chapterNumber >= 1 && chapterNumber <= 18) {
+        return 'ભગવદ્ ગીતા અધ્યાય $chapterNumber';
+      }
     }
-    if (languageCode == 'hi' && subtitleHi != null && subtitleHi!.isNotEmpty) {
-      return subtitleHi!;
+    if (code == 'hi') {
+      if (subtitleHi != null && subtitleHi!.trim().isNotEmpty) return subtitleHi!;
+      if (chapterNumber >= 1 && chapterNumber <= 18) {
+        return 'भगवद् गीता अध्याय $chapterNumber';
+      }
     }
-    if (subtitleEn != null && subtitleEn!.isNotEmpty) {
+    if (subtitleEn != null && subtitleEn!.trim().isNotEmpty) {
       return subtitleEn!;
     }
-    return subtitle;
+    if (subtitle.trim().isNotEmpty) return subtitle;
+    if (chapterNumber >= 1 && chapterNumber <= 18) {
+      return 'Bhagavad Gita Chapter $chapterNumber';
+    }
+    return 'Chapter $chapterNumber';
   }
 
   String getLocalizedDescription(String languageCode) {
-    if (languageCode == 'gu' && descriptionGujarati.isNotEmpty) {
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu' && descriptionGujarati.trim().isNotEmpty) {
       return descriptionGujarati;
     }
-    if (languageCode == 'hi' && descriptionHindi != null && descriptionHindi!.isNotEmpty) {
+    if (code == 'hi' && descriptionHindi != null && descriptionHindi!.trim().isNotEmpty) {
       return descriptionHindi!;
     }
     return descriptionEnglish;

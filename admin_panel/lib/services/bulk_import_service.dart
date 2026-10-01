@@ -944,7 +944,7 @@ class BulkImportService {
       case 'bhagavad_gita':
         return 'Chapter $kanda';
       case 'upanishads':
-        return 'Chapter $kanda';
+        return 'Isha Upanishad';
       default:
         return 'Chapter $kanda';
     }

@@ -1160,9 +1160,9 @@ class RamayanaParserService {
   static String _resolveBookName(String bookId) {
     switch (bookId.toLowerCase()) {
       case 'ramayana': return 'Ramayana';
-      case 'mahabharata': return 'Mahabharata';
       case 'bhagavad_gita': return 'Bhagavad Gita';
-      case 'upanishads': return 'Upanishads';
+      case 'upanishads':
+      case 'isha_upanishad': return 'Isha Upanishad';
       default: return bookId.split('_').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
     }
   }
@@ -1170,9 +1170,9 @@ class RamayanaParserService {
   static String _resolveBookCode(String bookId) {
     switch (bookId.toLowerCase()) {
       case 'ramayana': return 'RAM';
-      case 'mahabharata': return 'MAH';
       case 'bhagavad_gita': return 'GIT';
-      case 'upanishads': return 'UPN';
+      case 'upanishads':
+      case 'isha_upanishad': return 'ISHA';
       default:
         final clean = bookId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
         return clean.length >= 3 ? clean.substring(0, 3) : clean.padRight(3, 'X');
@@ -1182,9 +1182,9 @@ class RamayanaParserService {
   static String _resolveDefaultSourceUrl(String bookId) {
     switch (bookId.toLowerCase()) {
       case 'ramayana': return 'https://ramayana.info/';
-      case 'mahabharata': return 'https://mahabharata.info/';
       case 'bhagavad_gita': return 'https://bhagavadgita.info/';
-      case 'upanishads': return 'https://upanishads.info/';
+      case 'upanishads':
+      case 'isha_upanishad': return 'https://upanishads.info/';
       default: return 'https://sanatanscroll.info/';
     }
   }
@@ -1192,9 +1192,9 @@ class RamayanaParserService {
   static String _resolveChapterTerm(String bookId) {
     switch (bookId.toLowerCase()) {
       case 'ramayana': return 'Kanda';
-      case 'mahabharata': return 'Parva / Chapter';
       case 'bhagavad_gita': return 'Chapter';
-      case 'upanishads': return 'Chapter / Section';
+      case 'upanishads':
+      case 'isha_upanishad': return 'Mantra';
       default: return 'Chapter';
     }
   }

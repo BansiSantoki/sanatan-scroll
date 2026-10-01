@@ -19,6 +19,41 @@ import 'widgets/reading_context_card.dart';
 import 'widgets/reading_reflection_card.dart';
 import 'widgets/reading_wisdom_card.dart';
 
+import '../../../../data/upanishads_data.dart';
+
+class SargaScrollPhysics extends ScrollPhysics {
+  final bool allowUp;
+  final bool allowDown;
+
+  const SargaScrollPhysics({
+    super.parent,
+    this.allowUp = false,
+    this.allowDown = false,
+  });
+
+  @override
+  SargaScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return SargaScrollPhysics(
+      parent: buildParent(ancestor),
+      allowUp: allowUp,
+      allowDown: allowDown,
+    );
+  }
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    // offset < 0 means dragging finger UP (scrolling DOWN to next vertical page)
+    if (offset < 0 && !allowUp) {
+      return 0.0;
+    }
+    // offset > 0 means dragging finger DOWN (scrolling UP to previous vertical page)
+    if (offset > 0 && !allowDown) {
+      return 0.0;
+    }
+    return super.applyPhysicsToUserOffset(position, offset);
+  }
+}
+
 class SacredTextReaderScreen extends StatefulWidget {
   const SacredTextReaderScreen({
     super.key,
@@ -81,11 +116,10 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         });
       }
     } else {
-      if (langCode == 'hi') {
+      // Use Hindi/Sanskrit TTS engine for Sanskrit shlokas
+      try {
         await _tts.setLanguage('hi-IN');
-      } else if (langCode == 'gu') {
-        await _tts.setLanguage('gu-IN');
-      } else {
+      } catch (_) {
         await _tts.setLanguage('en-US');
       }
       await _tts.speak(text);
@@ -111,19 +145,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
-    final bookTitle = book.getLocalizedTitle(langCode);
-    final chapterWord = AppLocalizations.of(context).chapter;
-    final verseWord = AppLocalizations.of(context).verse;
-    final intro = '$bookTitle, $chapterWord ${chapter.chapterNumber}, $verseWord ${verse.verseNumber}.';
-    final quote = verse.getQuoteText(langCode);
-    final sanskrit = verse.sanskrit.isNotEmpty ? verse.sanskrit : '';
-    final translation = verse.getLocalizedTranslation(langCode);
-    final contextText = verse.getContextText(langCode);
-
-    final parts = [intro, quote, sanskrit, translation, contextText]
-        .where((element) => element.trim().isNotEmpty)
-        .join(' ');
-    return parts;
+    // Only read the Sanskrit shloka as requested
+    if (verse.sanskrit.trim().isNotEmpty) {
+      return verse.sanskrit.trim();
+    }
+    return verse.getQuoteText(langCode).trim();
   }
 
   void _shareVerse({
@@ -220,6 +246,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     final langCode = localeProvider.languageCode;
     final l10n = AppLocalizations.of(context);
     final isBhagavadGita = (widget.textId == 'bhagavad_gita' || widget.textId == 'gita');
+    final isRamayana = (widget.textId == 'ramayana');
     final isUpanishad = (widget.textId == 'upanishads');
     final cardsPerVerse = isBhagavadGita ? 3 : 1;
 
@@ -232,7 +259,9 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final bgColor = isDark ? const Color(0xFF141714) : const Color(0xFFFAF7F2);
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final book = snapshot.data ?? SacredBooksRepository.getCachedOrFallbackBook(widget.textId);
+
+        if (snapshot.connectionState == ConnectionState.waiting && book == null) {
           return Scaffold(
             backgroundColor: bgColor,
             body: const Center(
@@ -242,8 +271,6 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
             ),
           );
         }
-
-        final book = snapshot.data;
         if (book == null) {
           return Scaffold(
             backgroundColor: bgColor,
@@ -258,6 +285,45 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
+          );
+        }
+
+        // ============================================================
+        // RAMAYANA: VERTICAL SWIPE = SARGA, HORIZONTAL SWIPE = SHLOKA
+        // ============================================================
+        if (isRamayana) {
+          final sargas = book.chapters;
+          if (sargas.isEmpty) {
+            return Scaffold(
+              backgroundColor: bgColor,
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                iconTheme: IconThemeData(color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B)),
+              ),
+              body: Center(
+                child: Text(l10n.noVersesAvailable),
+              ),
+            );
+          }
+
+          return _RamayanaReaderView(
+            book: book,
+            sargas: sargas,
+            initialChapterNumber: widget.initialChapterNumber,
+            langCode: langCode,
+            isSpeaking: _isSpeaking,
+            onToggleAudio: (text, lang) => _toggleAudio(text, lang),
+            onShareVerse: (b, c, v) => _shareVerse(book: b, chapter: c, verse: v, langCode: langCode),
+            onSaveProgress: _saveProgress,
+            onSargaChanged: (newChapterNumber) {
+              if (currentChapter != newChapterNumber) {
+                setState(() {
+                  currentChapter = newChapterNumber;
+                });
+              }
+            },
+            buildFullPageAudioContent: _buildFullPageAudioContent,
           );
         }
 
@@ -310,7 +376,24 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
 
             if (isUpanishad) {
               activeChapter = book.chapters[pageIndex];
-              activeVerse = activeChapter.verses.first;
+              if (activeChapter.verses.isNotEmpty) {
+                activeVerse = activeChapter.verses.first;
+              } else {
+                final fallbackChap = UpanishadsData.buildUpanishadsBook().getChapter(activeChapter.chapterNumber);
+                if (fallbackChap != null && fallbackChap.verses.isNotEmpty) {
+                  activeVerse = fallbackChap.verses.first;
+                } else {
+                  activeVerse = SacredVerseModel(
+                    verseNumber: activeChapter.chapterNumber,
+                    sanskrit: activeChapter.descriptionEnglish,
+                    english: activeChapter.descriptionEnglish,
+                    gujarati: activeChapter.descriptionGujarati,
+                    hindi: activeChapter.descriptionHindi,
+                    meaningEnglish: activeChapter.descriptionEnglish,
+                    meaningGujarati: activeChapter.descriptionGujarati,
+                  );
+                }
+              }
             } else {
               activeChapter = chapter!;
               activeVerse = chapter.verses[pageIndex];
@@ -506,3 +589,381 @@ class _VerseViewState extends State<_VerseView> {
     );
   }
 }
+
+class _RamayanaReaderView extends StatefulWidget {
+  const _RamayanaReaderView({
+    required this.book,
+    required this.sargas,
+    required this.initialChapterNumber,
+    required this.langCode,
+    required this.isSpeaking,
+    required this.onToggleAudio,
+    required this.onShareVerse,
+    required this.onSaveProgress,
+    this.onSargaChanged,
+    required this.buildFullPageAudioContent,
+  });
+
+  final SacredBookModel book;
+  final List<SacredChapterModel> sargas;
+  final int initialChapterNumber;
+  final String langCode;
+  final bool isSpeaking;
+  final void Function(String text, String lang) onToggleAudio;
+  final void Function(SacredBookModel book, SacredChapterModel sarga, SacredVerseModel verse) onShareVerse;
+  final void Function(int chapterNumber, int verseNumber) onSaveProgress;
+  final ValueChanged<int>? onSargaChanged;
+  final String Function({
+    required SacredBookModel book,
+    required SacredChapterModel chapter,
+    required SacredVerseModel verse,
+    required String langCode,
+  }) buildFullPageAudioContent;
+
+  @override
+  State<_RamayanaReaderView> createState() => _RamayanaReaderViewState();
+}
+
+class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
+  late PageController _shlokaPageController;
+
+  late int _currentKandaNumber;
+  late int _currentSargaNumber;
+  int _currentShlokaIndex = 0;
+
+  bool _isNavigatingSarga = false;
+
+  static const Map<int, int> _kandaSargaCounts = {
+    1: 77,  // Bala Kanda
+    2: 119, // Ayodhya Kanda
+    3: 75,  // Aranya Kanda
+    4: 67,  // Kishkindha Kanda
+    5: 68,  // Sundara Kanda
+    6: 128, // Yuddha Kanda
+    7: 111, // Uttara Kanda
+  };
+
+  static const List<Map<String, String>> _ramayanaKandaNames = [
+    {'en': 'Bala Kanda', 'hi': 'बाल काण्ड', 'gu': 'બાળ કાંડ'},
+    {'en': 'Ayodhya Kanda', 'hi': 'अयोध्या काण्ड', 'gu': 'અયોધ્યા કાંડ'},
+    {'en': 'Aranya Kanda', 'hi': 'अरण्य काण्ड', 'gu': 'અરણ્ય કાંડ'},
+    {'en': 'Kishkindha Kanda', 'hi': 'किष्किन्धा काण्ड', 'gu': 'કિષ્કિંધા કાંડ'},
+    {'en': 'Sundara Kanda', 'hi': 'सुन्दर काण्ड', 'gu': 'સુંદર કાંડ'},
+    {'en': 'Yuddha Kanda', 'hi': 'युद्ध काण्ड', 'gu': 'યુદ્ધ કાંડ'},
+    {'en': 'Uttara Kanda', 'hi': 'उत्तर काण्ड', 'gu': 'ઉત્તર કાંડ'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _shlokaPageController = PageController(initialPage: 0);
+    _initFromChapterNumber(widget.initialChapterNumber);
+  }
+
+  void _initFromChapterNumber(int chapNum) {
+    if (chapNum >= 1000) {
+      _currentKandaNumber = chapNum ~/ 1000;
+      _currentSargaNumber = chapNum % 1000;
+    } else {
+      _currentKandaNumber = (chapNum > 0 && chapNum <= 7) ? chapNum : 1;
+      _currentSargaNumber = 1;
+    }
+    _currentShlokaIndex = 0;
+  }
+
+  @override
+  void didUpdateWidget(covariant _RamayanaReaderView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialChapterNumber != widget.initialChapterNumber) {
+      _initFromChapterNumber(widget.initialChapterNumber);
+      if (_shlokaPageController.hasClients) {
+        _shlokaPageController.jumpToPage(0);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _shlokaPageController.dispose();
+    super.dispose();
+  }
+
+  int _getSargaCountForKanda(int kandaNum) {
+    return _kandaSargaCounts[kandaNum] ?? 77;
+  }
+
+  String _getKandaName(int kandaNum, String langCode) {
+    if (kandaNum < 1 || kandaNum > 7) return 'Kanda $kandaNum';
+    final map = _ramayanaKandaNames[kandaNum - 1];
+    if (langCode == 'hi') return map['hi']!;
+    if (langCode == 'gu') return map['gu']!;
+    return map['en']!;
+  }
+
+  SacredChapterModel _findOrCreateActiveSarga() {
+    final compositeNum = (_currentKandaNumber * 1000) + _currentSargaNumber;
+
+    final matchInSargas = widget.sargas.cast<SacredChapterModel?>().firstWhere(
+      (c) => c != null && (c.chapterNumber == compositeNum || (c.chapterNumber == _currentKandaNumber && c.verses.any((v) => (v.sargaNumber ?? 1) == _currentSargaNumber))),
+      orElse: () => null,
+    );
+
+    if (matchInSargas != null) {
+      final filteredVerses = matchInSargas.verses.where((v) {
+        final vKanda = v.kandaNumber ?? _currentKandaNumber;
+        final vSarga = v.sargaNumber ?? _currentSargaNumber;
+        return vKanda == _currentKandaNumber && vSarga == _currentSargaNumber;
+      }).toList();
+
+      filteredVerses.sort((a, b) => a.verseNumber.compareTo(b.verseNumber));
+
+      return matchInSargas.copyWith(
+        chapterNumber: compositeNum,
+        title: 'Sarga $_currentSargaNumber',
+        subtitle: '${_getKandaName(_currentKandaNumber, widget.langCode)} • Sarga $_currentSargaNumber',
+        verses: filteredVerses,
+      );
+    }
+
+    final kandaNameEn = _getKandaName(_currentKandaNumber, 'en');
+    final kandaNameHi = _getKandaName(_currentKandaNumber, 'hi');
+    final kandaNameGu = _getKandaName(_currentKandaNumber, 'gu');
+
+    return SacredChapterModel(
+      chapterNumber: compositeNum,
+      title: 'Sarga $_currentSargaNumber',
+      subtitle: '$kandaNameEn • Sarga $_currentSargaNumber',
+      titleEn: 'Sarga $_currentSargaNumber',
+      titleHi: 'सर्ग $_currentSargaNumber',
+      titleGu: 'સર્ગ $_currentSargaNumber',
+      subtitleEn: '$kandaNameEn • Sarga $_currentSargaNumber',
+      subtitleHi: '$kandaNameHi • सर्ग $_currentSargaNumber',
+      subtitleGu: '$kandaNameGu • સર્ગ $_currentSargaNumber',
+      descriptionEnglish: 'Sarga $_currentSargaNumber of $kandaNameEn',
+      descriptionHindi: '$kandaNameHi का सर्ग $_currentSargaNumber',
+      descriptionGujarati: '$kandaNameGu નો સર્ગ $_currentSargaNumber',
+      verses: const [],
+    );
+  }
+
+  void _saveProgress() {
+    final composite = (_currentKandaNumber * 1000) + _currentSargaNumber;
+    widget.onSaveProgress(composite, _currentShlokaIndex + 1);
+  }
+
+  void _goToNextShloka(int totalShlokas) {
+    if (_currentShlokaIndex < totalShlokas - 1) {
+      _currentShlokaIndex++;
+      if (_shlokaPageController.hasClients) {
+        _shlokaPageController.animateToPage(
+          _currentShlokaIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      _saveProgress();
+    } else {
+      _goToNextSarga();
+    }
+  }
+
+
+
+  void _goToNextSarga() {
+    if (_isNavigatingSarga) return;
+    _isNavigatingSarga = true;
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) _isNavigatingSarga = false;
+    });
+
+    final maxSargas = _getSargaCountForKanda(_currentKandaNumber);
+    if (_currentSargaNumber < maxSargas) {
+      setState(() {
+        _currentSargaNumber++;
+        _currentShlokaIndex = 0;
+      });
+      _resetControllerAndNotify();
+    } else if (_currentKandaNumber < 7) {
+      setState(() {
+        _currentKandaNumber++;
+        _currentSargaNumber = 1;
+        _currentShlokaIndex = 0;
+      });
+      _resetControllerAndNotify();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have reached the end of Ramayana.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _goToPreviousSarga() {
+    if (_isNavigatingSarga) return;
+    _isNavigatingSarga = true;
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) _isNavigatingSarga = false;
+    });
+
+    if (_currentSargaNumber > 1) {
+      setState(() {
+        _currentSargaNumber--;
+        _currentShlokaIndex = 0;
+      });
+      _resetControllerAndNotify();
+    } else if (_currentKandaNumber > 1) {
+      final prevKanda = _currentKandaNumber - 1;
+      final prevSargaCount = _getSargaCountForKanda(prevKanda);
+      setState(() {
+        _currentKandaNumber = prevKanda;
+        _currentSargaNumber = prevSargaCount;
+        _currentShlokaIndex = 0;
+      });
+      _resetControllerAndNotify();
+    }
+  }
+
+  void _resetControllerAndNotify() {
+    if (_shlokaPageController.hasClients) {
+      _shlokaPageController.jumpToPage(0);
+    }
+    final newComposite = (_currentKandaNumber * 1000) + _currentSargaNumber;
+    widget.onSargaChanged?.call(newComposite);
+    _saveProgress();
+  }
+
+  List<SacredVerseModel> _getEffectiveVerses(SacredChapterModel activeSarga) {
+    if (activeSarga.verses.isNotEmpty) {
+      return activeSarga.verses;
+    }
+    final kandaNameEn = _getKandaName(_currentKandaNumber, 'en');
+    final kandaNameHi = _getKandaName(_currentKandaNumber, 'hi');
+    final kandaNameGu = _getKandaName(_currentKandaNumber, 'gu');
+
+    return [
+      SacredVerseModel(
+        verseNumber: 1,
+        kandaNumber: _currentKandaNumber,
+        sargaNumber: _currentSargaNumber,
+        sanskrit: 'ॐ श्री रामचन्द्राय नमः ॥',
+        english: 'Sarga $_currentSargaNumber of $kandaNameEn',
+        hindi: '$kandaNameHi - सर्ग $_currentSargaNumber',
+        gujarati: '$kandaNameGu - સર્ગ $_currentSargaNumber',
+        meaningEnglish: 'Sarga $_currentSargaNumber of $kandaNameEn.',
+        meaningHindi: '$kandaNameHi का सर्ग $_currentSargaNumber।',
+        meaningGujarati: '$kandaNameGu નો સર્ગ $_currentSargaNumber.',
+      ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activeSarga = _findOrCreateActiveSarga();
+    final verses = _getEffectiveVerses(activeSarga);
+    final totalVerses = verses.length;
+    final savedProvider = context.watch<SavedProvider>();
+
+    if (_currentShlokaIndex >= totalVerses) {
+      _currentShlokaIndex = 0;
+    }
+
+    final isLastShlokaOfSarga = _currentShlokaIndex == totalVerses - 1;
+    final maxSargasInKanda = _getSargaCountForKanda(_currentKandaNumber);
+    final isLastSargaOfKanda = _currentSargaNumber == maxSargasInKanda;
+
+    String nextBtnLabel;
+    IconData nextBtnIcon;
+
+    if (!isLastShlokaOfSarga) {
+      nextBtnLabel = (widget.langCode == 'gu') ? 'આગળ' : (widget.langCode == 'hi' ? 'आगे' : 'Next');
+      nextBtnIcon = Icons.arrow_forward_rounded;
+    } else if (!isLastSargaOfKanda) {
+      final sargaPrefix = (widget.langCode == 'gu') ? 'સર્ગ' : (widget.langCode == 'hi' ? 'सर्ग' : 'Sarga');
+      nextBtnLabel = '$sargaPrefix ${_currentSargaNumber + 1}';
+      nextBtnIcon = Icons.arrow_upward_rounded;
+    } else if (_currentKandaNumber < 7) {
+      nextBtnLabel = _getKandaName(_currentKandaNumber + 1, widget.langCode);
+      nextBtnIcon = Icons.arrow_upward_rounded;
+    } else {
+      nextBtnLabel = (widget.langCode == 'gu') ? 'સંપૂર્ણ' : (widget.langCode == 'hi' ? 'समाप्त' : 'End');
+      nextBtnIcon = Icons.check_circle_outline_rounded;
+    }
+
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -200) {
+          // BOTTOM -> TOP swipe (drag up) - Transition to next Sarga from ANY shloka
+          _goToNextSarga();
+        } else if (velocity > 200) {
+          // TOP -> BOTTOM swipe (drag down) - Transition to previous Sarga from ANY shloka
+          _goToPreviousSarga();
+        }
+      },
+      child: PageView.builder(
+        controller: _shlokaPageController,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: totalVerses,
+        onPageChanged: (index) {
+          if (_currentShlokaIndex != index) {
+            setState(() {
+              _currentShlokaIndex = index;
+            });
+            _saveProgress();
+          }
+        },
+        itemBuilder: (context, index) {
+          final verse = verses[index];
+          final composite = (_currentKandaNumber * 1000) + _currentSargaNumber;
+
+          final savedItem = SavedItemModel(
+            id: '${widget.book.id}_c${composite}_v${verse.verseNumber}',
+            type: SavedItemType.verse,
+            title: '${widget.book.getLocalizedTitle(widget.langCode)} $composite.${verse.verseNumber}',
+            content: verse.getQuoteText(widget.langCode),
+            source: widget.book.getLocalizedTitle(widget.langCode),
+            savedAt: DateTime.now(),
+          );
+          final isSaved = savedProvider.isSaved(savedItem.id);
+          void toggleSave() => savedProvider.toggleItem(savedItem);
+
+          final fullAudioContent = widget.buildFullPageAudioContent(
+            book: widget.book,
+            chapter: activeSarga,
+            verse: verse,
+            langCode: widget.langCode,
+          );
+
+          final shlokaNumStr = (index + 1).toString().padLeft(2, '0');
+          final totalShlokasStr = totalVerses.toString().padLeft(2, '0');
+          final cardLabel = '$shlokaNumStr / $totalShlokasStr';
+
+          return ReadingWisdomCard(
+            key: ValueKey('ramayana_k${_currentKandaNumber}_s${_currentSargaNumber}_v${verse.verseNumber}_$index'),
+            book: widget.book,
+            chapter: activeSarga,
+            verse: verse,
+            languageCode: widget.langCode,
+            isSaved: isSaved,
+            onToggleSave: toggleSave,
+            onShare: () => widget.onShareVerse(widget.book, activeSarga, verse),
+            isPlayingAudio: widget.isSpeaking,
+            onToggleAudio: () => widget.onToggleAudio(fullAudioContent, widget.langCode),
+            onBack: () => Navigator.of(context).maybePop(),
+            onNextCard: () => _goToNextShloka(totalVerses),
+            totalCards: 1,
+            customCardLabel: cardLabel,
+            customTotalProgress: totalVerses <= 20 ? totalVerses : 0,
+            customActiveProgressIndex: totalVerses <= 20 ? index : 0,
+            customNextButtonLabel: nextBtnLabel,
+            customNextButtonIcon: nextBtnIcon,
+          );
+        },
+      ),
+    );
+  }
+}
+

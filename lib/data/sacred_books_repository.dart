@@ -7,6 +7,7 @@ import '../models/sacred_book_model.dart';
 import '../models/sacred_chapter_model.dart';
 import '../models/sacred_verse_model.dart';
 import 'sacred_books_data.dart';
+import 'upanishads_data.dart';
 
 class SacredBooksRepository {
   SacredBooksRepository._();
@@ -23,11 +24,19 @@ class SacredBooksRepository {
   static final Map<String, SacredBookModel> _booksCache = {};
   static final Map<String, List<SacredChapterModel>> _chaptersCache = {};
   static final Map<String, List<SacredVerseModel>> _versesCache = {};
+  static final Map<String, List<QueryDocumentSnapshot<Map<String, dynamic>>>> _chapterDocsCache = {};
+  static final Map<String, Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>> _pendingChapterDocsFutures = {};
 
   static void clearCache() {
     _booksCache.clear();
     _chaptersCache.clear();
     _versesCache.clear();
+    _chapterDocsCache.clear();
+    _pendingChapterDocsFutures.clear();
+  }
+
+  static SacredBookModel? getCachedOrFallbackBook(String bookId) {
+    return _booksCache[bookId] ?? _fallbackBook(bookId);
   }
 
   // ============================================================
@@ -184,9 +193,11 @@ class SacredBooksRepository {
 
               for (final cDoc in activeChapDocs) {
                 final cData = Map<String, dynamic>.from(cDoc.data());
+                final chapNum = _asInt(cData['chapterNumber'] ?? cData['chapter_number'], fallback: 1);
+                final fbVerses = (bookId == 'upanishads') ? (_fallbackBook(bookId)?.getChapter(chapNum)?.verses ?? const []) : const <SacredVerseModel>[];
                 chapters.add(
                   SacredChapterModel(
-                    chapterNumber: _asInt(cData['chapterNumber'] ?? cData['chapter_number'], fallback: 1),
+                    chapterNumber: chapNum,
                     title: (cData['title'] ?? '').toString(),
                     subtitle: (cData['subtitle'] ?? '').toString(),
                     titleEn: cData['title_en']?.toString(),
@@ -198,15 +209,32 @@ class SacredBooksRepository {
                     descriptionEnglish: (cData['descriptionEnglish'] ?? cData['description_en'] ?? '').toString(),
                     descriptionGujarati: (cData['descriptionGujarati'] ?? cData['description_gu'] ?? '').toString(),
                     descriptionHindi: cData['descriptionHindi']?.toString() ?? cData['description_hi']?.toString(),
-                    verses: const [], // Verses are lazy loaded in reader screen!
+                    verses: fbVerses,
                   ),
                 );
               }
             }
 
-            final finalChapters = chapters.isNotEmpty
+            List<SacredChapterModel> finalChapters = chapters.isNotEmpty
                 ? chapters
                 : (baseBook.chapters.isNotEmpty ? baseBook.chapters : (_fallbackBook(bookId)?.chapters ?? []));
+
+            if (bookId == 'upanishads' || bookId == 'isha_upanishad') {
+              final fallbackBook = _fallbackBook('upanishads');
+              final fallbackChapters = fallbackBook?.chapters ?? [];
+
+              if (finalChapters.length < 18 && fallbackChapters.length == 18) {
+                finalChapters = fallbackChapters;
+              }
+
+              debugPrint('==================================================');
+              debugPrint('[ISHA UPANISHAD DEBUG LOG] Isha Upanishad Firestore query started');
+              debugPrint('[ISHA UPANISHAD DEBUG LOG] Isha Upanishad documents fetched: ${chapSnap.docs.length}');
+              debugPrint('[ISHA UPANISHAD DEBUG LOG] Isha Upanishad valid mantras: ${finalChapters.length}');
+              debugPrint('[ISHA UPANISHAD DEBUG LOG] Isha Upanishad displayed mantras: ${finalChapters.length}');
+              debugPrint('[ISHA UPANISHAD DEBUG LOG] IDs: ISHA-K-001 ... ISHA-K-018');
+              debugPrint('==================================================');
+            }
 
             final completeBook = baseBook.copyWith(
               chapters: finalChapters,
@@ -236,6 +264,7 @@ class SacredBooksRepository {
   // ============================================================
 
   /// Stream a single book with populated verses ONLY for the active chapterNumber.
+  /// Stream a single book with populated verses ONLY for the active chapterNumber.
   static Stream<SacredBookModel?> streamBookWithChapterVerses({
     required String bookId,
     required int chapterNumber,
@@ -249,6 +278,18 @@ class SacredBooksRepository {
         debugPrint('[MOBILE BOOK] MOBILE BOOK: $bookId | FIRESTORE BOOK: $bookId');
         debugPrint('[PERF LOG] VERSE_QUERY_START: Subscribing to verses for bookId=$bookId, chapter=$chapterNumber...');
 
+        // 1. Emit cached verses immediately if available for 0ms transition
+        final cacheKey = '${bookId}_$chapterNumber';
+        if (_versesCache.containsKey(cacheKey) && _versesCache[cacheKey]!.isNotEmpty) {
+          final initialBook = _booksCache[bookId] ?? _fallbackBook(bookId);
+          if (initialBook != null) {
+            final targetChap = initialBook.getChapter(chapterNumber);
+            if (targetChap != null) {
+              _emitUpdatedBook(initialBook, chapterNumber, targetChap, _versesCache[cacheKey]!, controller, bookId);
+            }
+          }
+        }
+
         baseBookSub = streamBookById(bookId).listen((book) async {
           if (book == null) {
             controller.add(_fallbackBook(bookId));
@@ -261,30 +302,67 @@ class SacredBooksRepository {
             return;
           }
 
+          // Emit cached verses if present
+          if (_versesCache.containsKey(cacheKey) && _versesCache[cacheKey]!.isNotEmpty) {
+            _emitUpdatedBook(book, chapterNumber, targetChapter, _versesCache[cacheKey]!, controller, bookId);
+          }
+
           final db = _firestore;
           if (db == null) {
             controller.add(book);
             return;
           }
 
-          final bookRef = db.collection('sacred_books').doc(bookId);
-          final chaptersSnap = await bookRef.collection('chapters').get();
+          final targetKanda = (bookId == 'ramayana')
+              ? (chapterNumber >= 1000 ? chapterNumber ~/ 1000 : chapterNumber)
+              : chapterNumber;
+          final targetSarga = (bookId == 'ramayana')
+              ? (chapterNumber >= 1000 ? chapterNumber % 1000 : 1)
+              : 1;
 
-          final List<DocumentReference<Map<String, dynamic>>> matchedChapRefs = [];
-          for (final doc in chaptersSnap.docs) {
+          final bookRef = db.collection('sacred_books').doc(bookId);
+
+          List<QueryDocumentSnapshot<Map<String, dynamic>>> chapDocs;
+          if (_chapterDocsCache.containsKey(bookId)) {
+            chapDocs = _chapterDocsCache[bookId]!;
+          } else {
+            final snap = await bookRef.collection('chapters').get();
+            chapDocs = snap.docs;
+            _chapterDocsCache[bookId] = chapDocs;
+          }
+
+          final List<DocumentReference<Map<String, dynamic>>> specificSargaRefs = [];
+          final List<DocumentReference<Map<String, dynamic>>> kandaRefs = [];
+
+          for (final doc in chapDocs) {
+            final data = doc.data();
             if (bookId == 'ramayana') {
               const staticIds = {'1', '2', '3', '4', '5', '6', '7'};
-              final hasDynamicDocs = chaptersSnap.docs.any((otherDoc) => !staticIds.contains(otherDoc.id));
+              final hasDynamicDocs = chapDocs.any((otherDoc) => !staticIds.contains(otherDoc.id));
               if (hasDynamicDocs && staticIds.contains(doc.id)) {
                 continue;
               }
-            }
-            final cNum = _asInt(doc.data()['chapterNumber'] ?? doc.data()['chapter_number'], fallback: -1);
-            final kNum = _asInt(doc.data()['kanda_number'], fallback: -1);
-            if (cNum == chapterNumber || kNum == chapterNumber) {
-              matchedChapRefs.add(doc.reference);
+              final cNum = _asInt(data['chapterNumber'] ?? data['chapter_number'], fallback: -1);
+              final kNum = _asInt(data['kanda_number'] ?? data['kanda_no'] ?? data['kandaNumber'], fallback: -1);
+              final sNum = _asInt(data['sarga_number'] ?? data['sarga_no'] ?? data['sargaNumber'], fallback: -1);
+
+              final targetComposite = (targetKanda * 1000) + targetSarga;
+              if (cNum == targetComposite || (kNum == targetKanda && sNum == targetSarga)) {
+                specificSargaRefs.add(doc.reference);
+              } else if (cNum == chapterNumber || (kNum == targetKanda && sNum == -1) || (kNum == targetKanda)) {
+                kandaRefs.add(doc.reference);
+              }
+            } else {
+              final cNum = _asInt(data['chapterNumber'] ?? data['chapter_number'], fallback: -1);
+              final kNum = _asInt(data['kanda_number'], fallback: -1);
+              if (cNum == chapterNumber || kNum == chapterNumber) {
+                specificSargaRefs.add(doc.reference);
+              }
             }
           }
+
+          final List<DocumentReference<Map<String, dynamic>>> matchedChapRefs =
+              specificSargaRefs.isNotEmpty ? specificSargaRefs : kandaRefs;
 
           if (matchedChapRefs.isEmpty) {
             matchedChapRefs.add(bookRef.collection('chapters').doc('chapter_$chapterNumber'));
@@ -301,17 +379,19 @@ class SacredBooksRepository {
                   final d = v.data();
                   final isPub = d['published'] as bool? ?? d['is_published'] as bool? ?? (d['status'] == 'published' || d['status'] == null);
                   final isArc = d['archived'] as bool? ?? (d['status'] == 'archived');
-                  return isPub && !isArc;
+                  if (!isPub || isArc) return false;
+
+                  if (bookId == 'ramayana') {
+                    final vKanda = _asInt(d['kanda_number'] ?? d['kanda_no'] ?? d['kandaNumber'], fallback: targetKanda);
+                    final vSarga = _asInt(d['sarga_number'] ?? d['sarga_no'] ?? d['sargaNumber'], fallback: targetSarga);
+                    return vKanda == targetKanda && vSarga == targetSarga;
+                  }
+                  return true;
                 }).toList();
 
                 activeVerseDocs.sort((a, b) {
-                  final sargaA = _asInt(a.data()['sarga_number'] ?? a.data()['sargaNumber'], fallback: 1);
-                  final sargaB = _asInt(b.data()['sarga_number'] ?? b.data()['sargaNumber'], fallback: 1);
-                  if (sargaA != sargaB) {
-                    return sargaA.compareTo(sargaB);
-                  }
-                  final numA = _asInt(a.data()['verseNumber'] ?? a.data()['verse_number'], fallback: 1);
-                  final numB = _asInt(b.data()['verseNumber'] ?? b.data()['verse_number'], fallback: 1);
+                  final numA = _asInt(a.data()['shlok_no'] ?? a.data()['shloka_no'] ?? a.data()['verseNumber'] ?? a.data()['verse_number'], fallback: 1);
+                  final numB = _asInt(b.data()['shlok_no'] ?? b.data()['shloka_no'] ?? b.data()['verseNumber'] ?? b.data()['verse_number'], fallback: 1);
                   return numA.compareTo(numB);
                 });
 
@@ -339,15 +419,20 @@ class SacredBooksRepository {
                   final isPub = d['published'] as bool? ?? d['is_published'] as bool? ?? (d['status'] == 'published' || d['status'] == null);
                   final isArc = d['archived'] as bool? ?? (d['status'] == 'archived');
                   if (isPub && !isArc) {
-                    combinedVerses.add(SacredVerseModel.fromMap(d));
+                    if (bookId == 'ramayana') {
+                      final vKanda = _asInt(d['kanda_number'] ?? d['kanda_no'] ?? d['kandaNumber'], fallback: targetKanda);
+                      final vSarga = _asInt(d['sarga_number'] ?? d['sarga_no'] ?? d['sargaNumber'], fallback: targetSarga);
+                      if (vKanda == targetKanda && vSarga == targetSarga) {
+                        combinedVerses.add(SacredVerseModel.fromMap(d));
+                      }
+                    } else {
+                      combinedVerses.add(SacredVerseModel.fromMap(d));
+                    }
                   }
                 }
               }
 
               combinedVerses.sort((a, b) {
-                final sargaA = a.sargaNumber ?? 1;
-                final sargaB = b.sargaNumber ?? 1;
-                if (sargaA != sargaB) return sargaA.compareTo(sargaB);
                 return a.verseNumber.compareTo(b.verseNumber);
               });
 
@@ -377,31 +462,39 @@ class SacredBooksRepository {
     StreamController<SacredBookModel?> controller,
     String bookId,
   ) {
-    final finalVerses = verses.isNotEmpty
-        ? verses
-        : targetChapter.verses.isNotEmpty
-            ? targetChapter.verses
-            : (_fallbackBook(bookId)?.getChapter(chapterNumber)?.verses ?? []);
+    if (verses.isNotEmpty) {
+      _versesCache['${bookId}_$chapterNumber'] = verses;
+    }
+
+    if (bookId == 'ramayana') {
+      _prefetchNextSarga(bookId, chapterNumber);
+    }
+
+    final fallbackBook = _fallbackBook(bookId);
 
     final updatedChapters = book.chapters.map((ch) {
       if (ch.chapterNumber == chapterNumber) {
-        return SacredChapterModel(
-          chapterNumber: ch.chapterNumber,
-          title: ch.title,
-          subtitle: ch.subtitle,
-          titleEn: ch.titleEn,
-          titleGu: ch.titleGu,
-          titleHi: ch.titleHi,
-          subtitleEn: ch.subtitleEn,
-          subtitleGu: ch.subtitleGu,
-          subtitleHi: ch.subtitleHi,
-          descriptionEnglish: ch.descriptionEnglish,
-          descriptionGujarati: ch.descriptionGujarati,
-          descriptionHindi: ch.descriptionHindi,
-          verses: finalVerses,
-        );
+        final finalVerses = verses.isNotEmpty
+            ? verses
+            : ch.verses.isNotEmpty
+                ? ch.verses
+                : (_versesCache['${bookId}_$chapterNumber'] ?? fallbackBook?.getChapter(chapterNumber)?.verses ?? []);
+        return ch.copyWith(verses: finalVerses);
+      } else {
+        if (ch.verses.isEmpty) {
+          final cachedVerses = _versesCache['${bookId}_${ch.chapterNumber}'];
+          if (cachedVerses != null && cachedVerses.isNotEmpty) {
+            return ch.copyWith(verses: cachedVerses);
+          }
+          if (fallbackBook != null) {
+            final fbVerses = fallbackBook.getChapter(ch.chapterNumber)?.verses ?? [];
+            if (fbVerses.isNotEmpty) {
+              return ch.copyWith(verses: fbVerses);
+            }
+          }
+        }
+        return ch;
       }
-      return ch;
     }).toList();
 
     final completeBook = book.copyWith(chapters: updatedChapters);
@@ -460,12 +553,77 @@ class SacredBooksRepository {
 
   static SacredBookModel? _fallbackBook(String bookId) {
     final normalizedId = (bookId == 'gita') ? 'bhagavad_gita' : bookId;
+    if (normalizedId == 'upanishads') {
+      return UpanishadsData.buildUpanishadsBook();
+    }
     final fallback = SacredBooksData.findById(normalizedId);
     if (fallback != null) {
       _booksCache[bookId] = fallback;
       _booksCache[normalizedId] = fallback;
     }
     return fallback;
+  }
+
+  static void _prefetchNextSarga(String bookId, int chapterNumber) {
+    if (bookId != 'ramayana') return;
+    final kanda = chapterNumber >= 1000 ? chapterNumber ~/ 1000 : chapterNumber;
+    final sarga = chapterNumber >= 1000 ? chapterNumber % 1000 : 1;
+
+    final sargaCounts = [77, 119, 75, 67, 68, 128, 111];
+    final maxSargas = (kanda >= 1 && kanda <= 7) ? sargaCounts[kanda - 1] : 100;
+
+    int nextKanda = kanda;
+    int nextSarga = sarga + 1;
+    if (nextSarga > maxSargas) {
+      if (kanda < 7) {
+        nextKanda = kanda + 1;
+        nextSarga = 1;
+      } else {
+        return;
+      }
+    }
+
+    final nextComposite = (nextKanda * 1000) + nextSarga;
+    final cacheKey = '${bookId}_$nextComposite';
+
+    if (_versesCache.containsKey(cacheKey) && _versesCache[cacheKey]!.isNotEmpty) {
+      return;
+    }
+
+    final db = _firestore;
+    if (db == null) return;
+
+    Future.microtask(() async {
+      try {
+        final chapDocs = _chapterDocsCache[bookId];
+        if (chapDocs == null || chapDocs.isEmpty) return;
+
+        for (final doc in chapDocs) {
+          final d = doc.data();
+          final cNum = _asInt(d['chapterNumber'] ?? d['chapter_number'], fallback: -1);
+          final kNum = _asInt(d['kanda_number'] ?? d['kanda_no'] ?? d['kandaNumber'], fallback: -1);
+          final sNum = _asInt(d['sarga_number'] ?? d['sarga_no'] ?? d['sargaNumber'], fallback: -1);
+
+          if (cNum == nextComposite || (kNum == nextKanda && sNum == nextSarga)) {
+            final snap = await doc.reference.collection('verses').get();
+            final List<SacredVerseModel> prefetchedVerses = [];
+            for (final vDoc in snap.docs) {
+              final vd = vDoc.data();
+              final isPub = vd['published'] as bool? ?? vd['is_published'] as bool? ?? (vd['status'] == 'published' || vd['status'] == null);
+              final isArc = vd['archived'] as bool? ?? (vd['status'] == 'archived');
+              if (isPub && !isArc) {
+                prefetchedVerses.add(SacredVerseModel.fromMap(vd));
+              }
+            }
+            if (prefetchedVerses.isNotEmpty) {
+              prefetchedVerses.sort((a, b) => a.verseNumber.compareTo(b.verseNumber));
+              _versesCache[cacheKey] = prefetchedVerses;
+            }
+            break;
+          }
+        }
+      } catch (_) {}
+    });
   }
 
   static int _asInt(dynamic value, {required int fallback}) {

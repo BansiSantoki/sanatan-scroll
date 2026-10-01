@@ -92,14 +92,14 @@ class SacredVerseModel {
   });
 
   factory SacredVerseModel.fromMap(Map<String, dynamic> map) {
-    String sanskritText = _extractFieldValue(map, ['sanskrit', 'sanskritText', 'sanskrit_text', 'shloka', 'shlok', 'verse_sanskrit', 'sa']) ?? '';
-    String englishText = _extractFieldValue(map, ['english', 'english_translation', 'translation_en', 'englishText', 'translation', 'en']) ?? '';
-    String gujaratiText = _extractFieldValue(map, ['gujarati', 'gujarati_translation', 'translation_gu', 'gujaratiText', 'gu']) ?? '';
-    String? hindiText = _extractFieldValue(map, ['hindi', 'hindi_translation', 'translation_hi', 'hindiText', 'hi']);
+    String sanskritText = _extractFieldValue(map, ['sanskrit', 'sanskritText', 'sanskrit_text', 'shloka', 'shlok', 'verse_sanskrit', 'sa', 'Sanskrit', 'Shloka']) ?? '';
+    String englishText = _extractFieldValue(map, ['english', 'english_translation', 'translation_en', 'englishText', 'translation', 'en', 'English', 'English_translation', 'Translation_en', 'translationEnglish', 'english_meaning']) ?? '';
+    String gujaratiText = _extractFieldValue(map, ['gujarati', 'gujarati_translation', 'translation_gu', 'gujaratiText', 'gu', 'Gujarati', 'Gujarati_translation', 'Translation_gu', 'translationGujarati', 'gujarati_meaning']) ?? '';
+    String? hindiText = _extractFieldValue(map, ['hindi', 'hindi_translation', 'translation_hi', 'hindiText', 'hi', 'Hindi', 'Hindi_translation', 'Translation_hi', 'translationHindi', 'hindi_meaning']);
 
-    String meaningEn = _extractFieldValue(map, ['meaningEnglish', 'explanation_en', 'explanation', 'meaning_en', 'meaning']) ?? (englishText.isNotEmpty ? englishText : '');
-    String meaningGu = _extractFieldValue(map, ['meaningGujarati', 'explanation_gu', 'meaning_gu']) ?? (gujaratiText.isNotEmpty ? gujaratiText : '');
-    String? meaningHi = _extractFieldValue(map, ['meaningHindi', 'explanation_hi', 'meaning_hi']) ?? hindiText;
+    String meaningEn = _extractFieldValue(map, ['meaningEnglish', 'explanation_en', 'explanation', 'meaning_en', 'meaning', 'meaning_english', 'explanationEnglish']) ?? (englishText.isNotEmpty ? englishText : '');
+    String meaningGu = _extractFieldValue(map, ['meaningGujarati', 'explanation_gu', 'meaning_gu', 'meaning_gujarati', 'explanationGujarati']) ?? (gujaratiText.isNotEmpty ? gujaratiText : '');
+    String? meaningHi = _extractFieldValue(map, ['meaningHindi', 'explanation_hi', 'meaning_hi', 'meaning_hindi', 'explanationHindi']) ?? hindiText;
 
     if (hindiText == null || hindiText.isEmpty) {
       hindiText = meaningHi;
@@ -204,7 +204,7 @@ class SacredVerseModel {
   }
 
   String getLocalizedTranslation(String languageCode) {
-    final code = languageCode.toLowerCase().split('-').first.trim();
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
 
     if (code == 'gu') {
       if (gujarati.trim().isNotEmpty) return gujarati;
@@ -286,11 +286,12 @@ class SacredVerseModel {
   }
 
   String getLocalizedMeaning(String languageCode) {
-    if (languageCode == 'gu') {
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
       if (meaningGujarati.trim().isNotEmpty) return meaningGujarati;
       return getLocalizedTranslation(languageCode);
     }
-    if (languageCode == 'hi') {
+    if (code == 'hi') {
       if (meaningHindi != null && meaningHindi!.trim().isNotEmpty) return meaningHindi!;
       return getLocalizedTranslation(languageCode);
     }
@@ -299,135 +300,150 @@ class SacredVerseModel {
   }
 
   String getQuoteText(String languageCode) {
-    if (languageCode == 'hi') {
-      if (quoteHi != null && quoteHi!.isNotEmpty) return quoteHi!;
-      final meaning = getLocalizedMeaning(languageCode);
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'hi') {
+      if (quoteHi != null && quoteHi!.trim().isNotEmpty) return quoteHi!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (languageCode == 'gu') {
-      if (quoteGu != null && quoteGu!.isNotEmpty) return quoteGu!;
-      final meaning = getLocalizedMeaning(languageCode);
+    if (code == 'gu') {
+      if (quoteGu != null && quoteGu!.trim().isNotEmpty) return quoteGu!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (quote != null && quote!.isNotEmpty) return quote!;
-    final meaning = getLocalizedMeaning(languageCode);
+    if (quote != null && quote!.trim().isNotEmpty) return quote!;
+    final meaning = getLocalizedMeaning(languageCode).trim();
     if (meaning.isNotEmpty) return meaning;
     return getLocalizedTranslation(languageCode);
   }
 
   String getContextText(String languageCode) {
-    if (languageCode == 'hi') {
-      if (contextTextHi != null && contextTextHi!.isNotEmpty) return contextTextHi!;
-      final meaning = getLocalizedMeaning(languageCode);
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'hi') {
+      if (contextTextHi != null && contextTextHi!.trim().isNotEmpty) return contextTextHi!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (languageCode == 'gu') {
-      if (contextTextGu != null && contextTextGu!.isNotEmpty) return contextTextGu!;
-      final meaning = getLocalizedMeaning(languageCode);
+    if (code == 'gu') {
+      if (contextTextGu != null && contextTextGu!.trim().isNotEmpty) return contextTextGu!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (contextText != null && contextText!.isNotEmpty) return contextText!;
-    final meaning = getLocalizedMeaning(languageCode);
+    if (contextText != null && contextText!.trim().isNotEmpty) return contextText!;
+    final meaning = getLocalizedMeaning(languageCode).trim();
     if (meaning.isNotEmpty) return meaning;
     return getLocalizedTranslation(languageCode);
   }
 
   String getWhyItMattersText(String languageCode) {
-    if (languageCode == 'gu') {
-      if (whyItMattersGu != null && whyItMattersGu!.isNotEmpty) return whyItMattersGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (whyItMattersGu != null && whyItMattersGu!.trim().isNotEmpty) return whyItMattersGu!;
       return 'પ્રશંસા વ્યસન જેવી લાગી શકે છે અને ટીકા તમારો આખો દિવસ બગાડી શકે છે.';
     }
-    if (languageCode == 'hi') {
-      if (whyItMattersHi != null && whyItMattersHi!.isNotEmpty) return whyItMattersHi!;
+    if (code == 'hi') {
+      if (whyItMattersHi != null && whyItMattersHi!.trim().isNotEmpty) return whyItMattersHi!;
       return 'क्योंकि प्रशंसा व्यसन जैसी लग सकती है और आलोचना आपका पूरा दिन खराब कर सकती है।';
     }
-    if (whyItMatters != null && whyItMatters!.isNotEmpty) return whyItMatters!;
+    if (whyItMatters != null && whyItMatters!.trim().isNotEmpty) return whyItMatters!;
     return 'Because praise can feel addictive and criticism can ruin your whole day.';
   }
 
   String getReflectionPreviewText(String languageCode) {
-    if (languageCode == 'hi') {
-      if (reflectionPreviewHi != null && reflectionPreviewHi!.isNotEmpty) return reflectionPreviewHi!;
-      final meaning = getLocalizedMeaning(languageCode);
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'hi') {
+      if (reflectionPreviewHi != null && reflectionPreviewHi!.trim().isNotEmpty) return reflectionPreviewHi!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (languageCode == 'gu') {
-      if (reflectionPreviewGu != null && reflectionPreviewGu!.isNotEmpty) return reflectionPreviewGu!;
-      final meaning = getLocalizedMeaning(languageCode);
+    if (code == 'gu') {
+      if (reflectionPreviewGu != null && reflectionPreviewGu!.trim().isNotEmpty) return reflectionPreviewGu!;
+      final meaning = getLocalizedMeaning(languageCode).trim();
       if (meaning.isNotEmpty) return meaning;
       return getLocalizedTranslation(languageCode);
     }
-    if (reflectionPreview != null && reflectionPreview!.isNotEmpty) return reflectionPreview!;
-    final meaning = getLocalizedMeaning(languageCode);
+    if (reflectionPreview != null && reflectionPreview!.trim().isNotEmpty) return reflectionPreview!;
+    final meaning = getLocalizedMeaning(languageCode).trim();
     if (meaning.isNotEmpty) return meaning;
     return getLocalizedTranslation(languageCode);
   }
 
   String getReflectionFullText(String languageCode) {
-    if (languageCode == 'hi') {
-      if (reflectionFullHi != null && reflectionFullHi!.isNotEmpty) return reflectionFullHi!;
-    } else if (languageCode == 'gu') {
-      if (reflectionFullGu != null && reflectionFullGu!.isNotEmpty) return reflectionFullGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'hi') {
+      if (reflectionFullHi != null && reflectionFullHi!.trim().isNotEmpty) return reflectionFullHi!;
+    } else if (code == 'gu') {
+      if (reflectionFullGu != null && reflectionFullGu!.trim().isNotEmpty) return reflectionFullGu!;
     } else {
-      if (reflectionFull != null && reflectionFull!.isNotEmpty) return reflectionFull!;
+      if (reflectionFull != null && reflectionFull!.trim().isNotEmpty) return reflectionFull!;
     }
-    final meaning = getLocalizedMeaning(languageCode);
-    final translation = getLocalizedTranslation(languageCode);
+    final meaning = getLocalizedMeaning(languageCode).trim();
+    final translation = getLocalizedTranslation(languageCode).trim();
+    if (meaning == translation || meaning.isEmpty) {
+      return translation;
+    }
+    if (translation.isEmpty) {
+      return meaning;
+    }
     return '$meaning\n\n$translation';
   }
 
   String getOneThingToNotice(String languageCode) {
-    if (languageCode == 'gu') {
-      if (oneThingToNoticeGu != null && oneThingToNoticeGu!.isNotEmpty) return oneThingToNoticeGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (oneThingToNoticeGu != null && oneThingToNoticeGu!.trim().isNotEmpty) return oneThingToNoticeGu!;
       return 'બીજા કોઈના પ્રતિભાવને કારણે તમારો મૂડ જ્યારે પણ બદલાય ત્યારે તેના પર ધ્યાન આપો.';
     }
-    if (languageCode == 'hi') {
-      if (oneThingToNoticeHi != null && oneThingToNoticeHi!.isNotEmpty) return oneThingToNoticeHi!;
+    if (code == 'hi') {
+      if (oneThingToNoticeHi != null && oneThingToNoticeHi!.trim().isNotEmpty) return oneThingToNoticeHi!;
       return 'अगली बार जब किसी अन्य की प्रतिक्रिया से आपका मूड बदले, तो उस पर ध्यान दें।';
     }
-    if (oneThingToNotice != null && oneThingToNotice!.isNotEmpty) return oneThingToNotice!;
+    if (oneThingToNotice != null && oneThingToNotice!.trim().isNotEmpty) return oneThingToNotice!;
     return 'Notice the next time your mood changes because of someone else\'s reaction.';
   }
 
   String getTryThis(String languageCode) {
-    if (languageCode == 'gu') {
-      if (tryThisGu != null && tryThisGu!.isNotEmpty) return tryThisGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (tryThisGu != null && tryThisGu!.trim().isNotEmpty) return tryThisGu!;
       return 'પરિણામ તપાસતા પહેલા પૂછો: શું મેં પૂર્ણ સમર્પણ સાથે કામ કર્યું?';
     }
-    if (languageCode == 'hi') {
-      if (tryThisHi != null && tryThisHi!.isNotEmpty) return tryThisHi!;
+    if (code == 'hi') {
+      if (tryThisHi != null && tryThisHi!.trim().isNotEmpty) return tryThisHi!;
       return 'परिणाम जांचने से पहले पूछें: क्या मैंने पूर्ण निष्ठा से कार्य किया?';
     }
-    if (tryThis != null && tryThis!.isNotEmpty) return tryThis!;
+    if (tryThis != null && tryThis!.trim().isNotEmpty) return tryThis!;
     return 'Before checking the result, ask: Did I act well with true devotion?';
   }
 
   String getCarryThisWithYou(String languageCode) {
-    if (languageCode == 'gu') {
-      if (carryThisWithYouGu != null && carryThisWithYouGu!.isNotEmpty) return carryThisWithYouGu!;
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'gu') {
+      if (carryThisWithYouGu != null && carryThisWithYouGu!.trim().isNotEmpty) return carryThisWithYouGu!;
       return 'તમારી આંતરિક શાંતિ દુનિયા પાસેથી ભાડે લેવાની જરૂર નથી.';
     }
-    if (languageCode == 'hi') {
-      if (carryThisWithYouHi != null && carryThisWithYouHi!.isNotEmpty) return carryThisWithYouHi!;
+    if (code == 'hi') {
+      if (carryThisWithYouHi != null && carryThisWithYouHi!.trim().isNotEmpty) return carryThisWithYouHi!;
       return 'आपकी आंतरिक शांति दुनिया से किराए पर लेने के लिए नहीं है।';
     }
-    if (carryThisWithYou != null && carryThisWithYou!.isNotEmpty) return carryThisWithYou!;
+    if (carryThisWithYou != null && carryThisWithYou!.trim().isNotEmpty) return carryThisWithYou!;
     return 'Your peace is not supposed to be rented from the world.';
   }
 
   String? getAudioUrlForLanguage(String languageCode) {
-    if (languageCode == 'hi' && audioUrlHi != null && audioUrlHi!.isNotEmpty) {
+    final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
+    if (code == 'hi' && audioUrlHi != null && audioUrlHi!.trim().isNotEmpty) {
       return audioUrlHi;
     }
-    if (languageCode == 'gu' && audioUrlGu != null && audioUrlGu!.isNotEmpty) {
+    if (code == 'gu' && audioUrlGu != null && audioUrlGu!.trim().isNotEmpty) {
       return audioUrlGu;
     }
-    if (audioUrl != null && audioUrl!.isNotEmpty) {
+    if (audioUrl != null && audioUrl!.trim().isNotEmpty) {
       return audioUrl;
     }
     return null;

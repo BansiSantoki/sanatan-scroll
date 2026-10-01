@@ -22,12 +22,14 @@ class MainNavigationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<NavigationProvider>(
       builder: (context, nav, _) {
         final currentIndex = nav.currentIndex.clamp(0, _screens.length - 1);
 
         return Scaffold(
-          backgroundColor: const Color(0xFFFAF0E4),
+          backgroundColor: isDark ? const Color(0xFF141714) : const Color(0xFFFAF0E4),
           body: IndexedStack(
             index: currentIndex,
             children: _screens,
