@@ -695,6 +695,33 @@ class BulkImportService {
               updateMap['translations.gu'] = row.gujarati;
               updateMap['meaningGujarati'] = row.gujarati;
             }
+            if (row.contextEn != null && row.contextEn!.trim().isNotEmpty) {
+              updateMap['context_en'] = row.contextEn;
+              updateMap['contextText'] = row.contextEn;
+            }
+            if (row.contextHi != null && row.contextHi!.trim().isNotEmpty) {
+              updateMap['context_hi'] = row.contextHi;
+              updateMap['contextTextHi'] = row.contextHi;
+            }
+            if (row.contextGu != null && row.contextGu!.trim().isNotEmpty) {
+              updateMap['context_gu'] = row.contextGu;
+              updateMap['contextTextGu'] = row.contextGu;
+            }
+            if (row.reflectionEn != null && row.reflectionEn!.trim().isNotEmpty) {
+              updateMap['reflection_en'] = row.reflectionEn;
+              updateMap['reflectionFull'] = row.reflectionEn;
+              updateMap['reflectionPreview'] = row.reflectionEn;
+            }
+            if (row.reflectionHi != null && row.reflectionHi!.trim().isNotEmpty) {
+              updateMap['reflection_hi'] = row.reflectionHi;
+              updateMap['reflectionFullHi'] = row.reflectionHi;
+              updateMap['reflectionPreviewHi'] = row.reflectionHi;
+            }
+            if (row.reflectionGu != null && row.reflectionGu!.trim().isNotEmpty) {
+              updateMap['reflection_gu'] = row.reflectionGu;
+              updateMap['reflectionFullGu'] = row.reflectionGu;
+              updateMap['reflectionPreviewGu'] = row.reflectionGu;
+            }
             if (updateMap.isNotEmpty) {
               updateMap['updatedAt'] = FieldValue.serverTimestamp();
               currentBatch.set(verseRef, updateMap, SetOptions(merge: true));
@@ -706,8 +733,10 @@ class BulkImportService {
               'verse_id': row.verseId,
               'passage_id': row.rawId.isNotEmpty ? row.rawId : row.verseId,
               'canonical_reference': row.canonicalRef.isNotEmpty ? row.canonicalRef : '${row.kandaNumber}.${row.sargaNumber}.${row.verseNumber}',
+              'verse_reference': row.canonicalRef.isNotEmpty ? row.canonicalRef : '${row.kandaNumber}.${row.verseNumber}',
               'verseNumber': row.verseNumber,
               'shlok_no': row.verseNumber,
+              'chapter_no': row.kandaNumber,
               'kanda_number': row.kandaNumber,
               'kanda_no': row.kandaNumber,
               'kanda_name': _getKandaName(row.kandaNumber),
@@ -718,6 +747,9 @@ class BulkImportService {
               'english': row.english ?? '',
               'hindi': row.hindi ?? '',
               'gujarati': row.gujarati ?? '',
+              'translation_en': row.english ?? '',
+              'translation_hi': row.hindi ?? '',
+              'translation_gu': row.gujarati ?? '',
               'translations': {
                 'en': row.english ?? '',
                 'hi': row.hindi ?? '',
@@ -726,6 +758,21 @@ class BulkImportService {
               'meaningEnglish': (row.english != null && row.english!.isNotEmpty) ? row.english : (row.explanation ?? ''),
               'meaningHindi': (row.hindi != null && row.hindi!.isNotEmpty) ? row.hindi : (row.explanation ?? ''),
               'meaningGujarati': (row.gujarati != null && row.gujarati!.isNotEmpty) ? row.gujarati : (row.explanation ?? ''),
+              'context_en': row.contextEn ?? '',
+              'context_hi': row.contextHi ?? '',
+              'context_gu': row.contextGu ?? '',
+              'contextText': row.contextEn ?? '',
+              'contextTextHi': row.contextHi ?? '',
+              'contextTextGu': row.contextGu ?? '',
+              'reflection_en': row.reflectionEn ?? '',
+              'reflection_hi': row.reflectionHi ?? '',
+              'reflection_gu': row.reflectionGu ?? '',
+              'reflectionFull': row.reflectionEn ?? '',
+              'reflectionFullHi': row.reflectionHi ?? '',
+              'reflectionFullGu': row.reflectionGu ?? '',
+              'reflectionPreview': row.reflectionEn ?? '',
+              'reflectionPreviewHi': row.reflectionHi ?? '',
+              'reflectionPreviewGu': row.reflectionGu ?? '',
               'explanation': row.explanation ?? row.english ?? '',
               'source_url': row.sourceUrl ?? '',
               'qa_status': row.qaStatus ?? 'Approved',
@@ -876,13 +923,6 @@ class BulkImportService {
         errors: importErrors,
       );
     }
-  }
-
-  static int _asInt(dynamic val, {int fallback = 0}) {
-    if (val == null) return fallback;
-    if (val is int) return val;
-    if (val is num) return val.toInt();
-    return int.tryParse(val.toString().trim()) ?? fallback;
   }
 
   static String _resolveBookTitle(String bookId) {

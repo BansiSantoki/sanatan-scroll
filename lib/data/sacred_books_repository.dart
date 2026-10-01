@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../models/sacred_book_model.dart';
 import '../models/sacred_chapter_model.dart';
 import '../models/sacred_verse_model.dart';
+import 'bhagavad_gita_data.dart';
 import 'sacred_books_data.dart';
 import 'upanishads_data.dart';
 
@@ -89,6 +90,13 @@ class SacredBooksRepository {
                 continue;
               }
 
+              if (doc.id == 'bhagavad_gita' || doc.id == 'gita') {
+                final gitaBook = BhagavadGitaData.buildGitaBook();
+                books.add(gitaBook);
+                _booksCache[gitaBook.id] = gitaBook;
+                continue;
+              }
+
               final isPub = data['published'] as bool? ?? data['is_published'] as bool? ?? (data['status'] == 'published' || data['status'] == null);
               final isArc = data['archived'] as bool? ?? (data['status'] == 'archived');
 
@@ -131,6 +139,13 @@ class SacredBooksRepository {
 
   /// Stream a single book with lazily loaded chapters (no verses downloaded).
   static Stream<SacredBookModel?> streamBookById(String bookId) {
+    if (bookId == 'bhagavad_gita' || bookId == 'gita') {
+      final gitaBook = BhagavadGitaData.buildGitaBook();
+      _booksCache['bhagavad_gita'] = gitaBook;
+      _booksCache['gita'] = gitaBook;
+      return Stream.value(gitaBook);
+    }
+
     late StreamController<SacredBookModel?> controller;
     StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? bookSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? chapterSub;
@@ -185,22 +200,42 @@ class SacredBooksRepository {
                 return true;
               }).toList();
 
-              activeChapDocs.sort((a, b) {
+              final Map<int, QueryDocumentSnapshot<Map<String, dynamic>>> chapMapByNum = {};
+              for (final doc in activeChapDocs) {
+                final cData = doc.data();
+                final chapNum = _asInt(cData['chapterNumber'] ?? cData['chapter_number'], fallback: 1);
+
+                if (!chapMapByNum.containsKey(chapNum)) {
+                  chapMapByNum[chapNum] = doc;
+                } else {
+                  final existingDoc = chapMapByNum[chapNum]!;
+                  if (doc.id.startsWith('chapter_') && !existingDoc.id.startsWith('chapter_')) {
+                    chapMapByNum[chapNum] = doc;
+                  }
+                }
+              }
+
+              final uniqueDocs = (bookId == 'bhagavad_gita' || bookId == 'gita')
+                  ? chapMapByNum.values.toList()
+                  : activeChapDocs;
+
+              uniqueDocs.sort((a, b) {
                 final numA = _asInt(a.data()['chapterNumber'] ?? a.data()['chapter_number'], fallback: 1);
                 final numB = _asInt(b.data()['chapterNumber'] ?? b.data()['chapter_number'], fallback: 1);
                 return numA.compareTo(numB);
               });
 
-              for (final cDoc in activeChapDocs) {
+              for (final cDoc in uniqueDocs) {
                 final cData = Map<String, dynamic>.from(cDoc.data());
                 final chapNum = _asInt(cData['chapterNumber'] ?? cData['chapter_number'], fallback: 1);
                 final fbVerses = (bookId == 'upanishads') ? (_fallbackBook(bookId)?.getChapter(chapNum)?.verses ?? const []) : const <SacredVerseModel>[];
+                final titleStr = (cData['title'] ?? cData['chapter_name'] ?? cData['title_en'] ?? 'Chapter $chapNum').toString();
                 chapters.add(
                   SacredChapterModel(
                     chapterNumber: chapNum,
-                    title: (cData['title'] ?? '').toString(),
-                    subtitle: (cData['subtitle'] ?? '').toString(),
-                    titleEn: cData['title_en']?.toString(),
+                    title: titleStr,
+                    subtitle: (cData['subtitle'] ?? 'Bhagavad Gita Chapter $chapNum').toString(),
+                    titleEn: (cData['title_en'] ?? cData['chapter_name'] ?? cData['title'])?.toString(),
                     titleGu: cData['title_gu']?.toString(),
                     titleHi: cData['title_hi']?.toString(),
                     subtitleEn: cData['subtitle_en']?.toString(),
@@ -215,9 +250,14 @@ class SacredBooksRepository {
               }
             }
 
-            List<SacredChapterModel> finalChapters = chapters.isNotEmpty
-                ? chapters
-                : (baseBook.chapters.isNotEmpty ? baseBook.chapters : (_fallbackBook(bookId)?.chapters ?? []));
+            List<SacredChapterModel> finalChapters;
+            if (bookId == 'bhagavad_gita' || bookId == 'gita') {
+              finalChapters = chapters;
+            } else {
+              finalChapters = chapters.isNotEmpty
+                  ? chapters
+                  : (baseBook.chapters.isNotEmpty ? baseBook.chapters : (_fallbackBook(bookId)?.chapters ?? []));
+            }
 
             if (bookId == 'upanishads' || bookId == 'isha_upanishad') {
               final fallbackBook = _fallbackBook('upanishads');
@@ -269,6 +309,13 @@ class SacredBooksRepository {
     required String bookId,
     required int chapterNumber,
   }) {
+    if (bookId == 'bhagavad_gita' || bookId == 'gita') {
+      final gitaBook = BhagavadGitaData.buildGitaBook();
+      _booksCache['bhagavad_gita'] = gitaBook;
+      _booksCache['gita'] = gitaBook;
+      return Stream.value(gitaBook);
+    }
+
     late StreamController<SacredBookModel?> controller;
     StreamSubscription<SacredBookModel?>? baseBookSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? verseSub;
@@ -361,8 +408,16 @@ class SacredBooksRepository {
             }
           }
 
-          final List<DocumentReference<Map<String, dynamic>>> matchedChapRefs =
+          List<DocumentReference<Map<String, dynamic>>> matchedChapRefs =
               specificSargaRefs.isNotEmpty ? specificSargaRefs : kandaRefs;
+
+          if ((bookId == 'bhagavad_gita' || bookId == 'gita') && matchedChapRefs.isNotEmpty) {
+            final preferredRef = matchedChapRefs.firstWhere(
+              (ref) => ref.id == 'chapter_$chapterNumber',
+              orElse: () => matchedChapRefs.first,
+            );
+            matchedChapRefs = [preferredRef];
+          }
 
           if (matchedChapRefs.isEmpty) {
             matchedChapRefs.add(bookRef.collection('chapters').doc('chapter_$chapterNumber'));
@@ -545,6 +600,12 @@ class SacredBooksRepository {
     String bookId, {
     bool forceRefresh = false,
   }) async {
+    if (bookId == 'bhagavad_gita' || bookId == 'gita') {
+      final gitaBook = BhagavadGitaData.buildGitaBook();
+      _booksCache['bhagavad_gita'] = gitaBook;
+      _booksCache['gita'] = gitaBook;
+      return gitaBook;
+    }
     if (!forceRefresh && _booksCache.containsKey(bookId) && _booksCache[bookId]!.chapters.isNotEmpty) {
       return _booksCache[bookId];
     }
@@ -553,6 +614,9 @@ class SacredBooksRepository {
 
   static SacredBookModel? _fallbackBook(String bookId) {
     final normalizedId = (bookId == 'gita') ? 'bhagavad_gita' : bookId;
+    if (normalizedId == 'bhagavad_gita') {
+      return BhagavadGitaData.buildGitaBook();
+    }
     if (normalizedId == 'upanishads') {
       return UpanishadsData.buildUpanishadsBook();
     }

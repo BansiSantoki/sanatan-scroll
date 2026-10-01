@@ -13,14 +13,16 @@ import '../../../services/ramayana_parser_service.dart';
 import '../../../services/source_fetcher_service.dart';
 import '../../../services/universal_web_file_picker.dart';
 
-class RamayanaImportScreen extends StatefulWidget {
-  const RamayanaImportScreen({super.key});
+class ContentImportScreen extends StatefulWidget {
+  const ContentImportScreen({super.key});
 
   @override
-  State<RamayanaImportScreen> createState() => _RamayanaImportScreenState();
+  State<ContentImportScreen> createState() => _ContentImportScreenState();
 }
 
-class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
+typedef RamayanaImportScreen = ContentImportScreen;
+
+class _ContentImportScreenState extends State<ContentImportScreen> {
   final CsvImportService _csvImportService = CsvImportService();
   final SourceFetcherService _sourceFetcherService = SourceFetcherService();
   final BulkImportService _bulkImportService = BulkImportService();
@@ -186,6 +188,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
   Future<void> _processParsedFile(PlatformFile file) async {
     setState(() {
       _isAnalyzing = true;
+      _errorMessage = null;
     });
 
     try {
@@ -194,13 +197,16 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
         targetBookId: _selectedBookId,
         targetBookName: _selectedBookName,
       );
+
       await _bulkImportService.analyzeRamayanaRowsAgainstFirestore(
         rows: parseResult.rows,
         mode: _importMode,
-        targetBookId: _selectedBookId,
+        targetBookId: parseResult.targetBookId,
       );
 
       setState(() {
+        _selectedBookId = parseResult.targetBookId;
+        _selectedBookName = parseResult.targetBookName;
         _parseResult = parseResult;
         _isAnalyzing = false;
         _currentStep = 3;
@@ -341,27 +347,57 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
       return;
     }
 
-    // SAFETY CHECK: selectedBookId must match import target
-    final sampleRowBookId = _parseResult!.rows.first.bookId.toLowerCase();
-    if (_selectedBookId.toLowerCase() != sampleRowBookId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Selected book ($_selectedBookId) and imported book ($sampleRowBookId) do not match. Please select the correct book and try again.'),
-          backgroundColor: Colors.red[900],
-        ),
-      );
-      return;
-    }
+    final activeBookId = _parseResult?.targetBookId ?? _selectedBookId;
+    final activeBookName = _parseResult?.targetBookName ?? _selectedBookName;
 
     final adminEmail = context.read<AdminAuthProvider>().user?.email ?? 'admin@sanatan-scroll.com';
-
     final isReplaceMode = _importMode == 'replace_all';
+    final bookTitleUpper = activeBookName.toUpperCase();
+
+    // Determine preserved books list dynamically excluding active target book
+    final Map<String, String> bookNamesMap = {
+      'bhagavad_gita': 'Bhagavad Gita',
+      'ramayana': 'Ramayana',
+      'mahabharata': 'Mahabharata',
+      'upanishads': 'Upanishads',
+      'isha_upanishad': 'Isha Upanishad',
+    };
+
+    final preservedList = bookNamesMap.entries
+        .where((entry) =>
+            entry.key != activeBookId.toLowerCase() &&
+            entry.value.toLowerCase() != activeBookName.toLowerCase())
+        .map((entry) => entry.value)
+        .toList();
+
+    final preservedDataText = '• PRESERVED DATA: ${preservedList.join(', ')}, Users, Saved Items, Reading Progress, Streaks, Completed Chapters and Ratings will NOT be modified.';
+
+    // Hierarchy summary string
+    String hierarchySummary = '';
+    final bIdLower = activeBookId.toLowerCase();
+    if (bIdLower == 'bhagavad_gita') {
+      final chaptersCount = _parseResult?.detectedKandas.length ?? 0;
+      hierarchySummary = '• Chapters: $chaptersCount, Verses: $validCount';
+    } else if (bIdLower == 'ramayana') {
+      final kandasCount = _parseResult?.detectedKandas.length ?? 0;
+      final sargasCount = _parseResult?.detectedSargasCount ?? 0;
+      hierarchySummary = '• Kandas: $kandasCount, Sargas: $sargasCount, Verses: $validCount';
+    } else if (bIdLower == 'mahabharata') {
+      final parvasCount = _parseResult?.detectedKandas.length ?? 0;
+      final sectionsCount = _parseResult?.detectedSargasCount ?? 0;
+      hierarchySummary = '• Parvas: $parvasCount, Sections: $sectionsCount, Verses: $validCount';
+    } else if (bIdLower.contains('upanishad')) {
+      hierarchySummary = '• Mantras / Passages: $validCount';
+    } else {
+      final chaptersCount = _parseResult?.detectedKandas.length ?? 0;
+      hierarchySummary = '• Chapters: $chaptersCount, Records: $validCount';
+    }
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          isReplaceMode ? 'CONFIRM RAMAYANA DATASET REPLACEMENT' : 'Confirm Import to Firestore',
+          isReplaceMode ? 'CONFIRM $bookTitleUpper DATASET REPLACEMENT' : 'Confirm Import to Firestore',
           style: GoogleFonts.cinzel(fontWeight: FontWeight.bold, color: isReplaceMode ? Colors.red[900] : AdminColors.primaryDark),
         ),
         content: Column(
@@ -382,7 +418,7 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'WARNING: This operation will REMOVE existing Ramayana records in Firestore and replace them with the new Master dataset.',
+                        'WARNING: This operation will remove existing $activeBookName records in Firestore and replace them with the new Master dataset.',
                         style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.red[900]),
                       ),
                     ),
@@ -393,16 +429,16 @@ class _RamayanaImportScreenState extends State<RamayanaImportScreen> {
             ] else
               Text('Are you sure you want to write data to production Firestore?'),
             const SizedBox(height: 8),
-            Text('• Target Book: $_selectedBookName ($_selectedBookId)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            Text('• Target Collection: sacred_books/$_selectedBookId', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('• Target Book: $activeBookName ($activeBookId)', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('• Target Collection: sacred_books/$activeBookId', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             Text('• New Verses to Write: $validCount', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-            Text('• Kandas: ${_parseResult?.detectedKandas.length ?? 0}, Sargas: ${_parseResult?.detectedSargasCount ?? 0}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(hierarchySummary, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(color: Colors.green[50], borderRadius: BorderRadius.circular(8)),
               child: Text(
-                '• PRESERVED DATA: Bhagavad Gita, Mahabharata, Upanishads, Users, Reading Progress, Saved Items, Streaks & Ratings will NOT be modified.',
+                preservedDataText,
                 style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green[900]),
               ),
             ),

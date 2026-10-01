@@ -4,7 +4,6 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:admin_panel/services/ramayana_parser_service.dart';
-import 'package:excel/excel.dart';
 
 void main() {
   const filePath = r'C:\Users\Lenovo\Downloads\Ramayana_App_Test_Translations_Pass_Only.xlsx';

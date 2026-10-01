@@ -57,17 +57,17 @@ RAM-01-001-001,1,1,1,तपःस्वाध्यायनिरतं...,Valm
       expect(result.rows[0].isValid, isTrue);
     });
 
-    test('3. Missing Sanskrit flags row as invalid with "Missing Sanskrit shloka text"', () async {
+    test('3. Missing Sanskrit and translations flags row as invalid with "Missing required content"', () async {
       const csvContent = '''
 id,kanda_number,sarga_number,verse_number,sanskrit,english
-RAM-01-001-002,1,1,2,,English translation only
+RAM-01-001-002,1,1,2,,
 ''';
 
       final file = createCsvFile(csvContent, 'missing_sanskrit.csv');
       final result = await csvImportService.parseFile(file, targetBookId: 'ramayana');
 
       expect(result.invalidRowsCount, equals(1));
-      expect(result.rows[0].validationErrors, contains('Missing Sanskrit shloka text'));
+      expect(result.rows[0].validationErrors.first, contains('Missing required content'));
     });
 
     test('4. Missing ID auto-generates ID from Kanda/Sarga/Verse', () async {

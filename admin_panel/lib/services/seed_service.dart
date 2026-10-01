@@ -40,6 +40,9 @@ class SeedService {
   }) async {
     try {
 
+      // Always clean up legacy static Bhagavad Gita chapter documents ('1'..'18') if present
+      await cleanupOldStaticGitaDocs();
+
       // Always clean up legacy static Ramayana chapter documents ('1'..'7') if present
       await cleanupOldStaticRamayanaDocs();
 
@@ -258,6 +261,38 @@ class SeedService {
       );
     } catch (e) {
       print('Error during legacy Ramayana cleanup: $e');
+    }
+  }
+
+  /// Deletes the old static 18 Bhagavad Gita chapter documents ('1'..'18') and their subcollections
+  /// from Firestore sacred_books/bhagavad_gita/chapters/ if present.
+  Future<void> cleanupOldStaticGitaDocs() async {
+    try {
+      final gitaRef = _firestore.collection('sacred_books').doc('bhagavad_gita');
+      final chaptersRef = gitaRef.collection('chapters');
+
+      final staticIds = List.generate(18, (i) => (i + 1).toString());
+      for (final docId in staticIds) {
+        final chapDocRef = chaptersRef.doc(docId);
+        final chapSnap = await chapDocRef.get();
+        if (chapSnap.exists) {
+          final versesSnap = await chapDocRef.collection('verses').get();
+          final batch = _firestore.batch();
+          for (final vDoc in versesSnap.docs) {
+            batch.delete(vDoc.reference);
+          }
+          batch.delete(chapDocRef);
+          await batch.commit();
+        }
+      }
+
+      await _logsService.logAction(
+        action: 'Cleaned Up Legacy Gita Data',
+        target: 'Firestore sacred_books/bhagavad_gita/chapters',
+        details: 'Purged old static chapter documents (1..18)',
+      );
+    } catch (e) {
+      print('Error during legacy Gita cleanup: $e');
     }
   }
 

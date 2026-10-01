@@ -1,4 +1,3 @@
-import '../data/sacred_books_data.dart';
 import 'sacred_verse_model.dart';
 
 class SacredChapterModel {
@@ -112,23 +111,14 @@ class SacredChapterModel {
     final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
     if (code == 'gu') {
       if (titleGu != null && titleGu!.trim().isNotEmpty) return titleGu!;
-      if (chapterNumber >= 1 && chapterNumber <= 18) {
-        return SacredBooksData.getGitaChapterTitleGu(chapterNumber);
-      }
     }
     if (code == 'hi') {
       if (titleHi != null && titleHi!.trim().isNotEmpty) return titleHi!;
-      if (chapterNumber >= 1 && chapterNumber <= 18) {
-        return SacredBooksData.getGitaChapterTitleHi(chapterNumber);
-      }
     }
     if (titleEn != null && titleEn!.trim().isNotEmpty) {
       return titleEn!;
     }
     if (title.trim().isNotEmpty) return title;
-    if (chapterNumber >= 1 && chapterNumber <= 18) {
-      return SacredBooksData.getGitaChapterTitle(chapterNumber);
-    }
     return 'Chapter $chapterNumber';
   }
 
@@ -136,23 +126,16 @@ class SacredChapterModel {
     final code = languageCode.toLowerCase().split('-').first.split('_').first.trim();
     if (code == 'gu') {
       if (subtitleGu != null && subtitleGu!.trim().isNotEmpty) return subtitleGu!;
-      if (chapterNumber >= 1 && chapterNumber <= 18) {
-        return 'ભગવદ્ ગીતા અધ્યાય $chapterNumber';
-      }
+      return 'અધ્યાય $chapterNumber';
     }
     if (code == 'hi') {
       if (subtitleHi != null && subtitleHi!.trim().isNotEmpty) return subtitleHi!;
-      if (chapterNumber >= 1 && chapterNumber <= 18) {
-        return 'भगवद् गीता अध्याय $chapterNumber';
-      }
+      return 'अध्याय $chapterNumber';
     }
     if (subtitleEn != null && subtitleEn!.trim().isNotEmpty) {
       return subtitleEn!;
     }
     if (subtitle.trim().isNotEmpty) return subtitle;
-    if (chapterNumber >= 1 && chapterNumber <= 18) {
-      return 'Bhagavad Gita Chapter $chapterNumber';
-    }
     return 'Chapter $chapterNumber';
   }
 

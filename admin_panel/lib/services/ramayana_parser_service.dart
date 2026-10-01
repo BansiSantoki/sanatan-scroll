@@ -344,6 +344,12 @@ class RamayanaParsedRow {
   final String? english;
   final String? hindi;
   final String? gujarati;
+  final String? contextEn;
+  final String? contextHi;
+  final String? contextGu;
+  final String? reflectionEn;
+  final String? reflectionHi;
+  final String? reflectionGu;
   final String? explanation;
   final String? sourceUrl;
   final String? sourceName;
@@ -373,6 +379,12 @@ class RamayanaParsedRow {
     this.english,
     this.hindi,
     this.gujarati,
+    this.contextEn,
+    this.contextHi,
+    this.contextGu,
+    this.reflectionEn,
+    this.reflectionHi,
+    this.reflectionGu,
     this.explanation,
     this.sourceUrl,
     this.sourceName,
@@ -397,6 +409,8 @@ class RamayanaParseResult {
   final int scriptureRowsDetected;
   final int headerRowNumber;
   final Map<String, String> detectedColumnMappings;
+  final String targetBookId;
+  final String targetBookName;
   final HierarchyType hierarchyType;
   final List<int> detectedKandas;
   final int detectedSargasCount;
@@ -423,6 +437,8 @@ class RamayanaParseResult {
     required this.scriptureRowsDetected,
     required this.headerRowNumber,
     required this.detectedColumnMappings,
+    this.targetBookId = 'ramayana',
+    this.targetBookName = 'Ramayana',
     this.hierarchyType = HierarchyType.kandaSargaVerse,
     required this.detectedKandas,
     required this.detectedSargasCount,
@@ -554,14 +570,6 @@ class RamayanaParserService {
       throw Exception("File content could not be read.");
     }
 
-    final String activeBookId = (targetBookId != null && targetBookId.isNotEmpty)
-        ? targetBookId.toLowerCase().replaceAll(' ', '_')
-        : 'ramayana';
-    final String activeBookName = (targetBookName != null && targetBookName.isNotEmpty)
-        ? targetBookName
-        : _resolveBookName(activeBookId);
-
-    final String defaultBookCode = _resolveBookCode(activeBookId);
     final String extension = (file.extension ?? (file.name.contains('.') ? file.name.split('.').last : '')).toLowerCase();
 
     final bool isZipHeader = bytes.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B;
@@ -709,9 +717,6 @@ class RamayanaParserService {
     print('[IMPORT DEBUG] Header Row Index: ${headerRowIdx + 1}');
 
     String defaultSourceUrl = _extractMetadataSourceUrl(rawRows.sublist(0, headerRowIdx + 1));
-    if (defaultSourceUrl.isEmpty) {
-      defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
-    }
 
     final metadataRowsSkipped = headerRowIdx;
     final headerRowCells = rawRows[headerRowIdx].map((e) => safeString(e) ?? '').toList();
@@ -721,13 +726,13 @@ class RamayanaParserService {
     print('[IMPORT DEBUG] Normalized headers: $normalizedHeaders');
 
     // Flexible Column Mapping using normalized header names & aliases
-    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'passage_id', 'passageid', 'passage_no', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'ram_id', 'mah_id', 'git_id', 'upn_id']);
+    final idIdx = _findHeaderIdx(normalizedHeaders, ['id', 'passage_id', 'passageid', 'passage_no', 'verse_id', 'shlok_id', 'shloka_id', 'code', 'ram_id', 'mah_id', 'git_id', 'upn_id', 'isha_id']);
     final canonicalRefIdx = _findHeaderIdx(normalizedHeaders, ['canonical_reference', 'canonical_ref', 'reference_no', 'reference_num', 'ref_no', 'reference', 'ref', 'verse_reference']);
-    final bookIdIdx = _findHeaderIdx(normalizedHeaders, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book']);
-    final bookNameIdx = _findHeaderIdx(normalizedHeaders, ['book_name', 'bookname', 'book_title', 'title']);
-    final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_name', 'kanda', 'kand', 'kanda_no', 'kandam', 'parva', 'parva_number', 'chapter_number', 'chapternumber', 'chapter']);
-    final sargaIdx = _findHeaderIdx(normalizedHeaders, ['sarga_number', 'sarganumber', 'sarga', 'sarg', 'sarga_no', 'sarga_num', 'section_number', 'sectionnumber', 'section', 'adhyaya']);
-    final verseIdx = _findHeaderIdx(normalizedHeaders, ['verse_number', 'versenumber', 'verse', 'shlok_number', 'shloka_number', 'shlok_no', 'shloka_no', 'shlok', 'shloka', 'verse_no']);
+    final bookIdIdx = _findHeaderIdx(normalizedHeaders, ['book_id', 'bookid', 'book', 'book_code', 'sacred_book', 'collection']);
+    final bookNameIdx = _findHeaderIdx(normalizedHeaders, ['book_name', 'bookname', 'book_title', 'title', 'scripture_name', 'scripturename', 'scripture']);
+    final kandaIdx = _findHeaderIdx(normalizedHeaders, ['kanda_number', 'kandanumber', 'kanda_no', 'kanda', 'kand', 'kanda_name', 'kandam', 'parva_number', 'parva_no', 'parva', 'chapter_number', 'chapter_no', 'chapter']);
+    final sargaIdx = _findHeaderIdx(normalizedHeaders, ['sarga_number', 'sarganumber', 'sarga_no', 'sarga_num', 'sarga', 'sarg', 'section_number', 'section_no', 'section', 'adhyaya_no', 'adhyaya']);
+    final verseIdx = _findHeaderIdx(normalizedHeaders, ['verse_number', 'versenumber', 'verse_no', 'shloka_no', 'shlok_no', 'shlok_number', 'shloka_number', 'shlok_num', 'shloka_num', 'verse', 'shlok', 'shloka']);
     final sanskritIdx = _findHeaderIdx(normalizedHeaders, ['sanskrit', 'sanskrit_shloka', 'sanskrit_text', 'shloka_text', 'sloka', 'original_sanskrit', 'sanskrit_passage']);
     int englishIdx = _findHeaderIdx(normalizedHeaders, [
       'english', 'english_translation', 'english_meaning', 'translation_en', 'en', 'eng',
@@ -755,11 +760,83 @@ class RamayanaParserService {
     }
 
     final explanationIdx = _findHeaderIdx(normalizedHeaders, ['explanation', 'purport', 'commentary']);
+    final contextEnIdx = _findHeaderIdx(normalizedHeaders, ['context_en', 'context_english', 'english_context', 'contexttext', 'context_text', 'context']);
+    final contextHiIdx = _findHeaderIdx(normalizedHeaders, ['context_hi', 'context_hindi', 'hindi_context', 'context_text_hi']);
+    final contextGuIdx = _findHeaderIdx(normalizedHeaders, ['context_gu', 'context_gujarati', 'gujarati_context', 'context_text_gu']);
+
+    final reflectionEnIdx = _findHeaderIdx(normalizedHeaders, ['reflection_en', 'reflection_english', 'english_reflection', 'reflectiontext', 'reflection_text', 'reflection']);
+    final reflectionHiIdx = _findHeaderIdx(normalizedHeaders, ['reflection_hi', 'reflection_hindi', 'hindi_reflection', 'reflection_text_hi']);
+    final reflectionGuIdx = _findHeaderIdx(normalizedHeaders, ['reflection_gu', 'reflection_gujarati', 'gujarati_reflection', 'reflection_text_gu']);
+
     final sourceUrlIdx = _findHeaderIdx(normalizedHeaders, ['source_url', 'sourceurl', 'source', 'url', 'link']);
     final sourceNameIdx = _findHeaderIdx(normalizedHeaders, ['source_name', 'sourcename']);
     final qaStatusIdx = _findHeaderIdx(normalizedHeaders, ['qa_status', 'qastatus', 'qa', 'status', 'review_status']);
     final notesIdx = _findHeaderIdx(normalizedHeaders, ['notes', 'comment', 'remarks', 'note']);
 
+    // Detect Target Book from dataset headers, row data, ID prefixes, or filename
+    final Set<String> detectedBookIdsSet = {};
+    final Map<String, String> detectedBookNamesMap = {};
+
+    for (int i = headerRowIdx + 1; i < rawRows.length; i++) {
+      final row = rawRows[i];
+      final rawBookId = safeString(getCellSafely(row, bookIdIdx));
+      final rawBookName = safeString(getCellSafely(row, bookNameIdx));
+      final rawId = safeString(getCellSafely(row, idIdx));
+      final rawRef = safeString(getCellSafely(row, canonicalRefIdx));
+
+      String? rowDetectedId;
+      String? rowDetectedName;
+
+      if (rawBookId != null && rawBookId.isNotEmpty) {
+        rowDetectedId = _normalizeBookId(rawBookId);
+        rowDetectedName = rawBookName ?? _resolveBookName(rowDetectedId);
+      } else if (rawBookName != null && rawBookName.isNotEmpty) {
+        rowDetectedId = _normalizeBookId(rawBookName);
+        rowDetectedName = rawBookName;
+      } else if (rawId != null && rawId.isNotEmpty) {
+        rowDetectedId = _inferBookIdFromPrefix(rawId);
+      } else if (rawRef != null && rawRef.isNotEmpty) {
+        rowDetectedId = _inferBookIdFromText(rawRef);
+      }
+
+      if (rowDetectedId != null && rowDetectedId.isNotEmpty) {
+        detectedBookIdsSet.add(rowDetectedId);
+        if (rowDetectedName != null && rowDetectedName.isNotEmpty) {
+          detectedBookNamesMap[rowDetectedId] = rowDetectedName;
+        }
+      }
+    }
+
+    String activeBookId = '';
+    String activeBookName = '';
+
+    if (detectedBookIdsSet.length > 1) {
+      throw Exception("Multiple books detected in this dataset.\n\nPlease upload a file containing only one book.");
+    } else if (detectedBookIdsSet.length == 1) {
+      activeBookId = detectedBookIdsSet.first;
+      activeBookName = detectedBookNamesMap[activeBookId] ?? _resolveBookName(activeBookId, targetBookName);
+    } else {
+      final filenameBook = _detectBookFromFilename(file.name);
+      if (filenameBook != null) {
+        activeBookId = filenameBook['id']!;
+        activeBookName = filenameBook['name']!;
+      } else if (targetBookId != null && targetBookId.isNotEmpty) {
+        activeBookId = _normalizeBookId(targetBookId);
+        activeBookName = targetBookName ?? _resolveBookName(activeBookId);
+      } else {
+        throw Exception("Unable to determine the target book from this dataset.\n\nPlease include a valid book_id or book_name column.");
+      }
+    }
+
+    final String defaultBookCode = _resolveBookCode(activeBookId);
+    if (defaultSourceUrl.isEmpty) {
+      defaultSourceUrl = _resolveDefaultSourceUrl(activeBookId);
+    }
+
+    print('[IMPORT DEBUG] File: ${file.name}, Extension: $extension, Size: ${file.size} bytes');
+    print('[IMPORT DEBUG] DETECTED TARGET BOOK: $activeBookName ($activeBookId)');
+    print('[IMPORT DEBUG] Sheets in workbook: ${sheetsMap.keys.toList()}');
+    print('[IMPORT DEBUG] Selected Sheet: $selectedSheetName');
     final bool hasStructureOrSanskrit = (kandaIdx != -1 || sargaIdx != -1 || verseIdx != -1 || sanskritIdx != -1);
     final bool hasIdOrRef = (idIdx != -1 || canonicalRefIdx != -1);
     final bool hasAnyTranslation = (englishIdx != -1 || hindiIdx != -1 || gujaratiIdx != -1);
@@ -779,6 +856,7 @@ class RamayanaParserService {
 
     final detectedMappings = <String, String>{};
     detectedMappings['Import Mode'] = fileImportMode == 'translation_update' ? 'Translation Update Mode' : 'Full Master Mode';
+    detectedMappings['Detected Book'] = '$activeBookName ($activeBookId)';
     detectedMappings['Hierarchy Mode'] = schema.hierarchyType == HierarchyType.referenceOnly
         ? 'Reference Only (passage_id / reference_no)'
         : schema.hierarchyType == HierarchyType.chapterVerse
@@ -839,6 +917,12 @@ class RamayanaParserService {
       final englishText = safeString(getCell(englishIdx));
       final hindiText = safeString(getCell(hindiIdx));
       final gujaratiText = safeString(getCell(gujaratiIdx));
+      final contextEnText = safeString(getCell(contextEnIdx));
+      final contextHiText = safeString(getCell(contextHiIdx));
+      final contextGuText = safeString(getCell(contextGuIdx));
+      final reflectionEnText = safeString(getCell(reflectionEnIdx));
+      final reflectionHiText = safeString(getCell(reflectionHiIdx));
+      final reflectionGuText = safeString(getCell(reflectionGuIdx));
       final explanationText = safeString(getCell(explanationIdx));
       final sourceUrlVal = safeString(getCell(sourceUrlIdx)) ?? defaultSourceUrl;
       final sourceNameVal = safeString(getCell(sourceNameIdx)) ?? '$activeBookName Source';
@@ -848,13 +932,21 @@ class RamayanaParserService {
       int colKanda = safeInt(rawKanda) ?? -1;
       if (colKanda <= 0 && rawKanda != null) {
         final strKanda = safeString(rawKanda)?.toLowerCase() ?? '';
-        if (strKanda.contains('bala')) colKanda = 1;
-        else if (strKanda.contains('ayodhya')) colKanda = 2;
-        else if (strKanda.contains('aranya')) colKanda = 3;
-        else if (strKanda.contains('kishkindha')) colKanda = 4;
-        else if (strKanda.contains('sundara')) colKanda = 5;
-        else if (strKanda.contains('yuddha') || strKanda.contains('lanka')) colKanda = 6;
-        else if (strKanda.contains('uttara')) colKanda = 7;
+        if (strKanda.contains('bala')) {
+          colKanda = 1;
+        } else if (strKanda.contains('ayodhya')) {
+          colKanda = 2;
+        } else if (strKanda.contains('aranya')) {
+          colKanda = 3;
+        } else if (strKanda.contains('kishkindha')) {
+          colKanda = 4;
+        } else if (strKanda.contains('sundara')) {
+          colKanda = 5;
+        } else if (strKanda.contains('yuddha') || strKanda.contains('lanka')) {
+          colKanda = 6;
+        } else if (strKanda.contains('uttara')) {
+          colKanda = 7;
+        }
       }
       final colSarga = safeInt(rawSarga) ?? -1;
       final colVerse = safeInt(rawVerse) ?? -1;
@@ -1048,10 +1140,11 @@ class RamayanaParserService {
 
         if (!hasEnglish && !hasHindi && !hasGujarati) {
           missingTranslationsCount++;
-          if (!hasSanskrit) {
-            errors.add("Missing required content: must provide Sanskrit shloka text or translation");
-            affectedCols.add("Content");
-          }
+        }
+
+        if (!hasSanskrit && !hasEnglish && !hasHindi && !hasGujarati) {
+          errors.add("Missing required content (Sanskrit or translation)");
+          affectedCols.add("Content");
         }
       }
 
@@ -1104,6 +1197,12 @@ class RamayanaParserService {
         english: englishText,
         hindi: hindiText,
         gujarati: gujaratiText,
+        contextEn: contextEnText,
+        contextHi: contextHiText,
+        contextGu: contextGuText,
+        reflectionEn: reflectionEnText,
+        reflectionHi: reflectionHiText,
+        reflectionGu: reflectionGuText,
         explanation: explanationText,
         sourceUrl: sourceUrlVal,
         sourceName: sourceNameVal,
@@ -1136,6 +1235,8 @@ class RamayanaParserService {
       scriptureRowsDetected: parsedRows.length,
       headerRowNumber: headerRowIdx + 1,
       detectedColumnMappings: detectedMappings,
+      targetBookId: activeBookId,
+      targetBookName: activeBookName,
       hierarchyType: schema.hierarchyType,
       detectedKandas: sortedKandas,
       detectedSargasCount: detectedSargasSet.length,
@@ -1157,22 +1258,77 @@ class RamayanaParserService {
     );
   }
 
-  static String _resolveBookName(String bookId) {
-    switch (bookId.toLowerCase()) {
-      case 'ramayana': return 'Ramayana';
+  static String _normalizeBookId(String input) {
+    final clean = input.trim().toLowerCase().replaceAll(RegExp(r'[\s\-_]+'), '_');
+    if (clean == 'gita' || clean == 'bhagavadgita' || clean == 'bhagavad_gita' || clean == 'bg' || clean == 'git') {
+      return 'bhagavad_gita';
+    }
+    if (clean == 'ramayana' || clean == 'ramayan' || clean == 'valmiki_ramayana' || clean == 'ram') {
+      return 'ramayana';
+    }
+    if (clean == 'mahabharata' || clean == 'mahabharat' || clean == 'mah') {
+      return 'mahabharata';
+    }
+    if (clean == 'isha' || clean == 'isha_upanishad' || clean == 'ishaupanishad' || clean == 'isha_upnishad') {
+      return 'isha_upanishad';
+    }
+    if (clean == 'upanishad' || clean == 'upanishads' || clean == 'upn') {
+      return 'upanishads';
+    }
+    return clean;
+  }
+
+  static String _resolveBookName(String bookId, [String? fallback]) {
+    final clean = _normalizeBookId(bookId);
+    switch (clean) {
       case 'bhagavad_gita': return 'Bhagavad Gita';
-      case 'upanishads':
+      case 'ramayana': return 'Ramayana';
+      case 'mahabharata': return 'Mahabharata';
       case 'isha_upanishad': return 'Isha Upanishad';
-      default: return bookId.split('_').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+      case 'upanishads': return 'Upanishads';
+      default:
+        if (fallback != null && fallback.isNotEmpty) return fallback;
+        return clean.split('_').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
     }
   }
 
+  static String? _inferBookIdFromPrefix(String idStr) {
+    final upper = idStr.trim().toUpperCase();
+    if (upper.startsWith('GIT-') || upper.startsWith('GITA-') || upper.startsWith('BG-')) return 'bhagavad_gita';
+    if (upper.startsWith('RAM-') || upper.startsWith('RAMAYANA-')) return 'ramayana';
+    if (upper.startsWith('MAH-') || upper.startsWith('MB-') || upper.startsWith('MAHABHARATA-')) return 'mahabharata';
+    if (upper.startsWith('ISHA-')) return 'isha_upanishad';
+    if (upper.startsWith('UPN-') || upper.startsWith('UPANISHAD-')) return 'upanishads';
+    return null;
+  }
+
+  static String? _inferBookIdFromText(String text) {
+    final lower = text.trim().toLowerCase();
+    if (lower.contains('gita') || lower.contains('bhagavad')) return 'bhagavad_gita';
+    if (lower.contains('ramayana') || lower.contains('ramayan')) return 'ramayana';
+    if (lower.contains('mahabharata')) return 'mahabharata';
+    if (lower.contains('isha')) return 'isha_upanishad';
+    if (lower.contains('upanishad')) return 'upanishads';
+    return null;
+  }
+
+  static Map<String, String>? _detectBookFromFilename(String filename) {
+    final lname = filename.toLowerCase();
+    if (lname.contains('isha')) return {'id': 'isha_upanishad', 'name': 'Isha Upanishad'};
+    if (lname.contains('upanishad') || lname.contains('upn')) return {'id': 'upanishads', 'name': 'Upanishads'};
+    if (lname.contains('gita') || lname.contains('bhagavad')) return {'id': 'bhagavad_gita', 'name': 'Bhagavad Gita'};
+    if (lname.contains('mahabharata') || lname.contains('maha')) return {'id': 'mahabharata', 'name': 'Mahabharata'};
+    if (lname.contains('ramayan') || lname.contains('ramayana') || lname.contains('ram')) return {'id': 'ramayana', 'name': 'Ramayana'};
+    return null;
+  }
+
   static String _resolveBookCode(String bookId) {
-    switch (bookId.toLowerCase()) {
+    switch (_normalizeBookId(bookId)) {
       case 'ramayana': return 'RAM';
       case 'bhagavad_gita': return 'GIT';
-      case 'upanishads':
       case 'isha_upanishad': return 'ISHA';
+      case 'upanishads': return 'UPN';
+      case 'mahabharata': return 'MAH';
       default:
         final clean = bookId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
         return clean.length >= 3 ? clean.substring(0, 3) : clean.padRight(3, 'X');
@@ -1180,7 +1336,7 @@ class RamayanaParserService {
   }
 
   static String _resolveDefaultSourceUrl(String bookId) {
-    switch (bookId.toLowerCase()) {
+    switch (_normalizeBookId(bookId)) {
       case 'ramayana': return 'https://ramayana.info/';
       case 'bhagavad_gita': return 'https://bhagavadgita.info/';
       case 'upanishads':
@@ -1190,7 +1346,7 @@ class RamayanaParserService {
   }
 
   static String _resolveChapterTerm(String bookId) {
-    switch (bookId.toLowerCase()) {
+    switch (_normalizeBookId(bookId)) {
       case 'ramayana': return 'Kanda';
       case 'bhagavad_gita': return 'Chapter';
       case 'upanishads':
@@ -1199,28 +1355,6 @@ class RamayanaParserService {
     }
   }
 
-  int _findContentHeaderRowIndex(List<List<dynamic>> rawRows) {
-    for (int r = 0; r < rawRows.length && r < 100; r++) {
-      final row = rawRows[r];
-      if (row.isEmpty) continue;
-
-      final rowStr = row.map((e) => normalizeHeader(e)).toList();
-      if (_isContentHeaderRow(rowStr)) {
-        return r;
-      }
-    }
-
-    // Fallback: If no keyword header match, select first row with 2+ non-empty cells
-    for (int r = 0; r < rawRows.length && r < 10; r++) {
-      final row = rawRows[r];
-      final nonEmptyCount = row.where((e) => safeString(e) != null && safeString(e)!.isNotEmpty).length;
-      if (nonEmptyCount >= 2) {
-        return r;
-      }
-    }
-
-    return -1;
-  }
 
   static int _calculateHeaderScore(List<String> rowCells) {
     if (rowCells.isEmpty) return 0;
@@ -1257,39 +1391,6 @@ class RamayanaParserService {
     return hasCoreField ? score : 0;
   }
 
-  bool _isContentHeaderRow(List<String> rowCells) {
-    if (rowCells.isEmpty) return false;
-
-    int matches = 0;
-    bool hasKandaOrSargaOrVerse = false;
-    bool hasSanskritOrTranslationOrId = false;
-
-    for (final c in rowCells) {
-      if (c == 'id' || c == 'passage_id' || c == 'verse_id' || c == 'canonical_id' || c == 'canonical_reference' || c == 'shlok_id' || c == 'shloka_id' || c == 'code' || c == 'ram_id' || c == 'mah_id' || c == 'git_id' || c == 'upn_id' || c == 'ref' || c == 'reference') {
-        matches++;
-        hasSanskritOrTranslationOrId = true;
-      } else if (c == 'kanda' || c == 'kand' || c == 'kanda_number' || c == 'kanda_name' || c == 'kanda_no' || c == 'kandam' || c == 'parva' || c == 'parva_number' || c == 'parva_name' || c == 'parva_no' || c == 'chapter' || c == 'chapter_number' || c == 'chapter_name' || c == 'chapter_no') {
-        matches++;
-        hasKandaOrSargaOrVerse = true;
-      } else if (c == 'sarga' || c == 'sarg' || c == 'sarga_number' || c == 'sarga_no' || c == 'sarga_num' || c == 'section' || c == 'section_number' || c == 'section_name' || c == 'section_no' || c == 'adhyaya' || c == 'adhyaya_no') {
-        matches++;
-        hasKandaOrSargaOrVerse = true;
-      } else if (c == 'verse' || c == 'shlok' || c == 'shloka' || c == 'verse_number' || c == 'verse_no' || c == 'shlok_number' || c == 'shloka_number' || c == 'shlok_no' || c == 'shloka_no' || c == 'shlok_num' || c == 'shloka_num') {
-        matches++;
-        hasKandaOrSargaOrVerse = true;
-      } else if (c == 'sanskrit' || c == 'sanskrit_shloka' || c == 'sanskrit_text' || c == 'sanskrit_shlok' || c == 'shloka_text' || c == 'shlok_text' || c == 'sloka' || c == 'original_sanskrit' || c == 'passage' || c == 'text') {
-        matches++;
-        hasSanskritOrTranslationOrId = true;
-      } else if (c == 'english' || c == 'hindi' || c == 'gujarati' || c == 'translation' || c == 'english_translation' || c == 'hindi_translation' || c == 'gujarati_translation' || c == 'english_meaning' || c == 'hindi_meaning' || c == 'gujarati_meaning' || c == 'translation_en' || c == 'translation_hi' || c == 'translation_gu' || c == 'en' || c == 'hi' || c == 'gu' || c == 'eng' || c == 'hin' || c == 'guj' || c == 'meaning_english' || c == 'meaning_hindi' || c == 'meaning_gujarati') {
-        matches++;
-        hasSanskritOrTranslationOrId = true;
-      } else if (c == 'source_url' || c == 'sourceurl' || c == 'source' || c == 'url' || c == 'link' || c == 'qa_status' || c == 'qastatus' || c == 'qa' || c == 'status' || c == 'review_status' || c == 'notes' || c == 'comment' || c == 'remarks' || c == 'note' || c == 'explanation' || c == 'purport' || c == 'commentary' || c == 'book_id' || c == 'bookid' || c == 'book' || c == 'book_name' || c == 'bookname' || c == 'title') {
-        matches++;
-      }
-    }
-
-    return matches >= 1 && (hasKandaOrSargaOrVerse || hasSanskritOrTranslationOrId);
-  }
 
   String _extractMetadataSourceUrl(List<List<dynamic>> rows) {
     for (final row in rows) {
