@@ -59,10 +59,24 @@ class SacredTextReaderScreen extends StatefulWidget {
     super.key,
     required this.textId,
     this.initialChapterNumber = 1,
+    this.initialKandaNumber,
+    this.initialSargaNumber,
+    this.initialVerseNumber,
+    this.initialMantraNumber,
+    this.initialVerseId,
+    this.initialPassageId,
+    this.initialPageIndex,
   });
 
   final String textId;
   final int initialChapterNumber;
+  final int? initialKandaNumber;
+  final int? initialSargaNumber;
+  final int? initialVerseNumber;
+  final int? initialMantraNumber;
+  final String? initialVerseId;
+  final String? initialPassageId;
+  final int? initialPageIndex;
 
   @override
   State<SacredTextReaderScreen> createState() => _SacredTextReaderScreenState();
@@ -73,16 +87,25 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   late final FlutterTts _tts;
   bool _isSpeaking = false;
   String? _lastAudioLangCode;
+  bool _hasJumpedToInitialPosition = false;
 
   late int currentChapter;
 
   @override
   void initState() {
     super.initState();
-    currentChapter = widget.initialChapterNumber;
-    final initialPage = (widget.textId == 'upanishads' && widget.initialChapterNumber > 0)
-        ? widget.initialChapterNumber - 1
-        : 0;
+    if (widget.textId == 'ramayana' && widget.initialKandaNumber != null && widget.initialSargaNumber != null) {
+      currentChapter = (widget.initialKandaNumber! * 1000) + widget.initialSargaNumber!;
+    } else if (widget.textId == 'upanishads' && widget.initialMantraNumber != null) {
+      currentChapter = widget.initialMantraNumber!;
+    } else {
+      currentChapter = widget.initialChapterNumber;
+    }
+
+    final initialPage = (widget.textId == 'upanishads' && currentChapter > 0)
+        ? (currentChapter - 1)
+        : ((widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) ? widget.initialVerseNumber! - 1 : 0);
+
     _pageController = PageController(initialPage: initialPage);
     _tts = FlutterTts();
   }
@@ -231,11 +254,28 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     );
   }
 
-  void _saveProgress(int chapterNumber, int verseNumber) {
+  void _saveProgress({
+    required int chapterNumber,
+    required int verseNumber,
+    String? chapterName,
+    int? kandaNumber,
+    int? sargaNumber,
+    int? mantraNumber,
+    String? verseId,
+    String? passageId,
+    int pageIndex = 0,
+  }) {
     context.read<ReadingProgressProvider>().savePosition(
           bookId: widget.textId,
           chapterNumber: chapterNumber,
+          chapterName: chapterName,
+          kandaNumber: kandaNumber,
+          sargaNumber: sargaNumber,
           verseNumber: verseNumber,
+          mantraNumber: mantraNumber,
+          verseId: verseId,
+          passageId: passageId,
+          pageIndex: pageIndex,
         );
     context.read<StreakProvider>().markCompleted(DateTime.now());
   }
@@ -311,6 +351,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
             book: book,
             sargas: sargas,
             initialChapterNumber: widget.initialChapterNumber,
+            initialKandaNumber: widget.initialKandaNumber,
+            initialSargaNumber: widget.initialSargaNumber,
+            initialVerseNumber: widget.initialVerseNumber,
+            initialVerseId: widget.initialVerseId,
+            initialPassageId: widget.initialPassageId,
             langCode: langCode,
             isSpeaking: _isSpeaking,
             onToggleAudio: (text, lang) => _toggleAudio(text, lang),
@@ -344,6 +389,43 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           );
         }
 
+        // Check if we need to jump to initial verse/mantra position on first load
+        if (!_hasJumpedToInitialPosition) {
+          if (isUpanishad) {
+            final targetMantra = widget.initialMantraNumber ?? widget.initialVerseNumber ?? currentChapter;
+            final targetIdx = (targetMantra - 1).clamp(0, itemCount - 1);
+            if (targetIdx > 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(targetIdx);
+                }
+              });
+            }
+            _hasJumpedToInitialPosition = true;
+          } else if (chapter != null && chapter.verses.isNotEmpty) {
+            int targetIdx = -1;
+            if (widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
+              targetIdx = chapter.verses.indexWhere((v) => v.verseNumber == widget.initialVerseNumber);
+            }
+            if (targetIdx == -1 && widget.initialVerseId != null) {
+              targetIdx = chapter.verses.indexWhere((v) => v.transliteration == widget.initialVerseId);
+            }
+            if (targetIdx == -1 && widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
+              targetIdx = (widget.initialVerseNumber! - 1).clamp(0, chapter.verses.length - 1);
+            }
+
+            if (targetIdx > 0) {
+              final idxToJump = targetIdx;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(idxToJump);
+                }
+              });
+            }
+            _hasJumpedToInitialPosition = true;
+          }
+        }
+
         return PageView.builder(
           controller: _pageController,
           scrollDirection: Axis.vertical,
@@ -351,7 +433,13 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           onPageChanged: (pageIndex) {
             if (isUpanishad) {
               final activeChap = book.chapters[pageIndex];
-              _saveProgress(activeChap.chapterNumber, 1);
+              _saveProgress(
+                chapterNumber: activeChap.chapterNumber,
+                verseNumber: 1,
+                chapterName: activeChap.title,
+                mantraNumber: activeChap.chapterNumber,
+                pageIndex: pageIndex,
+              );
               context.read<ChapterCompletionProvider>().markCompleted(
                     bookTitle: book.title,
                     chapterTitle: activeChap.title,
@@ -359,7 +447,18 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                     chapterNumber: activeChap.chapterNumber,
                   );
             } else if (chapter != null) {
-              _saveProgress(currentChapter, pageIndex + 1);
+              final activeVerse = (pageIndex >= 0 && pageIndex < chapter.verses.length)
+                  ? chapter.verses[pageIndex]
+                  : null;
+              final actualVerseNum = activeVerse?.verseNumber ?? (pageIndex + 1);
+
+              _saveProgress(
+                chapterNumber: currentChapter,
+                verseNumber: actualVerseNum,
+                chapterName: chapter.title,
+                verseId: activeVerse?.transliteration,
+                pageIndex: pageIndex,
+              );
               if (pageIndex == chapter.verses.length - 1) {
                 context.read<ChapterCompletionProvider>().markCompleted(
                       bookTitle: book.title,
@@ -438,6 +537,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
               ),
               onBack: handleBack,
               onNextVerse: handleNextVerse,
+              initialCardIndex: widget.initialPageIndex ?? 0,
             );
           },
         );
@@ -460,6 +560,7 @@ class _VerseView extends StatefulWidget {
     required this.onShareVerse,
     required this.onBack,
     required this.onNextVerse,
+    this.initialCardIndex = 0,
   });
 
   final SacredBookModel book;
@@ -473,6 +574,7 @@ class _VerseView extends StatefulWidget {
   final VoidCallback onShareVerse;
   final VoidCallback onBack;
   final VoidCallback onNextVerse;
+  final int initialCardIndex;
 
   @override
   State<_VerseView> createState() => _VerseViewState();
@@ -484,7 +586,9 @@ class _VerseViewState extends State<_VerseView> {
   @override
   void initState() {
     super.initState();
-    _horizontalController = PageController();
+    _horizontalController = PageController(
+      initialPage: widget.initialCardIndex.clamp(0, widget.cardsPerVerse - 1),
+    );
   }
 
   @override
@@ -525,13 +629,27 @@ class _VerseViewState extends State<_VerseView> {
     }
 
     final savedProvider = context.watch<SavedProvider>();
+    final isUpanishad = widget.book.id == 'upanishads';
+
     final savedItem = SavedItemModel(
       id: '${widget.book.id}_c${widget.chapter.chapterNumber}_v${widget.verse.verseNumber}',
       type: SavedItemType.verse,
-      title: '${widget.book.getLocalizedTitle(widget.langCode)} ${widget.chapter.chapterNumber}.${widget.verse.verseNumber}',
+      title: isUpanishad
+          ? 'Isha Upanishad Mantra ${widget.chapter.chapterNumber}'
+          : '${widget.book.getLocalizedTitle(widget.langCode)} ${widget.chapter.chapterNumber}.${widget.verse.verseNumber}',
       content: widget.verse.getQuoteText(widget.langCode),
       source: widget.book.getLocalizedTitle(widget.langCode),
       savedAt: DateTime.now(),
+      bookId: widget.book.id,
+      bookName: widget.book.getLocalizedTitle(widget.langCode),
+      chapterId: widget.chapter.chapterNumber.toString(),
+      chapterNumber: widget.chapter.chapterNumber,
+      chapterName: widget.chapter.title,
+      kandaNumber: widget.verse.kandaNumber ?? (widget.chapter.chapterNumber >= 1000 ? widget.chapter.chapterNumber ~/ 1000 : null),
+      sargaNumber: widget.verse.sargaNumber ?? (widget.chapter.chapterNumber >= 1000 ? widget.chapter.chapterNumber % 1000 : null),
+      mantraNumber: isUpanishad ? widget.chapter.chapterNumber : widget.verse.verseNumber,
+      verseId: widget.verse.transliteration,
+      verseNumber: widget.verse.verseNumber,
     );
     final isSaved = savedProvider.isSaved(savedItem.id);
     void toggleSave() => savedProvider.toggleItem(savedItem);
@@ -595,6 +713,11 @@ class _RamayanaReaderView extends StatefulWidget {
     required this.book,
     required this.sargas,
     required this.initialChapterNumber,
+    this.initialKandaNumber,
+    this.initialSargaNumber,
+    this.initialVerseNumber,
+    this.initialVerseId,
+    this.initialPassageId,
     required this.langCode,
     required this.isSpeaking,
     required this.onToggleAudio,
@@ -607,11 +730,26 @@ class _RamayanaReaderView extends StatefulWidget {
   final SacredBookModel book;
   final List<SacredChapterModel> sargas;
   final int initialChapterNumber;
+  final int? initialKandaNumber;
+  final int? initialSargaNumber;
+  final int? initialVerseNumber;
+  final String? initialVerseId;
+  final String? initialPassageId;
   final String langCode;
   final bool isSpeaking;
   final void Function(String text, String lang) onToggleAudio;
   final void Function(SacredBookModel book, SacredChapterModel sarga, SacredVerseModel verse) onShareVerse;
-  final void Function(int chapterNumber, int verseNumber) onSaveProgress;
+  final void Function({
+    required int chapterNumber,
+    required int verseNumber,
+    String? chapterName,
+    int? kandaNumber,
+    int? sargaNumber,
+    int? mantraNumber,
+    String? verseId,
+    String? passageId,
+    int pageIndex,
+  }) onSaveProgress;
   final ValueChanged<int>? onSargaChanged;
   final String Function({
     required SacredBookModel book,
@@ -656,19 +794,32 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
   @override
   void initState() {
     super.initState();
-    _shlokaPageController = PageController(initialPage: 0);
     _initFromChapterNumber(widget.initialChapterNumber);
+
+    final activeSarga = _findOrCreateActiveSarga();
+    final verses = _getEffectiveVerses(activeSarga);
+
+    int targetShlokaIndex = 0;
+    if (widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
+      final matchIdx = verses.indexWhere((v) => v.verseNumber == widget.initialVerseNumber);
+      targetShlokaIndex = matchIdx != -1 ? matchIdx : (widget.initialVerseNumber! - 1).clamp(0, verses.isNotEmpty ? verses.length - 1 : 0);
+    }
+
+    _currentShlokaIndex = targetShlokaIndex;
+    _shlokaPageController = PageController(initialPage: targetShlokaIndex);
   }
 
   void _initFromChapterNumber(int chapNum) {
-    if (chapNum >= 1000) {
+    if (widget.initialKandaNumber != null && widget.initialKandaNumber! > 0) {
+      _currentKandaNumber = widget.initialKandaNumber!;
+      _currentSargaNumber = widget.initialSargaNumber ?? 1;
+    } else if (chapNum >= 1000) {
       _currentKandaNumber = chapNum ~/ 1000;
       _currentSargaNumber = chapNum % 1000;
     } else {
       _currentKandaNumber = (chapNum > 0 && chapNum <= 7) ? chapNum : 1;
-      _currentSargaNumber = 1;
+      _currentSargaNumber = widget.initialSargaNumber ?? 1;
     }
-    _currentShlokaIndex = 0;
   }
 
   @override
@@ -747,8 +898,24 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
   }
 
   void _saveProgress() {
+    final activeSarga = _findOrCreateActiveSarga();
+    final verses = _getEffectiveVerses(activeSarga);
     final composite = (_currentKandaNumber * 1000) + _currentSargaNumber;
-    widget.onSaveProgress(composite, _currentShlokaIndex + 1);
+    final verse = (_currentShlokaIndex >= 0 && _currentShlokaIndex < verses.length)
+        ? verses[_currentShlokaIndex]
+        : null;
+
+    final actualVerseNum = verse?.verseNumber ?? (_currentShlokaIndex + 1);
+
+    widget.onSaveProgress(
+      chapterNumber: composite,
+      verseNumber: actualVerseNum,
+      chapterName: activeSarga.title,
+      kandaNumber: _currentKandaNumber,
+      sargaNumber: _currentSargaNumber,
+      verseId: verse?.transliteration,
+      pageIndex: _currentShlokaIndex,
+    );
   }
 
   void _goToNextShloka(int totalShlokas) {
@@ -766,8 +933,6 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
       _goToNextSarga();
     }
   }
-
-
 
   void _goToNextSarga() {
     if (_isNavigatingSarga) return;
@@ -922,10 +1087,19 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
           final savedItem = SavedItemModel(
             id: '${widget.book.id}_c${composite}_v${verse.verseNumber}',
             type: SavedItemType.verse,
-            title: '${widget.book.getLocalizedTitle(widget.langCode)} $composite.${verse.verseNumber}',
+            title: '${_getKandaName(_currentKandaNumber, widget.langCode)} Sarga $_currentSargaNumber Verse ${verse.verseNumber}',
             content: verse.getQuoteText(widget.langCode),
             source: widget.book.getLocalizedTitle(widget.langCode),
             savedAt: DateTime.now(),
+            bookId: widget.book.id,
+            bookName: widget.book.getLocalizedTitle(widget.langCode),
+            chapterId: activeSarga.chapterNumber.toString(),
+            chapterNumber: composite,
+            chapterName: activeSarga.title,
+            kandaNumber: _currentKandaNumber,
+            sargaNumber: _currentSargaNumber,
+            verseId: verse.transliteration,
+            verseNumber: verse.verseNumber,
           );
           final isSaved = savedProvider.isSaved(savedItem.id);
           void toggleSave() => savedProvider.toggleItem(savedItem);

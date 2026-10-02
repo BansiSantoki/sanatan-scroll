@@ -74,29 +74,7 @@ class ProfileScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
-                      // 1. Milestones & Achievements Card
-                      _MenuTileCard(
-                        icon: Icons.emoji_events_outlined,
-                        iconBgColor: isDark ? const Color(0xFF2E3824) : const Color(0xFFE0E5CE),
-                        iconColor: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
-                        cardBgColor: isDark ? const Color(0xFF1F281B) : const Color(0xFFEFF2E4),
-                        title: l10n.milestonesAndAchievements,
-                        subtitle: l10n.milestonesSubtitle,
-                        onTap: () {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.milestonesAndAchievements),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                        },
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // 2. Settings Card
+                      // 1. Settings Card
                       _MenuTileCard(
                         icon: Icons.settings_outlined,
                         iconBgColor: isDark ? const Color(0xFF3D2C1E) : const Color(0xFFF7D4B6),
@@ -120,7 +98,7 @@ class ProfileScreen extends StatelessWidget {
                         onTap: () => _showInfoDialog(
                           context,
                           l10n.helpAndSupport,
-                          'Need help with Sanatan Scroll? We are here to support your spiritual journey.',
+                          'Need help with Sanatan Scroll? Email us at: sanatanscrollapp@gmail.com',
                         ),
                       ),
 

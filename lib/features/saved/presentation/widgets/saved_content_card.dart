@@ -11,11 +11,13 @@ class SavedContentCard extends StatelessWidget {
     super.key,
     required this.item,
     required this.onRemove,
+    this.onTap,
     this.index = 0,
   });
 
   final SavedItemModel item;
   final VoidCallback onRemove;
+  final VoidCallback? onTap;
   final int index;
 
   @override
@@ -24,102 +26,106 @@ class SavedContentCard extends StatelessWidget {
     final cardStyle = _getCardStyle(index, item.title, item.source, isDark);
     final langCode = context.watch<LocaleProvider>().languageCode;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: cardStyle.gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: cardStyle.gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 16, 18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Text Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    style: AppTypography.cardTitle(
-                      langCode,
-                      color: cardStyle.titleColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.content,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body(
-                      langCode,
-                      color: cardStyle.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    item.source,
-                    style: AppTypography.compact(
-                      langCode,
-                      fontWeight: FontWeight.w500,
-                      color: cardStyle.sourceColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Right Side Actions (Bookmark Top & Share Bottom)
-            SizedBox(
-              height: 110,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: onRemove,
-                    behavior: HitTestBehavior.opaque,
-                    child: Icon(
-                      Icons.bookmark_rounded,
-                      color: cardStyle.bookmarkColor,
-                      size: 24,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => ShareService.showOptions(
-                      context: context,
-                      title: item.title,
-                      text:
-                          '${item.title}\n\n"${item.content}"\n\n${item.source}\n\nSanatan Scroll',
-                    ),
-                    behavior: HitTestBehavior.opaque,
-                    child: Icon(
-                      Icons.share_outlined,
-                      color: isDark ? Colors.white60 : const Color(0xFF5A5A5A),
-                      size: 19,
-                    ),
-                  ),
-                ],
-              ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white12 : const Color(0xFFEAE2D2),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 16, 18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Text Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: AppTypography.cardTitle(
+                        langCode,
+                        color: cardStyle.titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item.content,
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        langCode,
+                        color: cardStyle.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      item.source,
+                      style: AppTypography.compact(
+                        langCode,
+                        fontWeight: FontWeight.w500,
+                        color: cardStyle.sourceColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Right Side Actions (Bookmark Top & Share Bottom)
+              SizedBox(
+                height: 110,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: onRemove,
+                      behavior: HitTestBehavior.opaque,
+                      child: Icon(
+                        Icons.bookmark_rounded,
+                        color: cardStyle.bookmarkColor,
+                        size: 24,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => ShareService.showOptions(
+                        context: context,
+                        title: item.title,
+                        text:
+                            '${item.title}\n\n"${item.content}"\n\n${item.source}\n\nSanatan Scroll',
+                      ),
+                      behavior: HitTestBehavior.opaque,
+                      child: Icon(
+                        Icons.share_outlined,
+                        color: isDark ? Colors.white60 : const Color(0xFF5A5A5A),
+                        size: 19,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

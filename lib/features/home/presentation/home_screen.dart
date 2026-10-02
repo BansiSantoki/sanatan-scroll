@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/services/daily_wisdom_service.dart';
 import '../../../providers/locale_provider.dart';
 import '../../../providers/reading_progress_provider.dart';
 import '../../../providers/streak_provider.dart';
@@ -17,6 +19,23 @@ class HomePageWidget extends StatefulWidget {
 }
 
 class _HomePageWidgetState extends State<HomePageWidget> {
+  DailyWisdomVerse _todayWisdom = DailyWisdomService.getFallbackWisdom(DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDailyWisdom();
+  }
+
+  Future<void> _loadDailyWisdom() async {
+    final wisdom = await DailyWisdomService.getTodayWisdom();
+    if (mounted) {
+      setState(() {
+        _todayWisdom = wisdom;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -34,9 +53,6 @@ class _HomePageWidgetState extends State<HomePageWidget> {
 
     final readingProgress = Provider.of<ReadingProgressProvider>(context);
     final lastReadBookId = readingProgress.lastReadBookId;
-
-    // Daily Wisdom dynamic content based on lastReadBookId
-    final Map<String, dynamic> dailyWisdomData = _getDailyWisdomData(lastReadBookId, langCode, l10n);
 
     final List<Map<String, dynamic>> scriptureBooks = [
       {
@@ -207,26 +223,21 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               // ==========================================
               InkWell(
                 onTap: () {
-                  final String bookId = dailyWisdomData['bookId'] as String;
-                  if (bookId == 'bhagavad_gita') {
-                    Navigator.of(context).pushNamed(AppRoutes.dailyReading);
-                  } else {
-                    Navigator.of(context).pushNamed(
-                      AppRoutes.sacredTextReading,
-                      arguments: {'textId': bookId, 'chapterNumber': 1},
-                    );
-                  }
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.sacredTextReading,
+                    arguments: _todayWisdom.toRouteArguments(),
+                  );
                 },
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
                   decoration: BoxDecoration(
-                    color: dailyWisdomData['bgColor'] as Color,
+                    color: _todayWisdom.bgColor,
                     borderRadius: BorderRadius.circular(24.0),
                     boxShadow: [
                       BoxShadow(
-                        color: (dailyWisdomData['bgColor'] as Color).withValues(alpha: 0.25),
+                        color: _todayWisdom.bgColor.withValues(alpha: 0.25),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -252,7 +263,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              dailyWisdomData['title'] as String,
+                              _todayWisdom.getLocalizedTitle(langCode),
                               style: GoogleFonts.cormorantGaramond(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
@@ -261,7 +272,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                               ),
                             ),
                             Text(
-                              dailyWisdomData['verseRef'] as String,
+                              _todayWisdom.verseRef,
                               style: GoogleFonts.cormorantGaramond(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
@@ -271,7 +282,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              dailyWisdomData['shloka'] as String,
+                              _todayWisdom.sanskrit,
                               style: GoogleFonts.notoSansDevanagari(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
@@ -281,7 +292,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              dailyWisdomData['translation'] as String,
+                              _todayWisdom.getLocalizedTranslation(langCode),
                               style: GoogleFonts.inter(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w400,
@@ -294,13 +305,13 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                       ),
                       const SizedBox(width: 6),
 
-                      // Illustration on Right (50% width, large Bhagavad Gita chariot image)
+                      // Illustration on Right (50% width)
                       Expanded(
                         flex: 50,
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: Image.asset(
-                            dailyWisdomData['imagePath'] as String,
+                            _todayWisdom.imagePath,
                             height: 225,
                             fit: BoxFit.contain,
                             alignment: Alignment.centerRight,
@@ -328,17 +339,24 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                 builder: (context) {
                   final String targetBook = lastReadBookId.isNotEmpty ? lastReadBookId : 'bhagavad_gita';
                   final lastPos = readingProgress.positionFor(targetBook);
-                  final targetChapter = lastPos?.chapterNumber ?? 1;
 
                   final subtitleText = lastPos != null
-                      ? _getLocalizedPositionText(context, targetBook, lastPos.chapterNumber, lastPos.verseNumber)
+                      ? _getLocalizedPositionText(context, lastPos)
                       : l10n.pickUpWhereYouLeftOff;
 
                   return InkWell(
                     onTap: () {
+                      final routeArgs = lastPos != null
+                          ? lastPos.toRouteArguments()
+                          : {'textId': targetBook, 'chapterNumber': 1, 'verseNumber': 1};
+
+                      if (kDebugMode) {
+                        debugPrint('[CONTINUE] Tapped Continue Your Journey with args: $routeArgs');
+                      }
+
                       Navigator.of(context).pushNamed(
                         AppRoutes.sacredTextReading,
-                        arguments: {'textId': targetBook, 'chapterNumber': targetChapter},
+                        arguments: routeArgs,
                       );
                     },
                     borderRadius: BorderRadius.circular(24),
@@ -458,75 +476,32 @@ class _HomePageWidgetState extends State<HomePageWidget> {
     );
   }
 
-  Map<String, dynamic> _getDailyWisdomData(String bookId, String langCode, AppLocalizations l10n) {
-    if (bookId == 'ramayana') {
-      final translation = langCode == 'gu'
-          ? 'શ્રી રામ એ ધર્મની સાક્ષાત મૂર્તિ, સજ્જન અને સત્ય પરાક્રમી છે.'
-          : (langCode == 'hi'
-              ? 'श्री राम धर्म के साक्षात स्वरूप, सज्जन और सत्य पराक्रमी हैं।'
-              : 'Rama is the embodiment of Dharma, righteous and truthful in valor.');
-      return {
-        'bookId': 'ramayana',
-        'title': l10n.ramayana,
-        'verseRef': '1.1',
-        'shloka': 'रामो विग्रहवान् धर्मः साधुः सत्यपराक्रमः।',
-        'translation': translation,
-        'bgColor': const Color(0xFF94AA84),
-        'imagePath': 'assets/images/ramayana_bow_art.png',
-      };
-    } else if (bookId == 'upanishads' || bookId == 'isha_upanishad') {
-      final translation = langCode == 'gu'
-          ? 'આ સમગ્ર જગતમાં જે કંઈ પણ ચરાચર છે, તે બધું ઈશ્વરથી વ્યાપ્ત છે.'
-          : (langCode == 'hi'
-              ? 'इस सम्पूर्ण जगत् में जो कुछ भी स्थावर-जंगम है, वह सब ईश्वर से आच्छादित है।'
-              : 'All this, whatever moves in this moving world, is enveloped by God.');
-      return {
-        'bookId': 'upanishads',
-        'title': l10n.upanishads,
-        'verseRef': 'Mantra 1',
-        'shloka': 'ईशा वास्यमिदं सर्वं यत्किञ्च जगत्यां जगत्।',
-        'translation': translation,
-        'bgColor': const Color(0xFFF2B75B),
-        'imagePath': 'assets/images/upanishad_leaf_art.png',
-      };
-    } else {
-      // Bhagavad Gita default
-      final translation = langCode == 'gu'
-          ? 'તમને કર્મ કરવાનો જ અધિકાર છે, પરંતુ તેના ફળ ઉપર ક્યારેય નહીં.'
-          : (langCode == 'hi'
-              ? 'कर्म करने में ही तुम्हारा अधिकार है, उसके फलों में कभी नहीं।'
-              : 'You have the right to perform your duty, but not to the fruits of your actions.');
-      return {
-        'bookId': 'bhagavad_gita',
-        'title': l10n.bhagavadGita,
-        'verseRef': '2.47',
-        'shloka': 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।',
-        'translation': translation,
-        'bgColor': const Color(0xFFE47A46),
-        'imagePath': 'assets/images/bhagavat_gita_big.png',
-      };
-    }
-  }
-
   String _getLocalizedPositionText(
     BuildContext context,
-    String bookId,
-    int chapterNum,
-    int verseNum,
+    ReadingPosition pos,
   ) {
     final langCode = Provider.of<LocaleProvider>(context, listen: false).languageCode;
+    final bookId = pos.bookId;
+    final chapNum = pos.chapterNumber;
+    final verseNum = pos.verseNumber;
+    final kandaNum = pos.kandaNumber ?? (chapNum >= 1000 ? chapNum ~/ 1000 : null);
+    final sargaNum = pos.sargaNumber ?? (chapNum >= 1000 ? chapNum % 1000 : null);
+    final mantraNum = pos.mantraNumber ?? (bookId == 'upanishads' ? chapNum : verseNum);
+
     if (bookId == 'upanishads') {
-      if (langCode == 'gu') return 'ઇશોપનિષદ · મંત્ર $verseNum';
-      if (langCode == 'hi') return 'ईशोपनिषद् · मन्त्र $verseNum';
-      return 'Isha Upanishad · Mantra $verseNum';
+      if (langCode == 'gu') return 'ઇશોપનિષદ · મંત્ર $mantraNum';
+      if (langCode == 'hi') return 'ईशोपनिषद् · मन्त्र $mantraNum';
+      return 'Isha Upanishad · Mantra $mantraNum';
     } else if (bookId == 'ramayana') {
-      if (langCode == 'gu') return 'રામાયણ · કાંડ $chapterNum';
-      if (langCode == 'hi') return 'रामायण · काण्ड $chapterNum';
-      return 'Ramayana · Kanda $chapterNum';
+      final k = kandaNum ?? 1;
+      final s = sargaNum ?? 1;
+      if (langCode == 'gu') return 'રામાયણ · કાંડ $k, સર્ગ $s, શ્લોક $verseNum';
+      if (langCode == 'hi') return 'रामायण · काण्ड $k, सर्ग $s, श्लोक $verseNum';
+      return 'Ramayana · Kanda $k, Sarga $s, Verse $verseNum';
     } else {
-      if (langCode == 'gu') return 'ભગવદ્ ગીતા · અધ્યાય $chapterNum, શ્લોક $verseNum';
-      if (langCode == 'hi') return 'भगवद् गीता · अध्याय $chapterNum, श्लोक $verseNum';
-      return 'Bhagavad Gita · Chapter $chapterNum, Verse $verseNum';
+      if (langCode == 'gu') return 'ભગવદ્ ગીતા · અધ્યાય $chapNum, શ્લોક $verseNum';
+      if (langCode == 'hi') return 'भगवद् गीता · अध्याय $chapNum, श्लोक $verseNum';
+      return 'Bhagavad Gita · Chapter $chapNum, Verse $verseNum';
     }
   }
 }

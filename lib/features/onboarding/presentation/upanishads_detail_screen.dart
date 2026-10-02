@@ -341,11 +341,6 @@ class UpanishadsDetailScreen extends StatelessWidget {
             ),
 
             _BottomNavItem(
-              icon: Icons.article_outlined,
-              label: 'Feed',
-            ),
-
-            _BottomNavItem(
               icon: Icons.person_outline_rounded,
               label: 'Profile',
             ),

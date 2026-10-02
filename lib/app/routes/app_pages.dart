@@ -87,19 +87,69 @@ class AppPages {
         final dynamic args = settings.arguments;
         String textId = 'bhagavad_gita';
         int initialChapterNumber = 1;
+        int? initialKandaNumber;
+        int? initialSargaNumber;
+        int? initialVerseNumber;
+        int? initialMantraNumber;
+        String? initialVerseId;
+        String? initialPassageId;
+        int? initialPageIndex;
 
         if (args is String) {
           textId = args;
         } else if (args is Map) {
-          final mapTextId = args['textId'];
-          final mapChapter = args['chapterNumber'];
-
+          final mapTextId = args['textId'] ?? args['bookId'];
           if (mapTextId is String && mapTextId.isNotEmpty) {
             textId = mapTextId;
           }
 
-          if (mapChapter is int && mapChapter > 0) {
-            initialChapterNumber = mapChapter;
+          final chapVal = args['chapterNumber'] ?? args['chapter'];
+          if (chapVal is int && chapVal > 0) {
+            initialChapterNumber = chapVal;
+          } else if (chapVal is String) {
+            initialChapterNumber = int.tryParse(chapVal) ?? 1;
+          }
+
+          final kandaVal = args['kandaNumber'] ?? args['kanda'];
+          if (kandaVal is int) {
+            initialKandaNumber = kandaVal;
+          } else if (kandaVal is String) {
+            initialKandaNumber = int.tryParse(kandaVal);
+          }
+
+          final sargaVal = args['sargaNumber'] ?? args['sarga'];
+          if (sargaVal is int) {
+            initialSargaNumber = sargaVal;
+          } else if (sargaVal is String) {
+            initialSargaNumber = int.tryParse(sargaVal);
+          }
+
+          final verseVal = args['verseNumber'] ?? args['verse'];
+          if (verseVal is int) {
+            initialVerseNumber = verseVal;
+          } else if (verseVal is String) {
+            initialVerseNumber = int.tryParse(verseVal);
+          }
+
+          final mantraVal = args['mantraNumber'] ?? args['mantra'];
+          if (mantraVal is int) {
+            initialMantraNumber = mantraVal;
+          } else if (mantraVal is String) {
+            initialMantraNumber = int.tryParse(mantraVal);
+          }
+
+          if (args['verseId'] != null) {
+            initialVerseId = args['verseId'].toString();
+          }
+          if (args['passageId'] != null) {
+            initialPassageId = args['passageId'].toString();
+          }
+
+          final pageIdxVal = args['pageIndex'];
+          if (pageIdxVal is int) {
+            initialPageIndex = pageIdxVal;
+          } else if (pageIdxVal is String) {
+            initialPageIndex = int.tryParse(pageIdxVal);
           }
         }
 
@@ -107,6 +157,13 @@ class AppPages {
           SacredTextReaderScreen(
             textId: textId,
             initialChapterNumber: initialChapterNumber,
+            initialKandaNumber: initialKandaNumber,
+            initialSargaNumber: initialSargaNumber,
+            initialVerseNumber: initialVerseNumber,
+            initialMantraNumber: initialMantraNumber,
+            initialVerseId: initialVerseId,
+            initialPassageId: initialPassageId,
+            initialPageIndex: initialPageIndex,
           ),
           settings,
         );

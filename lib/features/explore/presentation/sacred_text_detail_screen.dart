@@ -643,7 +643,7 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
 
   Widget _buildBottomNavigation() {
     return CustomBottomNavigation(
-      currentIndex: 3,
+      currentIndex: 0,
       activeColor: _buttonColor,
       onTap: (index) {
         context.read<NavigationProvider>().setIndex(index);

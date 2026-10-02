@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../app/routes/app_routes.dart';
 import '../../../theme/app_typography.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -191,6 +193,16 @@ class SavedScreen extends StatelessWidget {
                             item: item,
                             index: index,
                             onRemove: () => saved.removeItem(item.id),
+                            onTap: () {
+                              final location = item.resolveLocation();
+                              if (kDebugMode) {
+                                debugPrint('[SAVED] Tapped saved item "${item.title}": bookId=${location.bookId}, chapter=${location.chapterNumber}, kanda=${location.kandaNumber}, sarga=${location.sargaNumber}, verse=${location.verseNumber}, mantra=${location.mantraNumber}');
+                              }
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.sacredTextReading,
+                                arguments: location.toRouteArguments(),
+                              );
+                            },
                           );
                         },
                       );

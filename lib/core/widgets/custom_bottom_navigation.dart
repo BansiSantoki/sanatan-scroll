@@ -26,8 +26,6 @@ class CustomBottomNavigation extends StatelessWidget {
       case 2:
         return l10n.saved;
       case 3:
-        return l10n.feed;
-      case 4:
         return l10n.profile;
       default:
         return AppConstants.bottomNavigationItems[index].label;

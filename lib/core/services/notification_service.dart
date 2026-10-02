@@ -168,7 +168,13 @@ class NotificationService {
     }
   }
 
-  /// Get or initialize the start date of the 15-day notification cycle.
+  static const List<int> allowedWeekdays = [
+    DateTime.monday,
+    DateTime.wednesday,
+    DateTime.friday,
+  ];
+
+  /// Get or initialize the start date of the notification cycle.
   static Future<DateTime> _getCycleStartDate(SharedPreferences prefs) async {
     final storedDateStr = prefs.getString(_keyCycleStartDate);
     final now = DateTime.now();
@@ -181,39 +187,58 @@ class NotificationService {
       }
     }
 
-    // First time app launch / installation
     await prefs.setString(_keyCycleStartDate, todayClean.toIso8601String());
     return todayClean;
   }
 
-  /// Schedule the upcoming morning notification according to 15-day rotation.
+  static DateTime _getNextScheduledDateTime(DateTime from) {
+    var candidate = DateTime(
+      from.year,
+      from.month,
+      from.day,
+      notificationHour,
+      notificationMinute,
+    );
+
+    if (from.isAfter(candidate) || from.isAtSameMomentAs(candidate)) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+
+    while (!allowedWeekdays.contains(candidate.weekday)) {
+      candidate = candidate.add(const Duration(days: 1));
+    }
+
+    return candidate;
+  }
+
+  static int _countScheduledDaysBetween(DateTime startDateClean, DateTime targetDateClean) {
+    int count = 0;
+    var cur = startDateClean;
+    while (cur.isBefore(targetDateClean)) {
+      if (allowedWeekdays.contains(cur.weekday)) {
+        count++;
+      }
+      cur = cur.add(const Duration(days: 1));
+    }
+    return count;
+  }
+
+  /// Schedule the upcoming notification for 3 days/week (Mon, Wed, Fri) according to 15-message rotation.
   static Future<void> scheduleNextMorningNotification() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final startDate = await _getCycleStartDate(prefs);
 
       final now = DateTime.now();
-      var targetMorning = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        notificationHour,
-        notificationMinute,
-      );
-
-      // If today's 8:00 AM has already passed, schedule for tomorrow 8:00 AM
-      if (now.isAfter(targetMorning) || now.isAtSameMomentAs(targetMorning)) {
-        targetMorning = targetMorning.add(const Duration(days: 1));
-      }
+      final targetMorning = _getNextScheduledDateTime(now);
 
       final targetDateClean = DateTime(targetMorning.year, targetMorning.month, targetMorning.day);
       final startDateClean = DateTime(startDate.year, startDate.month, startDate.day);
 
-      final daysSinceStart = targetDateClean.difference(startDateClean).inDays;
-      final cycleIndex = (daysSinceStart % 15 + 15) % 15;
+      final scheduledCount = _countScheduledDaysBetween(startDateClean, targetDateClean);
+      final cycleIndex = (scheduledCount % 15 + 15) % 15;
 
       final notification = notificationsList[cycleIndex];
-
       final tzTarget = tz.TZDateTime.from(targetMorning, tz.local);
 
       // Cancel previous scheduled notification to avoid duplicate scheduling
@@ -253,7 +278,7 @@ class NotificationService {
       await prefs.setString(_keyLastScheduledDate, targetDateClean.toIso8601String());
 
       if (kDebugMode) {
-        print('[NOTIFICATION LOG] Scheduled Day ${cycleIndex + 1} (${notification.title}) for $tzTarget');
+        print('[NOTIFICATION LOG] Scheduled 3-day notification (Index ${cycleIndex + 1}/15: "${notification.title}") for $tzTarget (Weekday: ${targetMorning.weekday})');
       }
     } catch (e) {
       if (kDebugMode) {

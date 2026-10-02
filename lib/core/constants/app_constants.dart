@@ -43,11 +43,6 @@ class AppConstants {
       label: 'Saved',
     ),
     AppNavigationItem(
-      icon: Icons.menu_book_outlined,
-      activeIcon: Icons.menu_book_rounded,
-      label: 'Feed',
-    ),
-    AppNavigationItem(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
       label: 'Profile',
