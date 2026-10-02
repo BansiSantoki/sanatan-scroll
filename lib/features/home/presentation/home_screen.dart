@@ -19,16 +19,22 @@ class HomePageWidget extends StatefulWidget {
 }
 
 class _HomePageWidgetState extends State<HomePageWidget> {
-  DailyWisdomVerse _todayWisdom = DailyWisdomService.getFallbackWisdom(DateTime.now());
+  DailyWisdomVerse _todayWisdom = DailyWisdomService.getFallbackWisdomForBook(DateTime.now(), 'bhagavad_gita');
+  String? _lastLoadedBookId;
 
   @override
-  void initState() {
-    super.initState();
-    _loadDailyWisdom();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final readingProgress = Provider.of<ReadingProgressProvider>(context);
+    final activeBookId = readingProgress.lastReadBookId;
+    if (_lastLoadedBookId != activeBookId) {
+      _lastLoadedBookId = activeBookId;
+      _loadDailyWisdom(activeBookId);
+    }
   }
 
-  Future<void> _loadDailyWisdom() async {
-    final wisdom = await DailyWisdomService.getTodayWisdom();
+  Future<void> _loadDailyWisdom(String activeBookId) async {
+    final wisdom = await DailyWisdomService.getTodayWisdom(activeBookId: activeBookId);
     if (mounted) {
       setState(() {
         _todayWisdom = wisdom;
