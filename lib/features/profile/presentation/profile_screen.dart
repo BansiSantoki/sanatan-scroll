@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../theme/app_typography.dart';
 import '../../../../app/routes/app_routes.dart';
@@ -337,6 +339,53 @@ class ProfileScreen extends StatelessWidget {
     final l10n = context.l10n;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    const emailStr = 'sanatanscrollapp@gmail.com';
+    final hasEmail = message.contains(emailStr);
+
+    Widget contentWidget;
+    if (hasEmail) {
+      final parts = message.split(emailStr);
+      final prefix = parts[0];
+      final suffix = parts.length > 1 ? parts[1] : '';
+
+      contentWidget = Text.rich(
+        TextSpan(
+          style: AppTextStyles.getFont(
+            context,
+            fontSize: 14,
+            height: 1.5,
+            color: isDark ? const Color(0xFFF0F2F0) : const Color(0xFF1B1B1B),
+          ),
+          children: [
+            TextSpan(text: prefix),
+            TextSpan(
+              text: emailStr,
+              style: AppTextStyles.getFont(
+                context,
+                fontSize: 14,
+                height: 1.5,
+                color: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+              ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => _launchEmail(context, emailStr),
+            ),
+            if (suffix.isNotEmpty) TextSpan(text: suffix),
+          ],
+        ),
+      );
+    } else {
+      contentWidget = Text(
+        message,
+        style: AppTextStyles.getFont(
+          context,
+          fontSize: 14,
+          height: 1.5,
+        ),
+      );
+    }
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -353,14 +402,7 @@ class ProfileScreen extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          content: Text(
-            message,
-            style: AppTextStyles.getFont(
-              context,
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
+          content: contentWidget,
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -373,6 +415,36 @@ class ProfileScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _launchEmail(BuildContext context, String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+    );
+    try {
+      final bool launched = await launchUrl(
+        emailUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open email app for $email'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open email app for $email'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 
