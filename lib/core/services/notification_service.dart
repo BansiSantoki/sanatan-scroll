@@ -24,7 +24,6 @@ class NotificationService {
 
   static const int notificationHour = 8;
   static const int notificationMinute = 0;
-  static const int _notificationId = 1001;
 
   static const String _keyCycleStartDate = 'notification_cycle_start_date';
   static const String _keyLastScheduledDate = 'last_scheduled_date';
@@ -175,10 +174,10 @@ class NotificationService {
   ];
 
   /// Get or initialize the start date of the notification cycle.
+  /// Standardized to the Monday of the starting week for consistent week-aligned calculation.
   static Future<DateTime> _getCycleStartDate(SharedPreferences prefs) async {
     final storedDateStr = prefs.getString(_keyCycleStartDate);
     final now = DateTime.now();
-    final todayClean = DateTime(now.year, now.month, now.day);
 
     if (storedDateStr != null && storedDateStr.isNotEmpty) {
       final parsed = DateTime.tryParse(storedDateStr);
@@ -187,28 +186,14 @@ class NotificationService {
       }
     }
 
-    await prefs.setString(_keyCycleStartDate, todayClean.toIso8601String());
-    return todayClean;
-  }
-
-  static DateTime _getNextScheduledDateTime(DateTime from) {
-    var candidate = DateTime(
-      from.year,
-      from.month,
-      from.day,
-      notificationHour,
-      notificationMinute,
-    );
-
-    if (from.isAfter(candidate) || from.isAtSameMomentAs(candidate)) {
-      candidate = candidate.add(const Duration(days: 1));
+    // Find the Monday of the current week as reference start
+    var startMon = DateTime(now.year, now.month, now.day);
+    while (startMon.weekday != DateTime.monday) {
+      startMon = startMon.subtract(const Duration(days: 1));
     }
 
-    while (!allowedWeekdays.contains(candidate.weekday)) {
-      candidate = candidate.add(const Duration(days: 1));
-    }
-
-    return candidate;
+    await prefs.setString(_keyCycleStartDate, startMon.toIso8601String());
+    return startMon;
   }
 
   static int _countScheduledDaysBetween(DateTime startDateClean, DateTime targetDateClean) {
@@ -223,66 +208,106 @@ class NotificationService {
     return count;
   }
 
-  /// Schedule the upcoming notification for 3 days/week (Mon, Wed, Fri) according to 15-message rotation.
+  /// Schedule upcoming notifications for 3 days/week (Mon, Wed, Fri) at 8:00 AM local device time.
+  /// Rotates strictly sequentially through all 15 notification messages (5-week cycle).
   static Future<void> scheduleNextMorningNotification() async {
+    await scheduleNotifications();
+  }
+
+  static Future<void> scheduleNotifications() async {
     try {
+      tz.initializeTimeZones();
       final prefs = await SharedPreferences.getInstance();
       final startDate = await _getCycleStartDate(prefs);
 
+      // Cancel all existing scheduled notifications to prevent duplicate scheduling
+      await _notificationsPlugin.cancelAll();
+
       final now = DateTime.now();
-      final targetMorning = _getNextScheduledDateTime(now);
 
-      final targetDateClean = DateTime(targetMorning.year, targetMorning.month, targetMorning.day);
-      final startDateClean = DateTime(startDate.year, startDate.month, startDate.day);
-
-      final scheduledCount = _countScheduledDaysBetween(startDateClean, targetDateClean);
-      final cycleIndex = (scheduledCount % 15 + 15) % 15;
-
-      final notification = notificationsList[cycleIndex];
-      final tzTarget = tz.TZDateTime.from(targetMorning, tz.local);
-
-      // Cancel previous scheduled notification to avoid duplicate scheduling
-      await _notificationsPlugin.cancel(_notificationId);
-
-      const androidDetails = AndroidNotificationDetails(
-        'sanatan_morning_channel',
-        'Sanatan Scroll Morning Wisdom',
-        channelDescription: 'Daily morning reminder to read or listen to sacred scriptures',
-        importance: Importance.max,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
+      // Find initial target date (today at 8:00 AM or next candidate day)
+      var candidate = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        notificationHour,
+        notificationMinute,
       );
 
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
+      if (now.isAfter(candidate) || now.isAtSameMomentAs(candidate)) {
+        candidate = candidate.add(const Duration(days: 1));
+      }
 
-      const details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
+      int scheduledCount = 0;
+      var cur = candidate;
 
-      await _notificationsPlugin.zonedSchedule(
-        _notificationId,
-        notification.title,
-        notification.body,
-        tzTarget,
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
+      // Schedule the next 6 notification slots (2 weeks ahead)
+      while (scheduledCount < 6) {
+        if (allowedWeekdays.contains(cur.weekday)) {
+          final curDateClean = DateTime(cur.year, cur.month, cur.day);
+          final startDateClean = DateTime(startDate.year, startDate.month, startDate.day);
 
-      await prefs.setString(_keyLastScheduledDate, targetDateClean.toIso8601String());
+          final countBetween = _countScheduledDaysBetween(startDateClean, curDateClean);
+          final cycleIndex = (countBetween % 15 + 15) % 15;
 
-      if (kDebugMode) {
-        print('[NOTIFICATION LOG] Scheduled 3-day notification (Index ${cycleIndex + 1}/15: "${notification.title}") for $tzTarget (Weekday: ${targetMorning.weekday})');
+          final notification = notificationsList[cycleIndex];
+          final notificationId = 1000 + cycleIndex;
+
+          final targetTime = DateTime(
+            cur.year,
+            cur.month,
+            cur.day,
+            notificationHour,
+            notificationMinute,
+          );
+
+          // Always use tz.local to ensure notification fires at 8:00 AM in user's device LOCAL TIME
+          final tzTarget = tz.TZDateTime.from(targetTime, tz.local);
+
+          const androidDetails = AndroidNotificationDetails(
+            'sanatan_morning_channel',
+            'Sanatan Scroll Morning Wisdom',
+            channelDescription: 'Daily morning reminder to read or listen to sacred scriptures',
+            importance: Importance.max,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          );
+
+          const iosDetails = DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          );
+
+          const details = NotificationDetails(
+            android: androidDetails,
+            iOS: iosDetails,
+          );
+
+          await _notificationsPlugin.zonedSchedule(
+            notificationId,
+            notification.title,
+            notification.body,
+            tzTarget,
+            details,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation:
+                UILocalNotificationDateInterpretation.absoluteTime,
+          );
+
+          await prefs.setString(_keyLastScheduledDate, curDateClean.toIso8601String());
+
+          if (kDebugMode) {
+            print('[NOTIFICATION LOG] Scheduled Notif ${cycleIndex + 1}/15 ("${notification.title}") for $tzTarget (Local Timezone: ${tz.local.name})');
+          }
+
+          scheduledCount++;
+        }
+        cur = cur.add(const Duration(days: 1));
       }
     } catch (e) {
       if (kDebugMode) {
-        print('[NOTIFICATION LOG] Error scheduling notification: $e');
+        print('[NOTIFICATION LOG] Error scheduling notifications: $e');
       }
     }
   }
