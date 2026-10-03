@@ -508,7 +508,7 @@ class AuthProvider extends ChangeNotifier {
         return 'Please choose a stronger password.';
 
       case 'operation-not-allowed':
-        return 'This sign-in method is not enabled in Firebase.';
+        return 'Apple Sign-In is not enabled in Firebase Console. Please go to Firebase Console > Authentication > Sign-in method and enable the Apple provider for project sanatan-scroll-19b25.';
 
       case 'network-request-failed':
         return 'Please check your internet connection.';
