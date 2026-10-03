@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     projectId: 'sanatan-scroll-19b25',
     storageBucket: 'sanatan-scroll-19b25.firebasestorage.app',
     iosClientId: '746323217658-g9kmvge3q4gnahcv41rotp7er6ndmih3.apps.googleusercontent.com',
-    iosBundleId: 'com.sanatanscroll.sanatanScroll',
+    iosBundleId: 'com.sanatanscroll.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

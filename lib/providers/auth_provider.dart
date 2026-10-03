@@ -287,17 +287,50 @@ class AuthProvider extends ChangeNotifier {
       _isAppleLoading = true;
       notifyListeners();
 
-      final rawNonce = _generateNonce();
-      final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
-
       if (kDebugMode) {
         debugPrint('[APPLE_AUTH_DEBUG] Starting Apple Sign-In flow...');
-        debugPrint('[APPLE_AUTH_DEBUG] Generated SHA256 nonce for Apple request.');
       }
 
-      UserCredential userCredential;
+      UserCredential? userCredential;
 
-      try {
+      // 1. Primary Flow: Firebase native AppleAuthProvider on iOS
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        try {
+          if (kDebugMode) {
+            debugPrint('[APPLE_AUTH_DEBUG] Attempting native Firebase AppleAuthProvider flow...');
+          }
+          final appleProvider = AppleAuthProvider();
+          appleProvider.addScope('email');
+          appleProvider.addScope('name');
+
+          userCredential = await _auth.signInWithProvider(appleProvider);
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'canceled' || e.code == 'user-cancelled' || e.code == '1001') {
+            if (kDebugMode) debugPrint('[APPLE_AUTH_DEBUG] User cancelled Apple Sign-In.');
+            return 'Apple Sign-In cancelled';
+          }
+          if (e.code == 'operation-not-allowed') {
+            return _firebaseAuthError(e);
+          }
+          if (kDebugMode) {
+            debugPrint('[APPLE_AUTH_DEBUG] signInWithProvider error: ${e.code} - ${e.message}. Trying getAppleIDCredential flow...');
+          }
+        } catch (e) {
+          final msg = e.toString().toLowerCase();
+          if (msg.contains('canceled') || msg.contains('cancelled') || msg.contains('1001')) {
+            return 'Apple Sign-In cancelled';
+          }
+          if (kDebugMode) {
+            debugPrint('[APPLE_AUTH_DEBUG] Native provider error: $e. Trying getAppleIDCredential flow...');
+          }
+        }
+      }
+
+      // 2. Secondary Flow: Manual nonce + SignInWithApple plugin
+      if (userCredential == null || userCredential.user == null) {
+        final rawNonce = _generateNonce();
+        final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
         final appleCredential = await SignInWithApple.getAppleIDCredential(
           scopes: [
             AppleIDAuthorizationScopes.email,
@@ -306,12 +339,13 @@ class AuthProvider extends ChangeNotifier {
           nonce: sha256Nonce,
         );
 
-        if (kDebugMode) {
-          debugPrint('[APPLE_AUTH_DEBUG] Received Apple ID credential successfully.');
+        final idToken = appleCredential.identityToken;
+        if (idToken == null || idToken.isEmpty) {
+          return 'Apple Sign-In failed: Apple Identity Token was not returned.';
         }
 
         final OAuthCredential credential = OAuthProvider('apple.com').credential(
-          idToken: appleCredential.identityToken,
+          idToken: idToken,
           rawNonce: rawNonce,
         );
 
@@ -323,33 +357,16 @@ class AuthProvider extends ChangeNotifier {
             final given = appleCredential.givenName ?? '';
             final family = appleCredential.familyName ?? '';
             final name = '$given $family'.trim();
-            if (name.isNotEmpty) {
+            if (name.isNotEmpty && (firebaseUser.displayName == null || firebaseUser.displayName!.isEmpty)) {
               await firebaseUser.updateDisplayName(name);
             }
           }
-          await _syncUserProfile(firebaseUser);
         }
-      } on SignInWithAppleAuthorizationException catch (e) {
-        if (e.code == AuthorizationErrorCode.canceled) {
-          if (kDebugMode) {
-            debugPrint('[APPLE_AUTH_DEBUG] User cancelled Apple Sign-In.');
-          }
-          return 'Apple Sign-In cancelled';
-        }
+      }
 
-        if (kDebugMode) {
-          debugPrint('[APPLE_AUTH_DEBUG] SignInWithApple exception: code=${e.code}, message=${e.message}. Attempting Firebase AppleAuthProvider fallback...');
-        }
-
-        final appleProvider = AppleAuthProvider();
-        appleProvider.addScope('email');
-        appleProvider.addScope('name');
-
-        userCredential = await _auth.signInWithProvider(appleProvider);
-        final firebaseUser = userCredential.user;
-        if (firebaseUser != null) {
-          await _syncUserProfile(firebaseUser);
-        }
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        await _syncUserProfile(currentUser);
       }
 
       notifyListeners();
@@ -359,7 +376,7 @@ class AuthProvider extends ChangeNotifier {
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
-        debugPrint('[APPLE_AUTH_DEBUG] Apple Authorization Error: code=${e.code}, message=${e.message}');
+        debugPrint('[APPLE_AUTH_DEBUG] AuthorizationException: code=${e.code}, message=${e.message}');
       }
       return 'Apple Sign-In failed: ${e.message}';
     } on FirebaseAuthException catch (e) {
@@ -367,7 +384,7 @@ class AuthProvider extends ChangeNotifier {
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
-        debugPrint('[APPLE_AUTH_DEBUG] FirebaseAuthException during Apple Sign-In: ${e.code} - ${e.message}');
+        debugPrint('[APPLE_AUTH_DEBUG] FirebaseAuthException: code=${e.code}, message=${e.message}');
       }
       return _firebaseAuthError(e);
     } catch (e) {
@@ -379,7 +396,7 @@ class AuthProvider extends ChangeNotifier {
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
-        debugPrint('[APPLE_AUTH_DEBUG] Unexpected error during Apple Sign-In: $e');
+        debugPrint('[APPLE_AUTH_DEBUG] Unexpected error: $e');
       }
       return 'Apple Sign-In failed: $e';
     } finally {
@@ -498,8 +515,10 @@ class AuthProvider extends ChangeNotifier {
         return 'No account found with this email.';
 
       case 'wrong-password':
-      case 'invalid-credential':
         return 'Incorrect email or password.';
+
+      case 'invalid-credential':
+        return 'Authentication credential is invalid or expired. Please check your sign-in settings.';
 
       case 'email-already-in-use':
         return 'An account already exists with this email.';
