@@ -518,7 +518,7 @@ class AuthProvider extends ChangeNotifier {
         return 'Incorrect email or password.';
 
       case 'invalid-credential':
-        return 'Authentication credential is invalid or expired. Please check your sign-in settings.';
+        return 'Apple Sign-In credential validation failed (invalid-credential). Please verify Apple Services ID (com.sanatanscroll.app), Team ID, and Private Key in Firebase Console > Authentication > Apple provider.';
 
       case 'email-already-in-use':
         return 'An account already exists with this email.';
