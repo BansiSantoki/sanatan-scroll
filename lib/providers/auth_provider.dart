@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,6 +16,8 @@ class AuthProvider extends ChangeNotifier {
   StreamSubscription<User?>? _authSubscription;
 
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   AuthProvider() {
     _authSubscription = _auth.authStateChanges().listen(
@@ -125,11 +131,11 @@ class AuthProvider extends ChangeNotifier {
   // LOADING
   // ============================================================
 
-  bool get isLoading => _isLoading;
+  bool get isLoading => _isLoading || _isGoogleLoading || _isAppleLoading;
 
-  bool get isGoogleLoading => _isLoading;
+  bool get isGoogleLoading => _isGoogleLoading;
 
-  bool get isAppleLoading => false;
+  bool get isAppleLoading => _isAppleLoading;
 
   void _setLoading(bool value) {
     if (_isLoading == value) {
@@ -198,12 +204,19 @@ class AuthProvider extends ChangeNotifier {
 
   Future<String?> signInWithGoogle() async {
     try {
-      _setLoading(true);
+      _isGoogleLoading = true;
+      notifyListeners();
 
-      // Existing Google session clear કરવી જરૂરી નથી.
-      // Directly account picker open થશે.
-      final GoogleSignInAccount? googleUser =
-          await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId:
+            '746323217658-0qfl1om1hk67vflkormno80seq38pvcr.apps.googleusercontent.com',
+      );
+
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
         return 'Google Sign-In cancelled';
@@ -219,27 +232,31 @@ class AuthProvider extends ChangeNotifier {
         return 'Google Sign-In failed: Google ID token was not returned.';
       }
 
-      final AuthCredential credential =
-          GoogleAuthProvider.credential(
+      final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: accessToken,
         idToken: idToken,
       );
 
-      await _auth.signInWithCredential(credential);
-
-      final firebaseUser = _auth.currentUser;
+      final userCredential = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
         await _syncUserProfile(firebaseUser);
       }
 
       notifyListeners();
-
       return null;
     } on FirebaseAuthException catch (e) {
       return _firebaseAuthError(e);
     } catch (e) {
       final message = e.toString();
+
+      if (message.contains('sign_in_canceled') ||
+          message.contains('canceled') ||
+          message.contains('cancelled') ||
+          message.contains('12501')) {
+        return 'Google Sign-In cancelled';
+      }
 
       if (message.contains('ApiException: 10')) {
         return 'Google Sign-In configuration error (ApiException: 10). '
@@ -253,8 +270,81 @@ class AuthProvider extends ChangeNotifier {
 
       return 'Google Sign-In failed: $e';
     } finally {
-      _setLoading(false);
+      _isGoogleLoading = false;
+      notifyListeners();
     }
+  }
+
+  // ============================================================
+  // APPLE SIGN IN
+  // ============================================================
+
+  Future<String?> signInWithApple() async {
+    try {
+      _isAppleLoading = true;
+      notifyListeners();
+
+      final rawNonce = _generateNonce();
+      final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: sha256Nonce,
+      );
+
+      final OAuthCredential credential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
+
+      if (firebaseUser != null) {
+        if (appleCredential.givenName != null ||
+            appleCredential.familyName != null) {
+          final given = appleCredential.givenName ?? '';
+          final family = appleCredential.familyName ?? '';
+          final name = '$given $family'.trim();
+          if (name.isNotEmpty) {
+            await firebaseUser.updateDisplayName(name);
+          }
+        }
+        await _syncUserProfile(firebaseUser);
+      }
+
+      notifyListeners();
+      return null;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return 'Apple Sign-In cancelled';
+      }
+      return 'Apple Sign-In failed: ${e.message}';
+    } on FirebaseAuthException catch (e) {
+      return _firebaseAuthError(e);
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('canceled') ||
+          msg.contains('cancelled') ||
+          msg.contains('1001')) {
+        return 'Apple Sign-In cancelled';
+      }
+      return 'Apple Sign-In failed: $e';
+    } finally {
+      _isAppleLoading = false;
+      notifyListeners();
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 
   // ============================================================

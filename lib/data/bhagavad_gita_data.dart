@@ -8,6 +8,10 @@ class BhagavadGitaData {
 
   static SacredBookModel? _gitaBookCache;
 
+  static void clearCache() {
+    _gitaBookCache = null;
+  }
+
   static SacredBookModel buildGitaBook() {
     if (_gitaBookCache != null) return _gitaBookCache!;
 

@@ -9,7 +9,6 @@ import '../../../../core/services/share_service.dart';
 import '../../../../core/widgets/custom_bottom_navigation.dart';
 import '../../../../providers/locale_provider.dart';
 import '../../../../providers/navigation_provider.dart';
-import '../../../../providers/reading_progress_provider.dart';
 
 class SacredTextDetailScreen extends StatefulWidget {
   final String bookId;
@@ -27,11 +26,6 @@ class _SacredTextDetailScreenState extends State<SacredTextDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<ReadingProgressProvider>().setLastReadBookId(widget.bookId);
-      }
-    });
   }
 
   // ============================================================

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -88,6 +89,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
   bool _isSpeaking = false;
   String? _lastAudioLangCode;
   bool _hasJumpedToInitialPosition = false;
+  bool _isInitialLoadCompleted = false;
+  Timer? _dwellTimer;
 
   late int currentChapter;
 
@@ -125,6 +128,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
 
   @override
   void dispose() {
+    _dwellTimer?.cancel();
     _pageController.dispose();
     _tts.stop();
     super.dispose();
@@ -264,6 +268,7 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     String? verseId,
     String? passageId,
     int pageIndex = 0,
+    String reason = 'Actual reading activity',
   }) {
     context.read<ReadingProgressProvider>().savePosition(
           bookId: widget.textId,
@@ -276,8 +281,40 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           verseId: verseId,
           passageId: passageId,
           pageIndex: pageIndex,
+          reason: reason,
         );
     context.read<StreakProvider>().markCompleted(DateTime.now());
+  }
+
+  void _scheduleDwellSave({
+    required int chapterNumber,
+    required int verseNumber,
+    String? chapterName,
+    int? kandaNumber,
+    int? sargaNumber,
+    int? mantraNumber,
+    String? verseId,
+    String? passageId,
+    int pageIndex = 0,
+    required String reason,
+  }) {
+    _dwellTimer?.cancel();
+    _dwellTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _isInitialLoadCompleted) {
+        _saveProgress(
+          chapterNumber: chapterNumber,
+          verseNumber: verseNumber,
+          chapterName: chapterName,
+          kandaNumber: kandaNumber,
+          sargaNumber: sargaNumber,
+          mantraNumber: mantraNumber,
+          verseId: verseId,
+          passageId: passageId,
+          pageIndex: pageIndex,
+          reason: reason,
+        );
+      }
+    });
   }
 
   @override
@@ -391,9 +428,10 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
 
         // Check if we need to jump to initial verse/mantra position on first load
         if (!_hasJumpedToInitialPosition) {
+          int targetIdx = 0;
           if (isUpanishad) {
             final targetMantra = widget.initialMantraNumber ?? widget.initialVerseNumber ?? currentChapter;
-            final targetIdx = (targetMantra - 1).clamp(0, itemCount - 1);
+            targetIdx = (targetMantra - 1).clamp(0, itemCount - 1);
             if (targetIdx > 0) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (_pageController.hasClients) {
@@ -401,29 +439,70 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                 }
               });
             }
-            _hasJumpedToInitialPosition = true;
           } else if (chapter != null && chapter.verses.isNotEmpty) {
-            int targetIdx = -1;
+            int matchIdx = -1;
             if (widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
-              targetIdx = chapter.verses.indexWhere((v) => v.verseNumber == widget.initialVerseNumber);
+              matchIdx = chapter.verses.indexWhere((v) => v.verseNumber == widget.initialVerseNumber);
             }
-            if (targetIdx == -1 && widget.initialVerseId != null) {
-              targetIdx = chapter.verses.indexWhere((v) => v.transliteration == widget.initialVerseId);
+            if (matchIdx == -1 && widget.initialVerseId != null) {
+              matchIdx = chapter.verses.indexWhere((v) => v.transliteration == widget.initialVerseId);
             }
-            if (targetIdx == -1 && widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
-              targetIdx = (widget.initialVerseNumber! - 1).clamp(0, chapter.verses.length - 1);
+            if (matchIdx == -1 && widget.initialVerseNumber != null && widget.initialVerseNumber! > 0) {
+              matchIdx = (widget.initialVerseNumber! - 1).clamp(0, chapter.verses.length - 1);
             }
 
-            if (targetIdx > 0) {
-              final idxToJump = targetIdx;
+            if (matchIdx > 0) {
+              targetIdx = matchIdx;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (_pageController.hasClients) {
-                  _pageController.jumpToPage(idxToJump);
+                  _pageController.jumpToPage(targetIdx);
                 }
               });
             }
-            _hasJumpedToInitialPosition = true;
           }
+
+          _hasJumpedToInitialPosition = true;
+
+          if (kDebugMode) {
+            debugPrint('==================================================');
+            debugPrint('[CONTINUE_DEBUG] READER OPENED / INITIALIZED');
+            debugPrint('bookId: ${widget.textId}');
+            debugPrint('chapterNumber: $currentChapter');
+            debugPrint('initialVerseNumber: ${widget.initialVerseNumber}');
+            debugPrint('initialVerseId: ${widget.initialVerseId}');
+            debugPrint('initialPageIndex: ${widget.initialPageIndex}');
+            debugPrint('resolvedTargetIndex: $targetIdx');
+            debugPrint('==================================================');
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _isInitialLoadCompleted = true;
+              });
+              if (isUpanishad) {
+                final activeChap = book.chapters[targetIdx.clamp(0, book.chapters.length - 1)];
+                _scheduleDwellSave(
+                  chapterNumber: activeChap.chapterNumber,
+                  verseNumber: 1,
+                  chapterName: activeChap.title,
+                  mantraNumber: activeChap.chapterNumber,
+                  pageIndex: targetIdx,
+                  reason: 'User stayed on initial Upanishads mantra page for 3+ seconds',
+                );
+              } else if (chapter != null && chapter.verses.isNotEmpty) {
+                final activeVerse = chapter.verses[targetIdx.clamp(0, chapter.verses.length - 1)];
+                _scheduleDwellSave(
+                  chapterNumber: currentChapter,
+                  verseNumber: activeVerse.verseNumber,
+                  chapterName: chapter.title,
+                  verseId: activeVerse.transliteration,
+                  pageIndex: targetIdx,
+                  reason: 'User stayed on initial verse page for 3+ seconds',
+                );
+              }
+            }
+          });
         }
 
         return PageView.builder(
@@ -431,6 +510,8 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
           scrollDirection: Axis.vertical,
           itemCount: itemCount,
           onPageChanged: (pageIndex) {
+            if (!_isInitialLoadCompleted) return;
+
             if (isUpanishad) {
               final activeChap = book.chapters[pageIndex];
               _saveProgress(
@@ -439,6 +520,15 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                 chapterName: activeChap.title,
                 mantraNumber: activeChap.chapterNumber,
                 pageIndex: pageIndex,
+                reason: 'User swiped Upanishads page $pageIndex',
+              );
+              _scheduleDwellSave(
+                chapterNumber: activeChap.chapterNumber,
+                verseNumber: 1,
+                chapterName: activeChap.title,
+                mantraNumber: activeChap.chapterNumber,
+                pageIndex: pageIndex,
+                reason: 'User stayed on Upanishads page $pageIndex for 3+ seconds',
               );
               context.read<ChapterCompletionProvider>().markCompleted(
                     bookTitle: book.title,
@@ -458,6 +548,15 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
                 chapterName: chapter.title,
                 verseId: activeVerse?.transliteration,
                 pageIndex: pageIndex,
+                reason: 'User swiped verse page $pageIndex (Verse $actualVerseNum)',
+              );
+              _scheduleDwellSave(
+                chapterNumber: currentChapter,
+                verseNumber: actualVerseNum,
+                chapterName: chapter.title,
+                verseId: activeVerse?.transliteration,
+                pageIndex: pageIndex,
+                reason: 'User stayed on verse page $pageIndex (Verse $actualVerseNum) for 3+ seconds',
               );
               if (pageIndex == chapter.verses.length - 1) {
                 context.read<ChapterCompletionProvider>().markCompleted(
@@ -749,6 +848,7 @@ class _RamayanaReaderView extends StatefulWidget {
     String? verseId,
     String? passageId,
     int pageIndex,
+    String reason,
   }) onSaveProgress;
   final ValueChanged<int>? onSargaChanged;
   final String Function({
@@ -770,6 +870,8 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
   int _currentShlokaIndex = 0;
 
   bool _isNavigatingSarga = false;
+  bool _isInitialLoadCompleted = false;
+  Timer? _dwellTimer;
 
   static const Map<int, int> _kandaSargaCounts = {
     1: 77,  // Bala Kanda
@@ -807,6 +909,26 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
 
     _currentShlokaIndex = targetShlokaIndex;
     _shlokaPageController = PageController(initialPage: targetShlokaIndex);
+
+    if (kDebugMode) {
+      debugPrint('==================================================');
+      debugPrint('[CONTINUE_DEBUG] RAMAYANA READER OPENED / INITIALIZED');
+      debugPrint('bookId: ramayana');
+      debugPrint('kandaNumber: $_currentKandaNumber');
+      debugPrint('sargaNumber: $_currentSargaNumber');
+      debugPrint('initialVerseNumber: ${widget.initialVerseNumber}');
+      debugPrint('resolvedShlokaIndex: $targetShlokaIndex');
+      debugPrint('==================================================');
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isInitialLoadCompleted = true;
+        });
+        _scheduleDwellSave('User stayed on initial Ramayana shloka for 3+ seconds');
+      }
+    });
   }
 
   void _initFromChapterNumber(int chapNum) {
@@ -835,6 +957,7 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
 
   @override
   void dispose() {
+    _dwellTimer?.cancel();
     _shlokaPageController.dispose();
     super.dispose();
   }
@@ -897,7 +1020,9 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
     );
   }
 
-  void _saveProgress() {
+  void _saveProgress({String reason = 'Actual reading activity'}) {
+    if (!_isInitialLoadCompleted) return;
+
     final activeSarga = _findOrCreateActiveSarga();
     final verses = _getEffectiveVerses(activeSarga);
     final composite = (_currentKandaNumber * 1000) + _currentSargaNumber;
@@ -915,7 +1040,17 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
       sargaNumber: _currentSargaNumber,
       verseId: verse?.transliteration,
       pageIndex: _currentShlokaIndex,
+      reason: reason,
     );
+  }
+
+  void _scheduleDwellSave(String reason) {
+    _dwellTimer?.cancel();
+    _dwellTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && _isInitialLoadCompleted) {
+        _saveProgress(reason: reason);
+      }
+    });
   }
 
   void _goToNextShloka(int totalShlokas) {
@@ -1077,7 +1212,10 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
             setState(() {
               _currentShlokaIndex = index;
             });
-            _saveProgress();
+            if (_isInitialLoadCompleted) {
+              _saveProgress(reason: 'User swiped Ramayana shloka $index');
+              _scheduleDwellSave('User stayed on Ramayana shloka $index for 3+ seconds');
+            }
           }
         },
         itemBuilder: (context, index) {

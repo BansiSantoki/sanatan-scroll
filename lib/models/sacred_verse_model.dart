@@ -121,7 +121,30 @@ class SacredVerseModel {
         : (map['sarga_number'] != null
             ? _asInt(map['sarga_number'], fallback: -1)
             : (map['sargaNumber'] != null ? _asInt(map['sargaNumber'], fallback: -1) : null));
-    final vNum = _asInt(map['shlok_no'] ?? map['shloka_no'] ?? map['verseNumber'] ?? map['verse_number'], fallback: 1);
+
+    dynamic rawVerseNum = map['verse_no'] ??
+        map['verseNo'] ??
+        map['verse_number'] ??
+        map['verseNumber'] ??
+        map['shlok_no'] ??
+        map['shlokNo'] ??
+        map['shloka_no'] ??
+        map['shlokaNo'] ??
+        map['shlok'] ??
+        map['shloka'] ??
+        map['verse'] ??
+        map['verse_id'] ??
+        map['id'];
+
+    if (rawVerseNum == null && map['verse_reference'] != null) {
+      final refStr = map['verse_reference'].toString().trim();
+      if (refStr.contains('.')) {
+        final lastPart = refStr.split('.').last;
+        rawVerseNum = int.tryParse(lastPart);
+      }
+    }
+
+    final vNum = _asInt(rawVerseNum, fallback: 1);
 
     return SacredVerseModel(
       verseNumber: vNum,

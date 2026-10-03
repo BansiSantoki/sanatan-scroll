@@ -29,6 +29,7 @@ class SacredBooksRepository {
   static final Map<String, Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>> _pendingChapterDocsFutures = {};
 
   static void clearCache() {
+    BhagavadGitaData.clearCache();
     _booksCache.clear();
     _chaptersCache.clear();
     _versesCache.clear();

@@ -81,15 +81,7 @@ class AuthScreen extends StatelessWidget {
                             AppleSignInButton(
                               onPressed: auth.isLoading
                                   ? null
-                                  : () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Apple Sign-In will be added soon',
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                  : () => _handleAppleSignIn(context, auth),
                               isLoading: auth.isAppleLoading,
                             ),
                           ],
@@ -148,6 +140,33 @@ class AuthScreen extends StatelessWidget {
     }
 
     if (error != null && error != 'Google Sign-In cancelled') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleAppleSignIn(
+    BuildContext context,
+    AuthProvider auth,
+  ) async {
+    final error = await auth.signInWithApple();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (auth.user != null) {
+      Navigator.of(context).pushReplacementNamed(
+        AppRoutes.onboarding,
+      );
+      return;
+    }
+
+    if (error != null && error != 'Apple Sign-In cancelled') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error),

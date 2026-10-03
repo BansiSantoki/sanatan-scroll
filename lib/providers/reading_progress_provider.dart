@@ -142,6 +142,27 @@ class ReadingProgressProvider extends ChangeNotifier {
 
   String get lastReadBookId => _lastReadBookId;
 
+  ReadingPosition? get latestPosition {
+    if (_positions.isEmpty) return null;
+    ReadingPosition? latest;
+    for (final pos in _positions.values) {
+      if (latest == null) {
+        latest = pos;
+      } else if (pos.lastReadAt != null &&
+          (latest.lastReadAt == null || pos.lastReadAt!.isAfter(latest.lastReadAt!))) {
+        latest = pos;
+      }
+    }
+    return latest;
+  }
+
+  void _syncLastReadBookIdFromPositions() {
+    final latest = latestPosition;
+    if (latest != null && latest.bookId.isNotEmpty) {
+      _lastReadBookId = latest.bookId;
+    }
+  }
+
   ReadingProgressProvider() {
     _loadLocalLastRead();
   }
@@ -162,6 +183,7 @@ class ReadingProgressProvider extends ChangeNotifier {
             _positions[key] = ReadingPosition.fromMap(key, value);
           }
         });
+        _syncLastReadBookIdFromPositions();
       }
       notifyListeners();
     } catch (e) {
@@ -187,18 +209,10 @@ class ReadingProgressProvider extends ChangeNotifier {
   ReadingPosition? positionFor(String bookId) => _positions[bookId];
 
   Future<void> setLastReadBookId(String bookId) async {
-    if (bookId.isEmpty) return;
-    _lastReadBookId = bookId;
-    notifyListeners();
-    _savePositionsLocally();
-
-    if (_activeUserId.isNotEmpty) {
-      try {
-        await _firestore.collection('users').doc(_activeUserId).set({
-          'lastReadBookId': bookId,
-          'lastReadUpdatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      } catch (_) {}
+    // Browsing a book/screen MUST NOT change the user's last reading progress.
+    // Progress is ONLY updated when actual reading activity occurs via savePosition.
+    if (kDebugMode) {
+      debugPrint('[CONTINUE_DEBUG] setLastReadBookId ignored for browsing book: $bookId');
     }
   }
 
@@ -222,7 +236,7 @@ class ReadingProgressProvider extends ChangeNotifier {
       if (docSnap.exists && docSnap.data() != null) {
         final data = docSnap.data()!;
         final savedBook = data['lastReadBookId'] as String?;
-        if (savedBook != null && savedBook.isNotEmpty) {
+        if (savedBook != null && savedBook.isNotEmpty && _positions.isEmpty) {
           _lastReadBookId = savedBook;
           notifyListeners();
         }
@@ -239,6 +253,7 @@ class ReadingProgressProvider extends ChangeNotifier {
         final data = doc.data();
         _positions[doc.id] = ReadingPosition.fromMap(doc.id, data);
       }
+      _syncLastReadBookIdFromPositions();
       _savePositionsLocally();
       notifyListeners();
     });
@@ -260,6 +275,7 @@ class ReadingProgressProvider extends ChangeNotifier {
     String? passageId,
     int? mantraNumber,
     int pageIndex = 0,
+    String reason = 'Actual reading activity',
   }) async {
     final position = ReadingPosition(
       bookId: bookId,
@@ -286,7 +302,19 @@ class ReadingProgressProvider extends ChangeNotifier {
     _savePositionsLocally();
 
     if (kDebugMode) {
-      debugPrint('[CONTINUE] Saved reading position: bookId=$bookId, chapter=$chapterNumber, kanda=$kandaNumber, sarga=$sargaNumber, verse=$verseNumber, mantra=$mantraNumber, pageIndex=$pageIndex');
+      debugPrint('==================================================');
+      debugPrint('[CONTINUE_DEBUG] PROGRESS UPDATED / SAVED');
+      debugPrint('bookId: $bookId');
+      debugPrint('chapterNumber: $chapterNumber');
+      debugPrint('kandaNumber: ${position.kandaNumber}');
+      debugPrint('sargaNumber: ${position.sargaNumber}');
+      debugPrint('mantraNumber: ${position.mantraNumber}');
+      debugPrint('verseId: $verseId');
+      debugPrint('verseNumber: $verseNumber');
+      debugPrint('pageIndex: $pageIndex');
+      debugPrint('reason: $reason');
+      debugPrint('timestamp: ${position.lastReadAt?.toIso8601String()}');
+      debugPrint('==================================================');
     }
 
     if (_activeUserId.isEmpty) return;

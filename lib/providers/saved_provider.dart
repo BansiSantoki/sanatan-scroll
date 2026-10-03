@@ -15,13 +15,65 @@ class SavedProvider extends ChangeNotifier {
 
   List<SavedItemModel> get items {
     if (_activeFilter == 'All') return List.unmodifiable(_items);
-    final query = _activeFilter.toLowerCase().trim();
-    final filtered = _items.where((i) {
-      return i.source.toLowerCase().contains(query) ||
-          i.title.toLowerCase().contains(query) ||
-          i.content.toLowerCase().contains(query);
-    }).toList();
+    final filtered = _items.where((i) => _matchesFilter(i, _activeFilter)).toList();
     return List.unmodifiable(filtered);
+  }
+
+  bool _matchesFilter(SavedItemModel item, String filter) {
+    if (filter == 'All') return true;
+
+    final filterLower = filter.toLowerCase().trim();
+
+    // 1. Direct bookId checks
+    final bookId = (item.bookId ?? '').toLowerCase().trim();
+    if (filterLower == 'upanishads' || filterLower == 'upanishad') {
+      if (bookId == 'upanishads' || bookId == 'upanishad' || bookId == 'isha_upanishad') {
+        return true;
+      }
+    } else if (filterLower == 'bhagavad gita' || filterLower == 'gita') {
+      if (bookId == 'bhagavad_gita' || bookId == 'gita') {
+        return true;
+      }
+    } else if (filterLower == 'ramayana') {
+      if (bookId == 'ramayana') {
+        return true;
+      }
+    }
+
+    // 2. Check item id prefix
+    final idLower = item.id.toLowerCase();
+    if (filterLower == 'upanishads' || filterLower == 'upanishad') {
+      if (idLower.startsWith('upanishad') || idLower.startsWith('isha') || idLower.contains('upanishad')) {
+        return true;
+      }
+    } else if (filterLower == 'bhagavad gita' || filterLower == 'gita') {
+      if (idLower.startsWith('bhagavad') || idLower.startsWith('gita') || idLower.contains('gita')) {
+        return true;
+      }
+    } else if (filterLower == 'ramayana') {
+      if (idLower.startsWith('ramayana') || idLower.contains('ramayana')) {
+        return true;
+      }
+    }
+
+    // 3. Singular vs Plural text matching (e.g. 'upanishad' vs 'upanishads')
+    final String queryBase = filterLower.endsWith('s')
+        ? filterLower.substring(0, filterLower.length - 1)
+        : filterLower;
+
+    final sourceLower = item.source.toLowerCase();
+    final titleLower = item.title.toLowerCase();
+    final bookNameLower = (item.bookName ?? '').toLowerCase();
+    final contentLower = item.content.toLowerCase();
+
+    return sourceLower.contains(queryBase) ||
+        titleLower.contains(queryBase) ||
+        bookNameLower.contains(queryBase) ||
+        contentLower.contains(queryBase) ||
+        sourceLower.contains(filterLower) ||
+        titleLower.contains(filterLower) ||
+        bookNameLower.contains(filterLower) ||
+        contentLower.contains(filterLower);
   }
 
   String get activeFilter => _activeFilter;

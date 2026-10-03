@@ -343,8 +343,8 @@ class _HomePageWidgetState extends State<HomePageWidget> {
               // ==========================================
               Builder(
                 builder: (context) {
-                  final String targetBook = lastReadBookId.isNotEmpty ? lastReadBookId : 'bhagavad_gita';
-                  final lastPos = readingProgress.positionFor(targetBook);
+                  final lastPos = readingProgress.latestPosition ?? readingProgress.positionFor(lastReadBookId);
+                  final String targetBook = lastPos?.bookId ?? (lastReadBookId.isNotEmpty ? lastReadBookId : 'bhagavad_gita');
 
                   final subtitleText = lastPos != null
                       ? _getLocalizedPositionText(context, lastPos)
@@ -357,7 +357,12 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                           : {'textId': targetBook, 'chapterNumber': 1, 'verseNumber': 1};
 
                       if (kDebugMode) {
-                        debugPrint('[CONTINUE] Tapped Continue Your Journey with args: $routeArgs');
+                        debugPrint('==================================================');
+                        debugPrint('[CONTINUE_DEBUG] TAPPED CONTINUE YOUR JOURNEY');
+                        debugPrint('targetBookId: $targetBook');
+                        debugPrint('loadedProgress: ${lastPos?.toMap()}');
+                        debugPrint('routeArgs: $routeArgs');
+                        debugPrint('==================================================');
                       }
 
                       Navigator.of(context).pushNamed(
@@ -463,7 +468,6 @@ class _HomePageWidgetState extends State<HomePageWidget> {
                       bgColor: item['bgColor'] as Color,
                       imagePath: item['imagePath']!,
                       onTap: () {
-                        context.read<ReadingProgressProvider>().setLastReadBookId(item['id'] as String);
                         Navigator.of(context).pushNamed(
                           AppRoutes.sacredTextDetail,
                           arguments: item['id'],
