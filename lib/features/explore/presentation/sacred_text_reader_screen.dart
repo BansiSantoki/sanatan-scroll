@@ -185,76 +185,11 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
-    if (book.id == 'upanishads') {
-      final passageRef = chapter.title;
-      final sanskritText = verse.sanskrit.trim();
-      final translationText = verse.getLocalizedTranslation(langCode).trim();
-
-      final buffer = StringBuffer();
-      buffer.writeln('Book:');
-      buffer.writeln('Isha Upanishad');
-      buffer.writeln();
-      buffer.writeln('Reference:');
-      buffer.writeln(passageRef);
-      buffer.writeln();
-      if (sanskritText.isNotEmpty) {
-        buffer.writeln('Sanskrit:');
-        buffer.writeln(sanskritText);
-        buffer.writeln();
-      }
-      buffer.writeln('Translation:');
-      buffer.writeln(translationText);
-
-      ShareService.share(
-        title: 'Isha Upanishad · $passageRef',
-        text: buffer.toString(),
-      );
-      return;
-    }
-
-    final l10n = AppLocalizations.of(context);
-    final chapterWord = l10n.chapter;
-    final verseWord = l10n.verse;
-    final bookTitle = book.getLocalizedTitle(langCode);
-
-    String topHeader;
-    if (book.id == 'ramayana' || verse.kandaNumber != null || verse.sargaNumber != null || chapter.chapterNumber >= 1000) {
-      final kanda = verse.kandaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber ~/ 1000 : chapter.chapterNumber);
-      final sarga = verse.sargaNumber ?? (chapter.chapterNumber >= 1000 ? chapter.chapterNumber % 1000 : 1);
-      final isBalaKanda = kanda == 1;
-      final kandaName = isBalaKanda ? 'Bala Kanda' : 'Kanda $kanda';
-      topHeader = '$bookTitle · $kandaName (Sarga $sarga) · $verseWord ${verse.verseNumber}';
-    } else {
-      topHeader = '$bookTitle · $chapterWord ${chapter.chapterNumber} · $verseWord ${verse.verseNumber}';
-    }
-
-    final sanskritText = verse.sanskrit.trim();
-    final translationText = verse.getLocalizedTranslation(langCode).trim();
-
-    String translationLabel;
-    if (langCode == 'hi') {
-      translationLabel = 'अनुवाद:';
-    } else if (langCode == 'gu') {
-      translationLabel = 'અનુવાદ:';
-    } else {
-      translationLabel = 'Translation:';
-    }
-
-    final buffer = StringBuffer();
-    buffer.writeln(topHeader);
-    buffer.writeln();
-    if (sanskritText.isNotEmpty) {
-      buffer.writeln(sanskritText);
-      buffer.writeln();
-    }
-    buffer.writeln(translationLabel);
-    buffer.writeln(translationText);
-    buffer.writeln();
-    buffer.write('— Sanatan Scroll');
-
-    ShareService.share(
-      title: topHeader,
-      text: buffer.toString(),
+    ShareService.shareVerse(
+      book: book,
+      chapter: chapter,
+      verse: verse,
+      langCode: langCode,
     );
   }
 
@@ -749,6 +684,7 @@ class _VerseViewState extends State<_VerseView> {
       mantraNumber: isUpanishad ? widget.chapter.chapterNumber : widget.verse.verseNumber,
       verseId: widget.verse.transliteration,
       verseNumber: widget.verse.verseNumber,
+      verseReference: isUpanishad ? 'Mantra ${widget.chapter.chapterNumber}' : '${widget.chapter.chapterNumber}.${widget.verse.verseNumber}',
     );
     final isSaved = savedProvider.isSaved(savedItem.id);
     void toggleSave() => savedProvider.toggleItem(savedItem);
@@ -1238,6 +1174,7 @@ class _RamayanaReaderViewState extends State<_RamayanaReaderView> {
             sargaNumber: _currentSargaNumber,
             verseId: verse.transliteration,
             verseNumber: verse.verseNumber,
+            verseReference: '$_currentKandaNumber.$_currentSargaNumber.${verse.verseNumber}',
           );
           final isSaved = savedProvider.isSaved(savedItem.id);
           void toggleSave() => savedProvider.toggleItem(savedItem);

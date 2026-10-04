@@ -108,11 +108,10 @@ class SavedContentCard extends StatelessWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => ShareService.showOptions(
-                        context: context,
+                      onTap: () => ShareService.share(
                         title: item.title,
                         text:
-                            '${item.title}\n\n"${item.content}"\n\n${item.source}\n\nSanatan Scroll',
+                            'Sanatan Scroll\n\n${item.title}\n\n${item.content}\n\nReference: ${item.verseReference ?? item.source}',
                       ),
                       behavior: HitTestBehavior.opaque,
                       child: Icon(

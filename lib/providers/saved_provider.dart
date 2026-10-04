@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../data/mock_saved_data.dart';
 import '../models/saved_item_model.dart';
@@ -8,10 +9,16 @@ import '../models/saved_item_model.dart';
 class SavedProvider extends ChangeNotifier {
   final List<SavedItemModel> _items = List.from(MockSavedData.initial);
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _savedSubscription;
   String _activeUserId = '';
   String _activeFilter = 'All';
+
+  String get effectiveUserId {
+    if (_activeUserId.isNotEmpty) return _activeUserId;
+    return _auth.currentUser?.uid ?? '';
+  }
 
   List<SavedItemModel> get items {
     if (_activeFilter == 'All') return List.unmodifiable(_items);
@@ -78,10 +85,10 @@ class SavedProvider extends ChangeNotifier {
 
   String get activeFilter => _activeFilter;
 
-  bool get isSyncedWithCloud => _activeUserId.isNotEmpty;
+  bool get isSyncedWithCloud => effectiveUserId.isNotEmpty;
 
   void bindUser(String userId) {
-    if (_activeUserId == userId) return;
+    if (_activeUserId == userId && _savedSubscription != null) return;
 
     _savedSubscription?.cancel();
     _activeUserId = userId;
@@ -121,54 +128,101 @@ class SavedProvider extends ChangeNotifier {
         );
 
       notifyListeners();
+    }, onError: (e) {
+      if (kDebugMode) {
+        debugPrint('[SAVE DEBUG] Firestore listen error for uid $_activeUserId: $e');
+      }
     });
   }
- 
+
   void setFilter(String filter) {
     _activeFilter = filter;
     notifyListeners();
   }
 
   Future<void> removeItem(String id) async {
+    final uid = effectiveUserId;
+
+    SavedItemModel? targetItem;
+    try {
+      targetItem = _items.firstWhere((i) => i.id == id);
+    } catch (_) {}
+
+    if (kDebugMode) {
+      debugPrint('==================================================');
+      debugPrint('[SAVE DEBUG] Save tapped (UNSAVE)');
+      debugPrint('  uid: $uid');
+      debugPrint('  bookId: ${targetItem?.bookId}');
+      debugPrint('  section/chapter: ${targetItem?.chapterNumber}');
+      debugPrint('  verseId: ${targetItem?.verseId}');
+      debugPrint('  verseNumber: ${targetItem?.verseNumber}');
+      debugPrint('  action: unsave');
+      debugPrint('  Firestore path: users/$uid/saved_items/$id');
+      debugPrint('==================================================');
+    }
+
     _items.removeWhere((i) => i.id == id);
     notifyListeners();
 
-    if (_activeUserId.isNotEmpty) {
+    if (uid.isNotEmpty) {
       try {
         await _firestore
             .collection('users')
-            .doc(_activeUserId)
+            .doc(uid)
             .collection('saved_items')
             .doc(id)
             .delete();
+
+        if (kDebugMode) {
+          debugPrint('[SAVE DEBUG] Firestore unsave success: users/$uid/saved_items/$id');
+        }
       } catch (e) {
         if (kDebugMode) {
-          print('Error deleting saved item from Firestore: $e');
+          debugPrint('[SAVE DEBUG] Error deleting saved item from Firestore: $e');
         }
       }
     }
   }
 
   Future<void> addItem(SavedItemModel item) async {
+    final uid = effectiveUserId;
+
+    if (kDebugMode) {
+      debugPrint('==================================================');
+      debugPrint('[SAVE DEBUG] Save tapped (SAVE)');
+      debugPrint('  uid: $uid');
+      debugPrint('  bookId: ${item.bookId}');
+      debugPrint('  section/chapter: ${item.chapterNumber}');
+      debugPrint('  verseId: ${item.verseId}');
+      debugPrint('  verseNumber: ${item.verseNumber}');
+      debugPrint('  action: save');
+      debugPrint('  Firestore path: users/$uid/saved_items/${item.id}');
+      debugPrint('==================================================');
+    }
+
     if (!_items.any((i) => i.id == item.id)) {
       _items.insert(0, item);
       notifyListeners();
     }
 
-    if (_activeUserId.isNotEmpty) {
+    if (uid.isNotEmpty) {
       try {
         await _firestore
             .collection('users')
-            .doc(_activeUserId)
+            .doc(uid)
             .collection('saved_items')
             .doc(item.id)
             .set({
           ...item.toMap(),
           'savedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
+
+        if (kDebugMode) {
+          debugPrint('[SAVE DEBUG] Firestore save success: users/$uid/saved_items/${item.id}');
+        }
       } catch (e) {
         if (kDebugMode) {
-          print('Error adding saved item to Firestore: $e');
+          debugPrint('[SAVE DEBUG] Error adding saved item to Firestore: $e');
         }
       }
     }
@@ -185,11 +239,10 @@ class SavedProvider extends ChangeNotifier {
 
   bool isSaved(String id) => _items.any((i) => i.id == id);
 
-
-
   @override
   void dispose() {
     _savedSubscription?.cancel();
     super.dispose();
   }
 }
+
