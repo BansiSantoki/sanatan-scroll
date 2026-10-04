@@ -185,11 +185,14 @@ class _SacredTextReaderScreenState extends State<SacredTextReaderScreen> {
     required SacredVerseModel verse,
     required String langCode,
   }) {
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null ? (box.localToGlobal(Offset.zero) & box.size) : null;
     ShareService.shareVerse(
       book: book,
       chapter: chapter,
       verse: verse,
       langCode: langCode,
+      sharePositionOrigin: origin,
     );
   }
 

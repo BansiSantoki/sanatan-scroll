@@ -15,28 +15,26 @@ class ShareService {
   static const String _appStoreLink =
       'https://apps.apple.com/gb/app/sanatan-scroll/id6764406241';
 
-  /// Returns the platform-specific app store link based on the running device.
-  static String get platformStoreLink {
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return _appStoreLink;
-    }
-    return _playStoreLink;
+  static String get formattedStoreLinks {
+    return 'Read more on Sanatan Scroll:\n\n'
+        'App Store: $_appStoreLink\n\n'
+        'Play Store: $_playStoreLink';
   }
 
   /// Share raw text directly using native Android/iOS platform share sheet.
   static Future<void> share({
     required String title,
     required String text,
+    Rect? sharePositionOrigin,
   }) async {
     final String finalText = text.contains('Read more on Sanatan Scroll:')
         ? text
-        : '$text\n\nRead more on Sanatan Scroll: $platformStoreLink';
+        : '$text\n\n$formattedStoreLinks';
 
     if (kDebugMode) {
       debugPrint('==================================================');
-      debugPrint('[SHARE DEBUG] Share tapped (generic)');
+      debugPrint('[SHARE DEBUG] Share tapped');
       debugPrint('  platform: $defaultTargetPlatform');
-      debugPrint('  storeLink: $platformStoreLink');
       debugPrint('  title: $title');
       debugPrint('  share text generated:\n$finalText');
       debugPrint('  share action started');
@@ -44,7 +42,11 @@ class ShareService {
     }
 
     try {
-      final result = await Share.share(finalText, subject: title);
+      final result = await Share.share(
+        finalText,
+        subject: title,
+        sharePositionOrigin: sharePositionOrigin ?? const Rect.fromLTWH(0, 0, 100, 100),
+      );
       if (kDebugMode) {
         debugPrint('[SHARE DEBUG] share success: status=${result.status}');
       }
@@ -55,20 +57,7 @@ class ShareService {
     }
   }
 
-  /// Builds standardized scripture verse share text following exact requirements:
-  /// 
-  /// Sanatan Scroll
-  /// 
-  /// [Book Name]
-  /// [Chapter / Section / Verse]
-  /// 
-  /// [Sanskrit Text]
-  /// 
-  /// [Current Language Translation]
-  /// 
-  /// Reference: [Canonical Reference]
-  /// 
-  /// Read more on Sanatan Scroll: [PLATFORM-SPECIFIC STORE LINK]
+  /// Builds standardized scripture verse share text with both App Store and Play Store links.
   static String buildShareText({
     required SacredBookModel book,
     required SacredChapterModel chapter,
@@ -144,7 +133,7 @@ class ShareService {
     buffer.writeln();
     buffer.writeln('Reference: $referenceStr');
     buffer.writeln();
-    buffer.write('Read more on Sanatan Scroll: $platformStoreLink');
+    buffer.write(formattedStoreLinks);
 
     return buffer.toString();
   }
@@ -155,6 +144,7 @@ class ShareService {
     required SacredChapterModel chapter,
     required SacredVerseModel verse,
     required String langCode,
+    Rect? sharePositionOrigin,
   }) async {
     final generatedText = buildShareText(
       book: book,
@@ -169,7 +159,6 @@ class ShareService {
       debugPrint('==================================================');
       debugPrint('[SHARE DEBUG] Share tapped');
       debugPrint('  platform: $defaultTargetPlatform');
-      debugPrint('  storeLink: $platformStoreLink');
       debugPrint('  bookId: ${book.id}');
       debugPrint('  verseId: $verseId');
       debugPrint('  verseNumber: ${verse.verseNumber}');
@@ -183,6 +172,7 @@ class ShareService {
       final result = await Share.share(
         generatedText,
         subject: '${book.getLocalizedTitle(langCode)} - Verse ${verse.verseNumber}',
+        sharePositionOrigin: sharePositionOrigin ?? const Rect.fromLTWH(0, 0, 100, 100),
       );
       if (kDebugMode) {
         debugPrint('[SHARE DEBUG] share success: status=${result.status}');
@@ -194,14 +184,17 @@ class ShareService {
     }
   }
 
-  /// Open native platform share sheet directly (replaces custom bottom sheet).
+  /// Open native platform share sheet directly.
   static Future<void> showOptions({
     required BuildContext context,
     required String title,
     required String text,
   }) async {
-    await share(title: title, text: text);
+    final box = context.findRenderObject() as RenderBox?;
+    final Rect? origin = box != null ? (box.localToGlobal(Offset.zero) & box.size) : null;
+    await share(title: title, text: text, sharePositionOrigin: origin);
   }
 }
+
 
 
