@@ -49,7 +49,7 @@ class _HomePageWidgetState extends State<HomePageWidget> {
         ? user.displayName!.trim().split(' ').first
         : (user?.email != null && user!.email!.trim().isNotEmpty)
             ? user.email!.trim().split('@').first
-            : 'Bansi';
+            : 'Seeker';
 
     final width = MediaQuery.sizeOf(context).width;
     final horizontalPadding = width >= 600 ? 28.0 : 20.0;

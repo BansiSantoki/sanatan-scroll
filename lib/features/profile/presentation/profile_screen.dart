@@ -10,9 +10,118 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/locale_provider.dart';
+import '../../../../providers/navigation_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int? _lastHandledTabNavIndex;
+
+  void _checkAndShowSignInPrompt(BuildContext context, bool isGuest) {
+    final nav = context.watch<NavigationProvider>();
+    final bool isProfileTabActive = nav.currentIndex == 3;
+
+    if (isGuest && isProfileTabActive && _lastHandledTabNavIndex != 3) {
+      _lastHandledTabNavIndex = 3;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showSignInPromptDialog(context);
+        }
+      });
+    } else if (nav.currentIndex != 3) {
+      _lastHandledTabNavIndex = nav.currentIndex;
+    }
+  }
+
+  void _showSignInPromptDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32)).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.account_circle_outlined,
+                  color: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Please Sign In',
+                  style: AppTextStyles.getFont(
+                    context,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Sign in to view your profile details, save sacred verses, and sync your reading progress across all devices.',
+            style: AppTextStyles.getFont(
+              context,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Maybe Later',
+                style: AppTextStyles.getFont(
+                  context,
+                  fontSize: 14,
+                  color: isDark ? Colors.white60 : const Color(0xFF666666),
+                ),
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pushNamed(AppRoutes.auth);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFFE88B60) : const Color(0xFFC85A32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Sign In',
+                style: AppTextStyles.getFont(
+                  context,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,16 +143,23 @@ class ProfileScreen extends StatelessWidget {
         child: Consumer<AuthProvider>(
           builder: (context, auth, child) {
             final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
+            final bool isGuest = firebaseUser == null;
 
-            final String name = auth.userName.trim().isNotEmpty
-                ? auth.userName.trim()
-                : 'Bansi Santoki';
+            _checkAndShowSignInPrompt(context, isGuest);
 
-            final String email = firebaseUser?.email ?? 'bansisantoki2005@gmail.com';
+            final String name = isGuest
+                ? 'Seeker'
+                : (auth.userName.trim().isNotEmpty
+                    ? auth.userName.trim()
+                    : 'Seeker');
 
-            final String? photoUrl = auth.userPhotoUrl?.trim().isNotEmpty == true
-                ? auth.userPhotoUrl
-                : firebaseUser?.photoURL;
+            final String email = isGuest ? '' : (firebaseUser.email ?? '');
+
+            final String? photoUrl = isGuest
+                ? null
+                : (auth.userPhotoUrl?.trim().isNotEmpty == true
+                    ? auth.userPhotoUrl
+                    : firebaseUser.photoURL);
 
             return Center(
               child: ConstrainedBox(
@@ -71,10 +187,32 @@ class ProfileScreen extends StatelessWidget {
                         name: name,
                         email: email,
                         photoUrl: photoUrl,
-                        onEdit: () => _showProfileEditor(context),
+                        isGuest: isGuest,
+                        onEdit: () {
+                          if (isGuest) {
+                            Navigator.of(context).pushNamed(AppRoutes.auth);
+                          } else {
+                            _showProfileEditor(context);
+                          }
+                        },
                       ),
 
                       const SizedBox(height: 16),
+
+                      if (isGuest) ...[
+                        // Guest Sign In Card
+                        _MenuTileCard(
+                          key: const Key('guest_sign_in'),
+                          icon: Icons.login_rounded,
+                          iconBgColor: isDark ? const Color(0xFF23362B) : const Color(0xFFD6ECCB),
+                          iconColor: isDark ? const Color(0xFF76B98C) : const Color(0xFF2C6B43),
+                          cardBgColor: isDark ? const Color(0xFF1B2921) : const Color(0xFFEAF5E5),
+                          title: 'Sign In / Create Account',
+                          subtitle: 'Sign in to sync your journey & save progress',
+                          onTap: () => Navigator.of(context).pushNamed(AppRoutes.auth),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
 
                       // 1. Settings Card
                       _MenuTileCard(
@@ -109,35 +247,37 @@ class ProfileScreen extends StatelessWidget {
                       // 4. Synced Across Devices Card
                       const _SyncedDevicesCard(),
 
-                      const SizedBox(height: 14),
+                      if (!isGuest) ...[
+                        const SizedBox(height: 14),
 
-                      // 5. Sign Out Option
-                      _MenuTileCard(
-                        key: const Key('logout'),
-                        icon: Icons.logout_rounded,
-                        iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
-                        iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
-                        cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
-                        title: l10n.signOut,
-                        titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
-                        subtitle: l10n.signOutSubtitle,
-                        onTap: () => _confirmSignOut(context),
-                      ),
+                        // 5. Sign Out Option
+                        _MenuTileCard(
+                          key: const Key('logout'),
+                          icon: Icons.logout_rounded,
+                          iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
+                          iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                          cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
+                          title: l10n.signOut,
+                          titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                          subtitle: l10n.signOutSubtitle,
+                          onTap: () => _confirmSignOut(context),
+                        ),
 
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 14),
 
-                      // 6. Delete Account Option
-                      _MenuTileCard(
-                        key: const Key('delete_account'),
-                        icon: Icons.delete_forever_rounded,
-                        iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
-                        iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
-                        cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
-                        title: l10n.deleteAccount,
-                        titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
-                        subtitle: l10n.deleteAccountSubtitle,
-                        onTap: () => _confirmDeleteAccount(context),
-                      ),
+                        // 6. Delete Account Option
+                        _MenuTileCard(
+                          key: const Key('delete_account'),
+                          icon: Icons.delete_forever_rounded,
+                          iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
+                          iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                          cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
+                          title: l10n.deleteAccount,
+                          titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                          subtitle: l10n.deleteAccountSubtitle,
+                          onTap: () => _confirmDeleteAccount(context),
+                        ),
+                      ],
 
                       const SizedBox(height: 20),
                     ],
@@ -611,12 +751,14 @@ class _ProfileSummaryCard extends StatelessWidget {
     required this.email,
     required this.photoUrl,
     required this.onEdit,
+    this.isGuest = false,
   });
 
   final String name;
   final String email;
   final String? photoUrl;
   final VoidCallback onEdit;
+  final bool isGuest;
 
   @override
   Widget build(BuildContext context) {
@@ -692,8 +834,8 @@ class _ProfileSummaryCard extends StatelessWidget {
                         width: 2,
                       ),
                     ),
-                    child: const Icon(
-                      Icons.edit,
+                    child: Icon(
+                      isGuest ? Icons.login_rounded : Icons.edit,
                       color: Colors.white,
                       size: 13,
                     ),
@@ -722,47 +864,52 @@ class _ProfileSummaryCard extends StatelessWidget {
                     height: 1.05,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.getFont(
-                    context,
-                    fontSize: 13,
-                    color: isDark ? Colors.white60 : const Color(0xFF555555),
-                    fontWeight: FontWeight.w400,
+                if (email.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.getFont(
+                      context,
+                      fontSize: 13,
+                      color: isDark ? Colors.white60 : const Color(0xFF555555),
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2E3824) : const Color(0xFFE4E8D5),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 13,
-                        color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        context.l10n.googleVerified,
-                        style: AppTextStyles.getFont(
-                          context,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
+                GestureDetector(
+                  onTap: isGuest ? onEdit : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2E3824) : const Color(0xFFE4E8D5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isGuest ? Icons.person_outline_rounded : Icons.check_circle_outline,
+                          size: 13,
                           color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 5),
+                        Text(
+                          isGuest ? 'Guest Mode' : context.l10n.googleVerified,
+                          style: AppTextStyles.getFont(
+                            context,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFFA5B888) : const Color(0xFF495736),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
