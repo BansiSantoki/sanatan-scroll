@@ -116,6 +116,12 @@ class AppLocalizations {
       'signOutSubtitle': 'Log out of your account.',
       'signOutConfirmTitle': 'Sign Out',
       'signOutConfirmMessage': 'Are you sure you want to sign out of your account?',
+      'deleteAccount': 'Delete Account',
+      'deleteAccountSubtitle': 'Permanently delete your account and personal data.',
+      'deleteAccountConfirmTitle': 'Delete Account?',
+      'deleteAccountConfirmMessage': 'Your Sanatan Scroll account and associated personal data will be permanently deleted. This action cannot be undone.',
+      'deletingAccount': 'Deleting your account...',
+      'accountDeletedSuccess': 'Your account has been deleted successfully.',
       'cancel': 'Cancel',
       'editProfile': 'Edit Profile',
       'displayName': 'Display name',
@@ -266,6 +272,12 @@ class AppLocalizations {
       'signOutSubtitle': 'તમારા ખાતામાંથી બહાર નીકળો.',
       'signOutConfirmTitle': 'સાઇન આઉટ',
       'signOutConfirmMessage': 'શું તમે ખાતામાંથી બહાર નીકળવા માંગો છો?',
+      'deleteAccount': 'ખાતું કાઢી નાખો',
+      'deleteAccountSubtitle': 'તમારું ખાતું અને સંબંધિત ડેટા કાયમ માટે દૂર કરો.',
+      'deleteAccountConfirmTitle': 'ખાતું કાઢી નાખવું છે?',
+      'deleteAccountConfirmMessage': 'તમારું સનાતન સ્ક્રોલ એકાઉન્ટ અને સંબંધિત વ્યક્તિગત ડેટા કાયમ માટે કાઢી નાખવામાં આવશે. આ ક્રિયા પાછી ખેંચી શકાતી નથી.',
+      'deletingAccount': 'તમારું ખાતું કાઢી રહ્યું છે...',
+      'accountDeletedSuccess': 'તમારું એકાઉન્ટ સફળતાપૂર્વક કાઢી નાખવામાં આવ્યું છે.',
       'cancel': 'રદ કરો',
       'editProfile': 'પ્રોફાઇલ એડિટ કરો',
       'displayName': 'નામ',
@@ -416,6 +428,12 @@ class AppLocalizations {
       'signOutSubtitle': 'अपने खाते से लॉग आउट करें।',
       'signOutConfirmTitle': 'साइन आउट',
       'signOutConfirmMessage': 'क्या आप अपने खाते से साइन आउट करना चाहते हैं?',
+      'deleteAccount': 'खाता हटाएं',
+      'deleteAccountSubtitle': 'अपना खाता और संबंधित डेटा स्थायी रूप से हटाएं।',
+      'deleteAccountConfirmTitle': 'खाता हटाएं?',
+      'deleteAccountConfirmMessage': 'आपका सनातन स्क्रॉल खाता और संबंधित व्यक्तिगत डेटा स्थायी रूप से हटा दिया जाएगा। यह क्रिया वापस नहीं ली जा सकती।',
+      'deletingAccount': 'आपका खाता हटाया जा रहा है...',
+      'accountDeletedSuccess': 'आपका खाता सफलतापूर्वक हटा दिया गया है।',
       'cancel': 'रद्द करें',
       'editProfile': 'प्रोफाइल संपादित करें',
       'displayName': 'प्रदर्शन नाम',
@@ -588,6 +606,12 @@ class AppLocalizations {
   String get signOutSubtitle => translate('signOutSubtitle');
   String get signOutConfirmTitle => translate('signOutConfirmTitle');
   String get signOutConfirmMessage => translate('signOutConfirmMessage');
+  String get deleteAccount => translate('deleteAccount');
+  String get deleteAccountSubtitle => translate('deleteAccountSubtitle');
+  String get deleteAccountConfirmTitle => translate('deleteAccountConfirmTitle');
+  String get deleteAccountConfirmMessage => translate('deleteAccountConfirmMessage');
+  String get deletingAccount => translate('deletingAccount');
+  String get accountDeletedSuccess => translate('accountDeletedSuccess');
   String get cancel => translate('cancel');
   String get editProfile => translate('editProfile');
   String get displayName => translate('displayName');

@@ -124,6 +124,21 @@ class ProfileScreen extends StatelessWidget {
                         onTap: () => _confirmSignOut(context),
                       ),
 
+                      const SizedBox(height: 14),
+
+                      // 6. Delete Account Option
+                      _MenuTileCard(
+                        key: const Key('delete_account'),
+                        icon: Icons.delete_forever_rounded,
+                        iconBgColor: isDark ? const Color(0xFF3D1F1D) : const Color(0xFFFAD1C7),
+                        iconColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                        cardBgColor: isDark ? const Color(0xFF281816) : const Color(0xFFFDE8E4),
+                        title: l10n.deleteAccount,
+                        titleColor: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+                        subtitle: l10n.deleteAccountSubtitle,
+                        onTap: () => _confirmDeleteAccount(context),
+                      ),
+
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -231,6 +246,144 @@ class ProfileScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  // ============================================================
+  // DELETE ACCOUNT CONFIRMATION & EXECUTION
+  // ============================================================
+
+  void _confirmDeleteAccount(BuildContext context) {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
+          title: Text(
+            l10n.deleteAccountConfirmTitle,
+            style: AppTextStyles.getFont(
+              context,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: isDark ? const Color(0xFFE86054) : const Color(0xFFC83A2A),
+            ),
+          ),
+          content: Text(
+            l10n.deleteAccountConfirmMessage,
+            style: AppTextStyles.getFont(
+              context,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                l10n.cancel,
+                style: AppTextStyles.getFont(context, fontSize: 14),
+              ),
+            ),
+            FilledButton(
+              key: const Key('delete_account_confirm'),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _performAccountDeletion(context);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC83A2A),
+              ),
+              child: Text(
+                l10n.deleteAccount,
+                style: AppTextStyles.getFont(context, fontSize: 14, color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _performAccountDeletion(BuildContext context) async {
+    final l10n = context.l10n;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Show non-dismissible loading overlay
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (loadingContext) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: isDark ? const Color(0xFF222722) : const Color(0xFFFAF7F2),
+            content: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                children: [
+                  const CircularProgressIndicator(
+                    color: Color(0xFFC83A2A),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Text(
+                      l10n.deletingAccount,
+                      style: AppTextStyles.getFont(
+                        context,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    final authProvider = context.read<AuthProvider>();
+    final String? error = await authProvider.deleteAccount();
+
+    if (context.mounted) {
+      // Pop loading dialog
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (error != null) {
+        // Show error snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error),
+            backgroundColor: const Color(0xFFC83A2A),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        // Show success snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.accountDeletedSuccess),
+            backgroundColor: const Color(0xFF18392C),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        // Navigate to logged out / authentication screen
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.auth,
+          (route) => false,
+        );
+      }
+    }
   }
 
   // ============================================================

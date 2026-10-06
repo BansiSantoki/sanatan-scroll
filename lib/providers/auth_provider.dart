@@ -7,7 +7,10 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+
+import '../core/data/local_database.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -538,6 +541,201 @@ class AuthProvider extends ChangeNotifier {
       default:
         return e.message ??
             'Authentication failed. Please try again.';
+    }
+  }
+
+  // ============================================================
+  // DELETE ACCOUNT
+  // ============================================================
+
+  Future<String?> deleteAccount() async {
+    final currentUser = _auth.currentUser;
+
+    if (currentUser == null) {
+      return 'No authenticated user found.';
+    }
+
+    final uid = currentUser.uid;
+    _setLoading(true);
+
+    try {
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] Starting deletion for user $uid...');
+      }
+
+      // 1. Delete user-scoped Firestore data
+      await _deleteUserFirestoreData(uid);
+
+      // 2. Delete Firebase Auth user (handling recent login requirement)
+      try {
+        await currentUser.delete();
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'requires-recent-login') {
+          if (kDebugMode) {
+            debugPrint('[ACCOUNT_DELETION] Recent authentication required. Initiating re-auth...');
+          }
+          final reauthError = await _reauthenticateUser(currentUser);
+          if (reauthError != null) {
+            return reauthError;
+          }
+          // Retry Auth deletion after successful re-auth
+          await currentUser.delete();
+        } else {
+          rethrow;
+        }
+      }
+
+      // 3. Clear local storage and SQLite caches
+      await _clearLocalUserData();
+
+      // 4. Sign out from GoogleSignIn if active
+      try {
+        await GoogleSignIn().signOut();
+      } catch (_) {}
+
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] FirebaseAuthException: ${e.code} - ${e.message}');
+      }
+      return _firebaseAuthError(e);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] Error during account deletion: $e');
+      }
+      return 'Failed to delete account. Please try again: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> _deleteUserFirestoreData(String uid) async {
+    try {
+      final userRef = _firestore.collection('users').doc(uid);
+
+      final List<String> userSubcollections = [
+        'saved_items',
+        'streak',
+        'reading_progress',
+        'completed_chapters',
+        'chapter_ratings',
+      ];
+
+      for (final subName in userSubcollections) {
+        try {
+          final snapshot = await userRef.collection(subName).get();
+          for (final doc in snapshot.docs) {
+            await doc.reference.delete();
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('[ACCOUNT_DELETION] Error deleting subcollection $subName: $e');
+          }
+        }
+      }
+
+      // Delete main user profile document
+      await userRef.delete();
+
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] Successfully deleted Firestore data for user $uid');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] Error deleting user document $uid: $e');
+      }
+    }
+  }
+
+  Future<String?> _reauthenticateUser(User user) async {
+    try {
+      final providers = user.providerData.map((p) => p.providerId).toList();
+      final bool isApple = providers.contains('apple.com');
+      final bool isGoogle = providers.contains('google.com');
+
+      if (isGoogle || (!isApple && defaultTargetPlatform != TargetPlatform.iOS)) {
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          clientId: defaultTargetPlatform == TargetPlatform.iOS
+              ? '746323217658-g9kmvge3q4gnahcv41rotp7er6ndmih3.apps.googleusercontent.com'
+              : null,
+          serverClientId:
+              '746323217658-0qfl1om1hk67vflkormno80seq38pvcr.apps.googleusercontent.com',
+        );
+
+        try {
+          await googleSignIn.signOut();
+        } catch (_) {}
+
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          return 'Re-authentication was cancelled.';
+        }
+
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        return null;
+      } else if (isApple || defaultTargetPlatform == TargetPlatform.iOS) {
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          try {
+            final appleProvider = AppleAuthProvider();
+            await user.reauthenticateWithProvider(appleProvider);
+            return null;
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('[ACCOUNT_DELETION] Native Apple re-auth error: $e. Retrying with credential flow...');
+            }
+          }
+        }
+
+        final rawNonce = _generateNonce();
+        final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+        final appleCredential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+          nonce: sha256Nonce,
+        );
+
+        final idToken = appleCredential.identityToken;
+        if (idToken == null || idToken.isEmpty) {
+          return 'Apple re-authentication failed: missing token.';
+        }
+
+        final credential = OAuthProvider('apple.com').credential(
+          idToken: idToken,
+          rawNonce: rawNonce,
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        return null;
+      }
+
+      return 'Please sign out and sign in again before deleting your account.';
+    } on FirebaseAuthException catch (e) {
+      return _firebaseAuthError(e);
+    } catch (e) {
+      return 'Re-authentication failed: $e';
+    }
+  }
+
+  Future<void> _clearLocalUserData() async {
+    try {
+      await LocalDatabase.instance.clearUserData();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('last_read_book_id');
+      await prefs.remove('reading_positions_json');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ACCOUNT_DELETION] Error clearing local user data: $e');
+      }
     }
   }
 

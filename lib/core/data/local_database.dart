@@ -262,5 +262,11 @@ class LocalDatabase {
     );
   }
 
+  Future<void> clearUserData() async {
+    final db = await database;
+    await db.delete('completed_dates');
+    await db.delete('book_progress');
+  }
+
   String _dateKey(DateTime d) => DateTime(d.year, d.month, d.day).toIso8601String();
 }

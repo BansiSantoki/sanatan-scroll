@@ -224,6 +224,8 @@ class ReadingProgressProvider extends ChangeNotifier {
     _activeUserId = userId;
 
     if (userId.isEmpty) {
+      _positions.clear();
+      _savePositionsLocally();
       notifyListeners();
       return;
     }

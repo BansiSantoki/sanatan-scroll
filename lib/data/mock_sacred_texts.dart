@@ -60,7 +60,7 @@ class MockSacredTexts {
       gradientIndex: 4,
       iconEmoji: '📜',
       keyTeachings: ['Ritual', 'Cosmos', 'Sacred Sound', 'Truth'],
-    ),
+    ),  
     SacredTextModel(
       id: 'puranas',
       title: 'Puranas',
