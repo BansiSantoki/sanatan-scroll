@@ -55,7 +55,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDgdzgYurf4TzOA4iNRNPCMK2y7xhlKjFc',
-    appId: '1:746323217658:android:05599e93219860775d4d43',
+    appId: '1:746323217658:android:67357138ae4c006a5d4d43',
     messagingSenderId: '746323217658',
     projectId: 'sanatan-scroll-19b25',
     storageBucket: 'sanatan-scroll-19b25.firebasestorage.app',

@@ -294,88 +294,99 @@ class AuthProvider extends ChangeNotifier {
         debugPrint('[APPLE_AUTH_DEBUG] Starting Apple Sign-In flow...');
       }
 
-      UserCredential? userCredential;
-
-      // 1. Primary Flow: Firebase native AppleAuthProvider on iOS
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        try {
-          if (kDebugMode) {
-            debugPrint('[APPLE_AUTH_DEBUG] Attempting native Firebase AppleAuthProvider flow...');
-          }
-          final appleProvider = AppleAuthProvider();
-          appleProvider.addScope('email');
-          appleProvider.addScope('name');
-
-          userCredential = await _auth.signInWithProvider(appleProvider);
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'canceled' || e.code == 'user-cancelled' || e.code == '1001') {
-            if (kDebugMode) debugPrint('[APPLE_AUTH_DEBUG] User cancelled Apple Sign-In.');
-            return 'Apple Sign-In cancelled';
-          }
-          if (e.code == 'operation-not-allowed') {
-            return _firebaseAuthError(e);
-          }
-          if (kDebugMode) {
-            debugPrint('[APPLE_AUTH_DEBUG] signInWithProvider error: ${e.code} - ${e.message}. Trying getAppleIDCredential flow...');
-          }
-        } catch (e) {
-          final msg = e.toString().toLowerCase();
-          if (msg.contains('canceled') || msg.contains('cancelled') || msg.contains('1001')) {
-            return 'Apple Sign-In cancelled';
-          }
-          if (kDebugMode) {
-            debugPrint('[APPLE_AUTH_DEBUG] Native provider error: $e. Trying getAppleIDCredential flow...');
-          }
-        }
+      // 1. Generate a NEW cryptographically secure raw nonce
+      final rawNonce = _generateNonce();
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Cryptographically secure rawNonce generated.');
       }
 
-      // 2. Secondary Flow: Manual nonce + SignInWithApple plugin
-      if (userCredential == null || userCredential.user == null) {
-        final rawNonce = _generateNonce();
-        final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      // 2. SHA-256 hash the raw nonce to pass to Apple
+      final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] SHA-256 hashed nonce computed for Apple request.');
+      }
 
-        final appleCredential = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
-          nonce: sha256Nonce,
+      // 3. Request Apple ID Credential using SignInWithApple plugin
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Requesting ASAuthorizationAppleIDCredential from Apple...');
+      }
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: sha256Nonce,
+      );
+
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Apple authorization completed successfully.');
+        debugPrint(
+          '[APPLE_AUTH_DEBUG] identityToken available: ${appleCredential.identityToken != null && appleCredential.identityToken!.isNotEmpty}',
         );
+        debugPrint(
+          '[APPLE_AUTH_DEBUG] authorizationCode available: ${appleCredential.authorizationCode.isNotEmpty}',
+        );
+      }
 
-        final idToken = appleCredential.identityToken;
-        if (idToken == null || idToken.isEmpty) {
-          return 'Apple Sign-In failed: Apple Identity Token was not returned.';
+      final idToken = appleCredential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('[APPLE_AUTH_DEBUG] ERROR: Apple Identity Token is null or empty.');
         }
+        return 'Apple Sign-In failed: Apple Identity Token was not returned.';
+      }
 
-        final OAuthCredential credential = OAuthProvider('apple.com').credential(
-          idToken: idToken,
-          rawNonce: rawNonce,
+      // 4. Create Firebase Apple OAuth Credential using the ORIGINAL RAW NONCE
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Creating Firebase OAuthProvider credential with idToken and original rawNonce...');
+      }
+      final OAuthCredential credential = OAuthProvider('apple.com').credential(
+        idToken: idToken,
+        rawNonce: rawNonce,
+      );
+
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Firebase credential created. Executing FirebaseAuth.signInWithCredential...');
+      }
+      final userCredential = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
+
+      if (kDebugMode) {
+        debugPrint(
+          '[APPLE_AUTH_DEBUG] FirebaseAuth.signInWithCredential succeeded. currentUser available: ${firebaseUser != null} (UID: ${firebaseUser?.uid})',
         );
+      }
 
-        userCredential = await _auth.signInWithCredential(credential);
-
-        final firebaseUser = userCredential.user;
-        if (firebaseUser != null) {
-          if (appleCredential.givenName != null || appleCredential.familyName != null) {
-            final given = appleCredential.givenName ?? '';
-            final family = appleCredential.familyName ?? '';
-            final name = '$given $family'.trim();
-            if (name.isNotEmpty && (firebaseUser.displayName == null || firebaseUser.displayName!.isEmpty)) {
-              await firebaseUser.updateDisplayName(name);
+      if (firebaseUser != null) {
+        if (appleCredential.givenName != null || appleCredential.familyName != null) {
+          final given = appleCredential.givenName ?? '';
+          final family = appleCredential.familyName ?? '';
+          final name = '$given $family'.trim();
+          if (name.isNotEmpty && (firebaseUser.displayName == null || firebaseUser.displayName!.isEmpty)) {
+            if (kDebugMode) {
+              debugPrint('[APPLE_AUTH_DEBUG] Updating user display name from Apple credential...');
             }
+            await firebaseUser.updateDisplayName(name);
           }
         }
       }
 
       final currentUser = _auth.currentUser;
       if (currentUser != null) {
+        if (kDebugMode) {
+          debugPrint('[APPLE_AUTH_DEBUG] Syncing profile with Firestore users/${currentUser.uid}...');
+        }
         await _syncUserProfile(currentUser);
       }
 
+      if (kDebugMode) {
+        debugPrint('[APPLE_AUTH_DEBUG] Apple Sign-In completed cleanly.');
+      }
       notifyListeners();
       return null;
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
+        if (kDebugMode) debugPrint('[APPLE_AUTH_DEBUG] User cancelled Apple Sign-In dialog.');
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
@@ -384,6 +395,7 @@ class AuthProvider extends ChangeNotifier {
       return 'Apple Sign-In failed: ${e.message}';
     } on FirebaseAuthException catch (e) {
       if (e.code == 'canceled' || e.code == 'user-cancelled') {
+        if (kDebugMode) debugPrint('[APPLE_AUTH_DEBUG] FirebaseAuth cancelled.');
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
@@ -392,14 +404,12 @@ class AuthProvider extends ChangeNotifier {
       return _firebaseAuthError(e);
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains('canceled') ||
-          msg.contains('cancelled') ||
-          msg.contains('1001') ||
-          msg.contains('user-cancelled')) {
+      if (msg.contains('canceled') || msg.contains('cancelled') || msg.contains('user-cancelled')) {
+        if (kDebugMode) debugPrint('[APPLE_AUTH_DEBUG] Cancellation detected in generic catch.');
         return 'Apple Sign-In cancelled';
       }
       if (kDebugMode) {
-        debugPrint('[APPLE_AUTH_DEBUG] Unexpected error: $e');
+        debugPrint('[APPLE_AUTH_DEBUG] Unexpected error during Apple Sign-In: $e');
       }
       return 'Apple Sign-In failed: $e';
     } finally {
@@ -681,18 +691,9 @@ class AuthProvider extends ChangeNotifier {
         await user.reauthenticateWithCredential(credential);
         return null;
       } else if (isApple || defaultTargetPlatform == TargetPlatform.iOS) {
-        if (defaultTargetPlatform == TargetPlatform.iOS) {
-          try {
-            final appleProvider = AppleAuthProvider();
-            await user.reauthenticateWithProvider(appleProvider);
-            return null;
-          } catch (e) {
-            if (kDebugMode) {
-              debugPrint('[ACCOUNT_DELETION] Native Apple re-auth error: $e. Retrying with credential flow...');
-            }
-          }
+        if (kDebugMode) {
+          debugPrint('[ACCOUNT_DELETION] Starting Apple re-authentication with raw nonce flow...');
         }
-
         final rawNonce = _generateNonce();
         final sha256Nonce = sha256.convert(utf8.encode(rawNonce)).toString();
 

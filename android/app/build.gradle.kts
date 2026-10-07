@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.sanatanscroll.sanatan_scroll"
+    namespace = "com.sanatanscroll.app"
 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sanatanscroll.sanatan_scroll"
+       applicationId = "com.sanatanscroll.app"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
