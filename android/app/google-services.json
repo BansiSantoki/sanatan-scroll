@@ -14,7 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "746323217658-qu7ukk3g7e63ra3vl72t7d0in9iqgdri.apps.googleusercontent.com",
+          "client_id": "746323217658-tfnli7j4qc7pal2a8adq8mnn9edb2mdt.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.sanatanscroll.app",
@@ -86,7 +86,7 @@
               "client_id": "746323217658-g9kmvge3q4gnahcv41rotp7er6ndmih3.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.sanatanscroll.app"
+                "bundle_id": "com.sanatanscroll.sanatanScroll"
               }
             }
           ]
